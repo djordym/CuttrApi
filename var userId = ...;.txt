@@ -1,0 +1,18 @@
+var userId = ...;
+
+var matches = context.Matches
+    .Where(m => m.UserId1 == userId || m.UserId2 == userId)
+    .Include(m => m.Plant1)
+        .ThenInclude(p => p.User)
+    .Include(m => m.Plant2)
+        .ThenInclude(p => p.User)
+    .ToList();
+
+foreach (var match in matches)
+{
+    var otherUser = match.UserId1 == userId ? match.User2 : match.User1;
+    var userPlant = match.UserId1 == userId ? match.Plant1 : match.Plant2;
+    var otherPlant = match.UserId1 == userId ? match.Plant2 : match.Plant1;
+
+    // Now you have access to the other user and their plant
+}
