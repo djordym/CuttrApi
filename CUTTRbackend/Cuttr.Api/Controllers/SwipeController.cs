@@ -1,5 +1,6 @@
 ﻿using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Exceptions;
+using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cuttr.Api.Controllers

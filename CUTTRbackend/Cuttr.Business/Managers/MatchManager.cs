@@ -1,6 +1,7 @@
 ﻿using Cuttr.Business.Contracts.Outputs;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
+using Cuttr.Business.Interfaces.RepositoryInterfaces;
 using Cuttr.Business.Mappers;
 using Microsoft.Extensions.Logging;
 using System;

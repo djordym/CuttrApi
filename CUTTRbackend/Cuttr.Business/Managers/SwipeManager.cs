@@ -93,5 +93,7 @@ namespace Cuttr.Business.Managers
                 throw new BusinessException("Error recording swipe.", ex);
             }
         }
+
+
     }
 }

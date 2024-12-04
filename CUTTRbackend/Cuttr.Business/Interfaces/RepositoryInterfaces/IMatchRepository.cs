@@ -12,5 +12,6 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
         Task<IEnumerable<Match>> GetMatchesByUserIdAsync(int userId);
         Task<Match> GetMatchByIdAsync(int matchId);
         // Other methods if necessary
+        Task<Match> AddMatchAsync(Match match);
     }
 }

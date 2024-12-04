@@ -1,4 +1,5 @@
 ﻿using Cuttr.Business.Entities;
+using Cuttr.Business.Interfaces.RepositoryInterfaces;
 using Cuttr.Infrastructure.Exceptions;
 using Cuttr.Infrastructure.Mappers;
 using Microsoft.EntityFrameworkCore;
@@ -60,6 +61,24 @@ namespace Cuttr.Infrastructure.Repositories
             {
                 _logger.LogError(ex, $"An error occurred while retrieving match with ID {matchId}.");
                 throw new RepositoryException("An error occurred while retrieving match.", ex);
+            }
+        }
+        public async Task<Match> AddMatchAsync(Match match)
+        {
+            try
+            {
+                var efMatch = BusinessToEFMapper.MapToMatchEF(match);
+                efMatch.MatchId = 0; // Ensure the ID is unset for new entities
+
+                await _context.Matches.AddAsync(efMatch);
+                await _context.SaveChangesAsync();
+
+                return EFToBusinessMapper.MapToMatch(efMatch);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while adding a match.");
+                throw new RepositoryException("An error occurred while adding a match.", ex);
             }
         }
     }
