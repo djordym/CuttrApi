@@ -1,6 +1,7 @@
 ﻿using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
+using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cuttr.Api.Controllers
@@ -24,12 +25,14 @@ namespace Cuttr.Api.Controllers
         {
             try
             {
-                var messageResponse = await _messageManager.SendMessageAsync(request);
+                int senderUserId = GetAuthenticatedUserId();
+
+                var messageResponse = await _messageManager.SendMessageAsync(request, senderUserId);
                 return Ok(messageResponse);
             }
             catch (NotFoundException ex)
             {
-                _logger.LogWarning(ex, "Match or plant not found.");
+                _logger.LogWarning(ex, "Match not found.");
                 return NotFound(ex.Message);
             }
             catch (BusinessException ex)
@@ -45,7 +48,6 @@ namespace Cuttr.Api.Controllers
         {
             try
             {
-                // Assuming we have a way to get the authenticated user's ID
                 int userId = GetAuthenticatedUserId();
 
                 var messages = await _messageManager.GetMessagesByMatchIdAsync(matchId, userId);
@@ -56,7 +58,7 @@ namespace Cuttr.Api.Controllers
                 _logger.LogWarning(ex, $"Match with ID {matchId} not found.");
                 return NotFound(ex.Message);
             }
-            catch (UnauthorizedAccessException ex)
+            catch (Business.Exceptions.UnauthorizedAccessException ex)
             {
                 _logger.LogWarning(ex, "Unauthorized access to messages.");
                 return Forbid(ex.Message);
@@ -68,11 +70,9 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        // Helper method to get authenticated user ID
         private int GetAuthenticatedUserId()
         {
-            // Implementation depends on authentication setup (e.g., JWT)
-            // For example, extract user ID from JWT claims
+            // Extract user ID from JWT token claims
             return int.Parse(User.FindFirst("sub")?.Value);
         }
     }

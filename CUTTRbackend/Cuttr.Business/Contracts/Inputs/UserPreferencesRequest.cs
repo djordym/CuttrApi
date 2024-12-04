@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace Cuttr.Business.Contracts.Inputs
 {
-    public class ReportRequest
+    public class UserPreferencesRequest
     {
-        public int ReportedUserId { get; set; }
-        public string Reason { get; set; }
-        public string Comments { get; set; }
+        public double SearchRadius { get; set; }
+        public List<string> PreferredCategories { get; set; }
     }
 }

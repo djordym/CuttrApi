@@ -9,8 +9,7 @@ namespace Cuttr.Business.Contracts.Inputs
     public class MessageRequest
     {
         public int MatchId { get; set; }
-        public int SenderPlantId { get; set; }
-        public string Content { get; set; }
+        public string MessageText { get; set; }
     }
 
 }

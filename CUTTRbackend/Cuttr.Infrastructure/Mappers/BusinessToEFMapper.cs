@@ -188,7 +188,7 @@ namespace Cuttr.Infrastructure.Mappers
         }
 
         // Helper method to serialize PreferredCategories
-        private static string SerializeCategories(List<string> categories)
+        public static string SerializeCategories(List<string> categories)
         {
             if (categories == null || !categories.Any())
                 return null;

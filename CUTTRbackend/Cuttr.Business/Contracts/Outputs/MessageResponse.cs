@@ -10,9 +10,9 @@ namespace Cuttr.Business.Contracts.Outputs
     {
         public int MessageId { get; set; }
         public int MatchId { get; set; }
-        public int SenderPlantId { get; set; }
-        public int ReceiverPlantId { get; set; }
-        public string Content { get; set; }
+        public int SenderUserId { get; set; }
+        public string MessageText { get; set; }
         public DateTime SentAt { get; set; }
+        public bool IsRead { get; set; }
     }
 }

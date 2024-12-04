@@ -1,4 +1,5 @@
 ﻿using Cuttr.Business.Contracts.Inputs;
+using Cuttr.Business.Contracts.Outputs;
 using Cuttr.Business.Entities;
 
 namespace Cuttr.Business.Mappers
@@ -72,6 +73,42 @@ namespace Cuttr.Business.Mappers
                 SwipedPlantId = request.SwipedPlantId,
                 IsLike = request.IsLike
             };
+        }
+
+        public static Message MapToMessage(MessageRequest request, int senderUserId)
+        {
+            if (request == null)
+                return null;
+
+            return new Message
+            {
+                MatchId = request.MatchId,
+                SenderUserId = senderUserId,
+                MessageText = request.MessageText,
+                SentAt = DateTime.UtcNow,
+                IsRead = false
+            };
+        }
+
+        public static UserPreferences MapToUserPreferences(UserPreferencesRequest request)
+        {
+            if (request == null)
+                return null;
+
+            return new UserPreferences
+            {
+                SearchRadius = request.SearchRadius,
+                PreferredCategories = request.PreferredCategories
+            };
+        }
+
+        public static void MapToUserPreferences(UserPreferencesRequest request, UserPreferences preferences)
+        {
+            if (request == null || preferences == null)
+                return;
+
+            preferences.SearchRadius = request.SearchRadius;
+            preferences.PreferredCategories = request.PreferredCategories;
         }
 
     }

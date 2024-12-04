@@ -71,5 +71,62 @@ namespace Cuttr.Business.Mappers
                 User2 = MapToUserResponse(match.User2)
             };
         }
+
+        public static IEnumerable<MatchResponse> MapToMatchResponse(IEnumerable<Match> matches)
+        {
+            return matches?.Select(MapToMatchResponse);
+        }
+
+        public static MessageResponse MapToMessageResponse(Message message)
+        {
+            if (message == null)
+                return null;
+
+            return new MessageResponse
+            {
+                MessageId = message.MessageId,
+                MatchId = message.MatchId,
+                SenderUserId = message.SenderUserId,
+                MessageText = message.MessageText,
+                SentAt = message.SentAt,
+                IsRead = message.IsRead
+            };
+        }
+
+        // Map collection of Message to collection of MessageResponse
+        public static IEnumerable<MessageResponse> MapToMessageResponse(IEnumerable<Message> messages)
+        {
+            return messages?.Select(MapToMessageResponse);
+        }
+
+        public static ReportResponse MapToReportResponse(Report report)
+        {
+            if (report == null)
+                return null;
+
+            return new ReportResponse
+            {
+                ReportId = report.ReportId,
+                ReporterUserId = report.ReporterUserId,
+                ReportedUserId = report.ReportedUserId,
+                Reason = report.Reason,
+                Comments = report.Comments,
+                CreatedAt = report.CreatedAt,
+                IsResolved = report.IsResolved
+            };
+        }
+
+        public static UserPreferencesResponse MapToUserPreferencesResponse(UserPreferences preferences)
+        {
+            if (preferences == null)
+                return null;
+
+            return new UserPreferencesResponse
+            {
+                UserId = preferences.UserId,
+                SearchRadius = preferences.SearchRadius,
+                PreferredCategories = preferences.PreferredCategories
+            };
+        }
     }
 }
