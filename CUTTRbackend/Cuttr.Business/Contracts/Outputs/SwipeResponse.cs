@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace Cuttr.Business.Contracts.Outputs
 {
-    public class SwipeResult
+    public class SwipeResponse
     {
         public bool IsMatch { get; set; }
-        public Match Match { get; set; } // Included if IsMatch is true
+        public MatchResponse Match { get; set; } // Included if IsMatch is true
     }
 }

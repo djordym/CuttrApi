@@ -1,7 +1,10 @@
 ﻿using Cuttr.Business.Contracts.Inputs;
+using Cuttr.Business.Exceptions;
+using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Authentication;
+using AuthenticationException = Cuttr.Business.Exceptions.AuthenticationException;
 
 namespace Cuttr.Api.Controllers
 {
@@ -24,8 +27,8 @@ namespace Cuttr.Api.Controllers
         {
             try
             {
-                var user = await _userManager.RegisterUserAsync(request);
-                return CreatedAtAction(nameof(GetUserById), new { userId = user.UserId }, user);
+                var userResponse = await _userManager.RegisterUserAsync(request);
+                return CreatedAtAction(nameof(GetUserById), new { userId = userResponse.UserId }, userResponse);
             }
             catch (BusinessException ex)
             {
@@ -61,8 +64,8 @@ namespace Cuttr.Api.Controllers
         {
             try
             {
-                var user = await _userManager.GetUserByIdAsync(userId);
-                return Ok(user);
+                var userResponse = await _userManager.GetUserByIdAsync(userId);
+                return Ok(userResponse);
             }
             catch (NotFoundException ex)
             {
@@ -82,8 +85,8 @@ namespace Cuttr.Api.Controllers
         {
             try
             {
-                var user = await _userManager.UpdateUserAsync(userId, request);
-                return Ok(user);
+                var userResponse = await _userManager.UpdateUserAsync(userId, request);
+                return Ok(userResponse);
             }
             catch (NotFoundException ex)
             {

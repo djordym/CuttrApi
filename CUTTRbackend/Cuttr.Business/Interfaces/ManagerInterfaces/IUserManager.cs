@@ -11,10 +11,10 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
     public interface IUserManager
     {
-        Task<User> RegisterUserAsync(UserRegistrationRequest request);
+        Task<UserResponse> RegisterUserAsync(UserRegistrationRequest request);
         Task<UserLoginResponse> AuthenticateUserAsync(UserLoginRequest request);
-        Task<User> GetUserByIdAsync(int userId);
-        Task<User> UpdateUserAsync(int userId, UserUpdateRequest request);
+        Task<UserResponse> GetUserByIdAsync(int userId);
+        Task<UserResponse> UpdateUserAsync(int userId, UserUpdateRequest request);
         Task DeleteUserAsync(int userId);
     }
 }

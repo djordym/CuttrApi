@@ -1,13 +1,20 @@
 ﻿using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Contracts.Outputs;
 using Cuttr.Business.Entities;
+using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
+using Cuttr.Business.Interfaces.RepositoryInterfaces;
+using Cuttr.Business.Mappers;
+using Cuttr.Business.Utilities;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading.Tasks;
+using AuthenticationException = Cuttr.Business.Exceptions.AuthenticationException;
 
 namespace Cuttr.Business.Managers
 {
@@ -15,14 +22,16 @@ namespace Cuttr.Business.Managers
     {
         private readonly IUserRepository _userRepository;
         private readonly ILogger<UserManager> _logger;
+        private readonly JwtTokenGenerator _jwtTokenGenerator;
 
-        public UserManager(IUserRepository userRepository, ILogger<UserManager> logger)
+        public UserManager(IUserRepository userRepository, ILogger<UserManager> logger, JwtTokenGenerator jwtTokenGenerator)
         {
             _userRepository = userRepository;
             _logger = logger;
+            _jwtTokenGenerator = jwtTokenGenerator;
         }
 
-        public async Task<User> RegisterUserAsync(UserRegistrationRequest request)
+        public async Task<UserResponse> RegisterUserAsync(UserRegistrationRequest request)
         {
             try
             {
@@ -32,18 +41,16 @@ namespace Cuttr.Business.Managers
                     throw new BusinessException("Email already registered.");
                 }
 
-                // Hash the password (assuming a PasswordHasher utility)
-                string passwordHash = PasswordHasher.HashPassword(request.Password);
+                // Map to User entity
+                var user = ContractToBusinessMapper.MapToUser(request);
 
-                var user = new User
-                {
-                    Email = request.Email,
-                    PasswordHash = passwordHash,
-                    Name = request.Name
-                };
+                // Hash the password
+                user.PasswordHash = PasswordHasher.HashPassword(user.PasswordHash);
 
                 var createdUser = await _userRepository.CreateUserAsync(user);
-                return createdUser;
+
+                // Map to UserResponse
+                return BusinessToContractMapper.MapToUserResponse(createdUser);
             }
             catch (Exception ex)
             {
@@ -63,14 +70,11 @@ namespace Cuttr.Business.Managers
                     throw new AuthenticationException("Invalid email or password.");
                 }
 
-                // Generate JWT token (assuming a JwtTokenGenerator utility)
-                string token = JwtTokenGenerator.GenerateToken(user);
+                // Generate JWT token
+                string token = _jwtTokenGenerator.GenerateToken(user);
 
-                return new UserLoginResponse
-                {
-                    Token = token,
-                    User = user
-                };
+                // Map to UserLoginResponse
+                return BusinessToContractMapper.MapToUserLoginResponse(user, token);
             }
             catch (AuthenticationException)
             {
@@ -83,7 +87,7 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task<User> GetUserByIdAsync(int userId)
+        public async Task<UserResponse> GetUserByIdAsync(int userId)
         {
             try
             {
@@ -93,7 +97,7 @@ namespace Cuttr.Business.Managers
                     throw new NotFoundException($"User with ID {userId} not found.");
                 }
 
-                return user;
+                return BusinessToContractMapper.MapToUserResponse(user);
             }
             catch (NotFoundException)
             {
@@ -106,7 +110,7 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task<User> UpdateUserAsync(int userId, UserUpdateRequest request)
+        public async Task<UserResponse> UpdateUserAsync(int userId, UserUpdateRequest request)
         {
             try
             {
@@ -117,14 +121,11 @@ namespace Cuttr.Business.Managers
                 }
 
                 // Update user properties
-                user.Name = request.Name ?? user.Name;
-                user.ProfilePictureUrl = request.ProfilePictureUrl ?? user.ProfilePictureUrl;
-                user.Bio = request.Bio ?? user.Bio;
-                user.LocationLatitude = request.LocationLatitude ?? user.LocationLatitude;
-                user.LocationLongitude = request.LocationLongitude ?? user.LocationLongitude;
+                ContractToBusinessMapper.MapToUser(request, user);
 
                 await _userRepository.UpdateUserAsync(user);
-                return user;
+
+                return BusinessToContractMapper.MapToUserResponse(user);
             }
             catch (NotFoundException)
             {
