@@ -1,0 +1,58 @@
+# Visual Studio files
+.vs/
+*.user
+*.suo
+
+# Build results
+bin/
+obj/
+Debug/
+Release/
+*.exe
+*.dll
+*.pdb
+*.appx
+*.appxsym
+*.builds
+*.csproj.user
+*.csproj.CoreCompileInputs.cache
+*.csproj.CoreCompileOutputs.cache
+*.csproj.FileListAbsolute.txt
+
+# Web development
+node_modules/
+dist/
+
+# Windows OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS files
+.DS_Store
+
+# Logs and database
+*.log
+*.ldf
+*.mdf
+
+# IDE directories
+.idea/
+*.sln.docstates
+
+# Coverage results
+*.coverage
+*.coveragexml
+TestResults/
+
+# Packages
+*.nupkg
+*.snupkg
+*.lock.json
+
+# Backup files
+*.bak
+*.swp
+*.tmp
