@@ -1,7 +1,9 @@
 using Cuttr.Api.Middleware;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Cuttr.Business.Interfaces.RepositoryInterfaces;
+using Cuttr.Business.Interfaces.Services;
 using Cuttr.Business.Managers;
+using Cuttr.Business.Services;
 using Cuttr.Business.Utilities;
 using Cuttr.Infrastructure;
 using Cuttr.Infrastructure.Repositories;
@@ -32,7 +34,8 @@ builder.Services.AddDbContext<CuttrDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("CuttrDb"));
 });
-
+//Register BlobStorageService
+builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 // Register Manager Services
 builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<IPlantManager, PlantManager>();

@@ -11,7 +11,7 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
     public interface IPlantManager
     {
-        Task<PlantResponse> AddPlantAsync(PlantRequest request);
+        Task<PlantResponse> AddPlantAsync(PlantCreateRequest request);
         Task<PlantResponse> GetPlantByIdAsync(int plantId);
         Task<PlantResponse> UpdatePlantAsync(int plantId, PlantUpdateRequest request);
         Task DeletePlantAsync(int plantId);

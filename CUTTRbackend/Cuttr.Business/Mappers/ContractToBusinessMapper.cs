@@ -45,7 +45,6 @@ namespace Cuttr.Business.Mappers
                 CareRequirements = request.CareRequirements,
                 Description = request.Description,
                 Category = request.Category,
-                ImageUrl = request.ImageUrl
             };
         }
 

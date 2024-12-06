@@ -20,7 +20,8 @@ namespace Cuttr.Api.Controllers
 
         // POST: api/plants
         [HttpPost]
-        public async Task<IActionResult> AddPlant([FromBody] PlantRequest request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> AddPlant([FromForm] PlantCreateRequest request)
         {
             try
             {

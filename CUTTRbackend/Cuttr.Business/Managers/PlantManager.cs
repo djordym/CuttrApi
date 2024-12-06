@@ -4,6 +4,7 @@ using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Cuttr.Business.Interfaces.RepositoryInterfaces;
+using Cuttr.Business.Interfaces.Services;
 using Cuttr.Business.Mappers;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,26 +20,37 @@ namespace Cuttr.Business.Managers
         private readonly IPlantRepository _plantRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<PlantManager> _logger;
+        private readonly IBlobStorageService _blobStorageService;
 
-        public PlantManager(IPlantRepository plantRepository, IUserRepository userRepository, ILogger<PlantManager> logger)
+        public PlantManager(IPlantRepository plantRepository, IUserRepository userRepository, ILogger<PlantManager> logger, IBlobStorageService blobStorageService)
         {
             _plantRepository = plantRepository;
             _userRepository = userRepository;
             _logger = logger;
+            _blobStorageService = blobStorageService;
         }
 
-        public async Task<PlantResponse> AddPlantAsync(PlantRequest request)
+        public async Task<PlantResponse> AddPlantAsync(PlantCreateRequest request)
         {
             try
             {
                 // Validate that the user exists
-                var user = await _userRepository.GetUserByIdAsync(request.UserId);
+                var user = await _userRepository.GetUserByIdAsync(request.PlantDetails.UserId);
                 if (user == null)
                 {
-                    throw new NotFoundException($"User with ID {request.UserId} not found.");
+                    throw new NotFoundException($"User with ID {request.PlantDetails.UserId} not found.");
                 }
 
-                var plant = ContractToBusinessMapper.MapToPlant(request);
+                string imageUrl = null;
+
+                if (request.Image != null && request.Image.Length > 0)
+                {
+                    // Upload image to Azure Blob Storage
+                    imageUrl = await _blobStorageService.UploadFileAsync(request.Image);
+                }
+
+                var plant = ContractToBusinessMapper.MapToPlant(request.PlantDetails);
+                plant.ImageUrl = imageUrl;
 
                 var createdPlant = await _plantRepository.AddPlantAsync(plant);
 

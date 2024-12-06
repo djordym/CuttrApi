@@ -17,9 +17,7 @@ namespace Cuttr.Business.Managers
     public class SwipeManager : ISwipeManager
     {
         private readonly ISwipeRepository _swipeRepository;
-        private readonly IMatchRepository _matchRepository;
         private readonly IPlantRepository _plantRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<SwipeManager> _logger;
 
         public SwipeManager(
@@ -30,9 +28,7 @@ namespace Cuttr.Business.Managers
             ILogger<SwipeManager> logger)
         {
             _swipeRepository = swipeRepository;
-            _matchRepository = matchRepository;
             _plantRepository = plantRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
@@ -73,19 +69,17 @@ namespace Cuttr.Business.Managers
 
                     if (response.IsMatch)
                     {
-                        // Create a new match
+                        // Order plants based on UserId to ensure Plant1 belongs to User1
+                        bool isSwiperUserFirst = swiperPlant.UserId < swipedPlant.UserId;
+
                         var match = new Match
                         {
-                            PlantId1 = Math.Min(request.SwiperPlantId, request.SwipedPlantId),
-                            PlantId2 = Math.Max(request.SwiperPlantId, request.SwipedPlantId),
-                            UserId1 = swiperPlant.UserId,
-                            UserId2 = swipedPlant.UserId
+                            PlantId1 = isSwiperUserFirst ? swiperPlant.PlantId : swipedPlant.PlantId,
+                            PlantId2 = isSwiperUserFirst ? swipedPlant.PlantId : swiperPlant.PlantId,
+                            UserId1 = isSwiperUserFirst ? swiperPlant.UserId : swipedPlant.UserId,
+                            UserId2 = isSwiperUserFirst ? swipedPlant.UserId : swiperPlant.UserId,
+                            CreatedAt = DateTime.UtcNow
                         };
-
-                        var createdMatch = await _matchRepository.AddMatchAsync(match);
-
-                        // Map to MatchResponse
-                        response.Match = BusinessToContractMapper.MapToMatchResponse(createdMatch);
                     }
 
                     responses.Add(response);
@@ -121,10 +115,10 @@ namespace Cuttr.Business.Managers
 
                 foreach (var plant in otherPlants)
                 {
-                    // Check if user has at least one plant that hasn't interacted with this plant
-                    bool hasUninteractedPlant = await Task.WhenAll(userPlants.Select(async up =>
+                    // Check if user has at least one plant that hasn't interacted with this plant, async method, if any of the results is true return true
+                    bool hasUninteractedPlant = (await Task.WhenAll(userPlants.Select(async up =>
                     !await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId)
-                    )).Any(result => result);
+                    ))).Any(result => result);
 
                     if (hasUninteractedPlant)
                     {
@@ -141,6 +135,5 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        // Existing methods...
     }
 }
