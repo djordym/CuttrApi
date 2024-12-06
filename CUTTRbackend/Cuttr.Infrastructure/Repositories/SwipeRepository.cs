@@ -57,5 +57,22 @@ namespace Cuttr.Infrastructure.Repositories
                 throw new RepositoryException("An error occurred while retrieving a swipe.", ex);
             }
         }
+
+        public async Task<bool> HasSwipeAsync(int swiperPlantId, int swipedPlantId)
+        {
+            try
+            {
+                var exists = await _context.Swipes.AnyAsync(s =>
+                    s.SwiperPlantId == swiperPlantId &&
+                    s.SwipedPlantId == swipedPlantId);
+
+                return exists;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while checking swipe existence.");
+                throw new RepositoryException("An error occurred while checking swipe existence.", ex);
+            }
+        }
     }
 }

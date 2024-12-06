@@ -10,6 +10,7 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
     public interface ISwipeManager
     {
-        Task<SwipeResponse> RecordSwipeAsync(SwipeRequest request);
+        Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests);
+        Task<List<PlantResponse>> GetLikablePlantsAsync(int userId);
     }
 }

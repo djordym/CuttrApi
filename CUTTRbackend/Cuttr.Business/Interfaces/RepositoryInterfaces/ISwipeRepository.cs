@@ -11,5 +11,7 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
     {
         Task AddSwipeAsync(Swipe swipe);
         Task<Swipe> GetSwipeAsync(int swiperPlantId, int swipedPlantId, bool isLike);
+        Task<bool> HasSwipeAsync(int swiperPlantId, int swipedPlantId);
+
     }
 }

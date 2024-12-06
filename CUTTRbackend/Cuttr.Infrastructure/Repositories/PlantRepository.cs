@@ -129,5 +129,22 @@ namespace Cuttr.Infrastructure.Repositories
                 throw new RepositoryException("An error occurred while retrieving plants.", ex);
             }
         }
+
+        public async Task<IEnumerable<Plant>> GetAllPlantsAsync()
+        {
+            try
+            {
+                var efPlants = await _context.Plants
+                    .Include(p => p.User)
+                    .ToListAsync();
+
+                return efPlants.Select(EFToBusinessMapper.MapToPlant);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving all plants.");
+                throw new RepositoryException("An error occurred while retrieving all plants.", ex);
+            }
+        }
     }
 }
