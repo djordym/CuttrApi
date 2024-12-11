@@ -26,7 +26,6 @@ namespace Cuttr.Business.Mappers
                 return;
 
             user.Name = request.Name ?? user.Name;
-            user.ProfilePictureUrl = request.ProfilePictureUrl ?? user.ProfilePictureUrl;
             user.Bio = request.Bio ?? user.Bio;
             user.LocationLatitude = request.LocationLatitude ?? user.LocationLatitude;
             user.LocationLongitude = request.LocationLongitude ?? user.LocationLongitude;
@@ -58,7 +57,6 @@ namespace Cuttr.Business.Mappers
             plant.CareRequirements = request.CareRequirements ?? plant.CareRequirements;
             plant.Description = request.Description ?? plant.Description;
             plant.Category = request.Category ?? plant.Category;
-            plant.ImageUrl = request.ImageUrl ?? plant.ImageUrl;
         }
 
         public static Swipe MapToSwipe(SwipeRequest request)

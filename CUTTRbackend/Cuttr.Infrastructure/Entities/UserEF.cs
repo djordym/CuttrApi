@@ -39,6 +39,7 @@ namespace Cuttr.Infrastructure.Entities
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
+        public Microsoft.SqlServer.Types.SqlGeography Location { get; set; }
 
         // Navigation properties
         public virtual ICollection<PlantEF> Plants { get; set; }

@@ -9,6 +9,9 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 
+using NetTopologySuite;
+using NetTopologySuite.Geometries;
+
 namespace Cuttr.Infrastructure
 {
     public class CuttrDbContext : DbContext
@@ -76,6 +79,9 @@ namespace Cuttr.Infrastructure
                     .WithOne(m => m.SenderUser)
                     .HasForeignKey(m => m.SenderUserId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(u => u.Location)
+                .HasColumnType("geography").NetTopologySuite.Geometries.HasSrid(4326);
             });
 
             // ----------------------------
@@ -244,7 +250,15 @@ namespace Cuttr.Infrastructure
                 }
             }
         }
-
+        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        //{
+        //    if (!optionsBuilder.IsConfigured)
+        //    {
+        //        optionsBuilder.UseSqlServer(
+        //            "Your_Connection_String_Here",
+        //            sqlOptions => sqlOptions.UseNetTopologySuite());
+        //    }
+        //}
         // Overriding SaveChanges to update timestamps
         public override int SaveChanges()
         {

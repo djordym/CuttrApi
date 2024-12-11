@@ -4,6 +4,7 @@ using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Cuttr.Business.Interfaces.RepositoryInterfaces;
+using Cuttr.Business.Interfaces.Services;
 using Cuttr.Business.Mappers;
 using Cuttr.Business.Utilities;
 using Microsoft.Extensions.Logging;
@@ -23,12 +24,16 @@ namespace Cuttr.Business.Managers
         private readonly IUserRepository _userRepository;
         private readonly ILogger<UserManager> _logger;
         private readonly JwtTokenGenerator _jwtTokenGenerator;
+        private readonly IBlobStorageService _blobStorageService;
 
-        public UserManager(IUserRepository userRepository, ILogger<UserManager> logger, JwtTokenGenerator jwtTokenGenerator)
+        private const string ProfileImagesContainer = "profile-images";
+
+        public UserManager(IUserRepository userRepository, ILogger<UserManager> logger, JwtTokenGenerator jwtTokenGenerator, IBlobStorageService blobStorageService)
         {
             _userRepository = userRepository;
             _logger = logger;
             _jwtTokenGenerator = jwtTokenGenerator;
+            _blobStorageService = blobStorageService;
         }
 
         public async Task<UserResponse> RegisterUserAsync(UserRegistrationRequest request)
@@ -158,6 +163,47 @@ namespace Cuttr.Business.Managers
             {
                 _logger.LogError(ex, $"Error deleting user with ID {userId}.");
                 throw new BusinessException("Error deleting user.", ex);
+            }
+        }
+
+        public async Task<UserResponse> UpdateUserProfileImageAsync(int userId, UserProfileImageUpdateRequest request)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if (user == null)
+                {
+                    throw new NotFoundException($"User with ID {userId} not found.");
+                }
+
+                string imageUrl = null;
+
+                if (request.Image != null && request.Image.Length > 0)
+                {
+                    // Upload image to Azure Blob Storage in 'profile-images' container
+                    imageUrl = await _blobStorageService.UploadFileAsync(request.Image, ProfileImagesContainer);
+
+                    // Optionally, delete the old profile picture from Blob Storage if it exists
+                    if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+                    {
+                        await _blobStorageService.DeleteFileAsync(user.ProfilePictureUrl, ProfileImagesContainer);
+                    }
+
+                    user.ProfilePictureUrl = imageUrl;
+                }
+
+                await _userRepository.UpdateUserAsync(user);
+
+                return BusinessToContractMapper.MapToUserResponse(user);
+            }
+            catch (NotFoundException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating profile picture for user with ID {userId}.");
+                throw new BusinessException("Error updating profile picture.", ex);
             }
         }
     }

@@ -1,0 +1,134 @@
+CUTTRbackend
+├── Cuttr.Api
+│   ├── Controllers
+│   │   ├── MatchController.cs
+│   │   ├── MessageController.cs
+│   │   ├── PlantController.cs
+│   │   ├── ReportController.cs
+│   │   ├── SwipeController.cs
+│   │   ├── UserController.cs
+│   │   └── UserPreferencesController.cs
+│   ├── Cuttr.Api.csproj
+│   ├── Cuttr.Api.csproj.user
+│   ├── Cuttr.Api.http
+│   ├── Logs
+│   │   ├── log-20241206.txt
+│   │   └── log-20241206_001.txt
+│   ├── Middleware
+│   │   ├── ExceptionHandlingMiddleware.cs
+│   │   └── LoggingMiddleware.cs
+│   ├── Program.cs
+│   ├── Properties
+│   │   └── launchSettings.json
+│   ├── appsettings.Development.json
+│   └── appsettings.json
+├── Cuttr.Business
+│   ├── Contracts
+│   │   ├── Inputs
+│   │   │   ├── MessageRequest.cs
+│   │   │   ├── PlantCreateRequest.cs
+│   │   │   ├── PlantRequest.cs
+│   │   │   ├── PlantUpdateRequest.cs
+│   │   │   ├── ReportRequest.cs
+│   │   │   ├── SwipeRequest.cs
+│   │   │   ├── UserLoginRequest.cs
+│   │   │   ├── UserPreferencesRequest.cs
+│   │   │   ├── UserProfileImageUpdateRequest.cs
+│   │   │   ├── UserRegistrationRequest.cs
+│   │   │   └── UserUpdateRequest.cs
+│   │   └── Outputs
+│   │       ├── MatchResponse.cs
+│   │       ├── MessageResponse.cs
+│   │       ├── PlantResponse.cs
+│   │       ├── ReportResponse.cs
+│   │       ├── SwipeResponse.cs
+│   │       ├── UserLoginResponse.cs
+│   │       ├── UserPreferencesResponse.cs
+│   │       └── UserResponse.cs
+│   ├── Cuttr.Business.csproj
+│   ├── Entities
+│   │   ├── Match.cs
+│   │   ├── Message.cs
+│   │   ├── Plant.cs
+│   │   ├── Report.cs
+│   │   ├── Swipe.cs
+│   │   ├── User.cs
+│   │   └── UserPreferences.cs
+│   ├── Exceptions
+│   │   ├── AuthenticationException.cs
+│   │   ├── BusinessException.cs
+│   │   ├── NotFoundException.cs
+│   │   └── UnauthorizedAccessException.cs
+│   ├── Interfaces
+│   │   ├── ManagerInterfaces
+│   │   │   ├── IMatchManager.cs
+│   │   │   ├── IMessageManager.cs
+│   │   │   ├── IPlantManager.cs
+│   │   │   ├── IReportManager.cs
+│   │   │   ├── ISwipeManager.cs
+│   │   │   ├── IUserManager.cs
+│   │   │   └── IUserPreferencesManager.cs
+│   │   ├── RepositoryInterfaces
+│   │   │   ├── IMatchRepository.cs
+│   │   │   ├── IMessageRepository.cs
+│   │   │   ├── IPlantRepository.cs
+│   │   │   ├── IReportRepository.cs
+│   │   │   ├── ISwipeRepository.cs
+│   │   │   ├── IUserPreferencesRepository.cs
+│   │   │   └── IUserRepository.cs
+│   │   └── Services
+│   │       └── IBlobStorageService.cs
+│   ├── Managers
+│   │   ├── MatchManager.cs
+│   │   ├── MessageManager.cs
+│   │   ├── PlantManager.cs
+│   │   ├── ReportManager.cs
+│   │   ├── SwipeManager.cs
+│   │   ├── UserManager.cs
+│   │   └── UserPreferencesManager.cs
+│   ├── Mappers
+│   │   ├── BusinessToContractMapper.cs
+│   │   └── ContractToBusinessMapper.cs
+│   ├── Services
+│   │   └── BlobStorageService.cs
+│   └── Utilities
+│       ├── JwtTokenGenerator.cs
+│       └── PasswordHasher.cs
+├── Cuttr.Infrastructure
+│   ├── Common
+│   │   ├── ICreatedAt.cs
+│   │   └── IUpdatedAt.cs
+│   ├── Cuttr.Infrastructure.csproj
+│   ├── CuttrDbContext.cs
+│   ├── Entities
+│   │   ├── MatchEF.cs
+│   │   ├── MessageEF.cs
+│   │   ├── PlantEF.cs
+│   │   ├── ReportEF.cs
+│   │   ├── SwipeEF.cs
+│   │   ├── UserEF.cs
+│   │   └── UserPreferencesEF.cs
+│   ├── Exceptions
+│   │   └── RepositoryException.cs
+│   ├── Mappers
+│   │   ├── BusinessToEFMapper.cs
+│   │   └── EFToBusinessMapper.cs
+│   ├── Migrations
+│   │   ├── 20241205083810_InitialCreate.Designer.cs
+│   │   ├── 20241205083810_InitialCreate.cs
+│   │   └── CuttrDbContextModelSnapshot.cs
+│   ├── Repositories
+│   │   ├── MatchRepository.cs
+│   │   ├── MessageRepository.cs
+│   │   ├── PlantRepository.cs
+│   │   ├── ReportRepository.cs
+│   │   ├── SwipeRepository.cs
+│   │   ├── UserPreferencesRepository.cs
+│   │   └── UserRepository.cs
+│   └── Services
+├── Cuttr.sln
+├── Gather all cs files.py
+├── all_cs_files_combined_cleaned.cs
+├── allfiles.py
+├── project_tree.txt
+└── treestrucutre.py

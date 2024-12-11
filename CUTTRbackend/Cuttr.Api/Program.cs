@@ -32,7 +32,9 @@ builder.Services.AddControllers();
 // Register DbContext with DI
 builder.Services.AddDbContext<CuttrDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("CuttrDb"));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("CuttrDb"),
+        sqlOptions => sqlOptions.UseNetTopologySuite());
 });
 //Register BlobStorageService
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();

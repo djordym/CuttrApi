@@ -9,6 +9,7 @@ namespace Cuttr.Business.Interfaces.Services
 {
     public interface IBlobStorageService
     {
-        Task<string> UploadFileAsync(IFormFile file);
+        Task<string> UploadFileAsync(IFormFile file, string containerName);
+        Task DeleteFileAsync(string fileUrl, string containerName);
     }
 }

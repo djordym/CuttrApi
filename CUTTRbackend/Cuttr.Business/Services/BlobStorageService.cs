@@ -15,19 +15,16 @@ namespace Cuttr.Business.Services
 {
     public class BlobStorageService : IBlobStorageService
     {
-        private readonly BlobContainerClient _containerClient;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<BlobStorageService> _logger;
 
         public BlobStorageService(IConfiguration configuration, ILogger<BlobStorageService> logger)
         {
-            var connectionString = configuration.GetConnectionString("AzureBlobStorage");
-            var containerName = configuration["AzureBlobContainerName"];
-            _containerClient = new BlobContainerClient(connectionString, containerName);
-            _containerClient.CreateIfNotExists(PublicAccessType.Blob);
+            _configuration = configuration;
             _logger = logger;
         }
 
-        public async Task<string> UploadFileAsync(IFormFile file)
+        public async Task<string> UploadFileAsync(IFormFile file, string containerName)
         {
             if (file == null || file.Length == 0)
                 throw new ArgumentException("File is empty.");
@@ -44,7 +41,8 @@ namespace Cuttr.Business.Services
                 throw new ArgumentException("File size exceeds the limit.");
 
             var blobName = Guid.NewGuid().ToString() + extension;
-            BlobClient blobClient = _containerClient.GetBlobClient(blobName);
+            BlobContainerClient containerClient = GetContainerClient(containerName);
+            BlobClient blobClient = containerClient.GetBlobClient(blobName);
 
             try
             {
@@ -57,9 +55,40 @@ namespace Cuttr.Business.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error uploading file to Azure Blob Storage.");
+                _logger.LogError(ex, $"Error uploading file to Azure Blob Storage in container '{containerName}'.");
                 throw new BusinessException("Error uploading image.", ex);
             }
         }
+
+        public async Task DeleteFileAsync(string fileUrl, string containerName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(fileUrl))
+                    return;
+
+                Uri uri = new Uri(fileUrl);
+                string blobName = Path.GetFileName(uri.LocalPath);
+
+                BlobContainerClient containerClient = GetContainerClient(containerName);
+                BlobClient blobClient = containerClient.GetBlobClient(blobName);
+
+                await blobClient.DeleteIfExistsAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error deleting file from Azure Blob Storage. URL: {fileUrl}");
+                throw new BusinessException("Error deleting image.", ex);
+            }
+        }
+
+        private BlobContainerClient GetContainerClient(string containerName)
+        {
+            string connectionString = _configuration.GetConnectionString("AzureBlobStorage");
+            var containerClient = new BlobContainerClient(connectionString, containerName);
+            containerClient.CreateIfNotExists(PublicAccessType.Blob);
+            return containerClient;
+        }
     }
 }
+

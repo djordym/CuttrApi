@@ -16,5 +16,6 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
         Task<UserResponse> GetUserByIdAsync(int userId);
         Task<UserResponse> UpdateUserAsync(int userId, UserUpdateRequest request);
         Task DeleteUserAsync(int userId);
+        Task<UserResponse> UpdateUserProfileImageAsync(int userId, UserProfileImageUpdateRequest request);
     }
 }

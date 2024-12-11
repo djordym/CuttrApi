@@ -22,6 +22,8 @@ namespace Cuttr.Business.Managers
         private readonly ILogger<PlantManager> _logger;
         private readonly IBlobStorageService _blobStorageService;
 
+        private const string PlantImagesContainer = "plant-images";
+
         public PlantManager(IPlantRepository plantRepository, IUserRepository userRepository, ILogger<PlantManager> logger, IBlobStorageService blobStorageService)
         {
             _plantRepository = plantRepository;
@@ -45,8 +47,8 @@ namespace Cuttr.Business.Managers
 
                 if (request.Image != null && request.Image.Length > 0)
                 {
-                    // Upload image to Azure Blob Storage
-                    imageUrl = await _blobStorageService.UploadFileAsync(request.Image);
+                    // Upload image to Azure Blob Storage in 'plant-images' container
+                    imageUrl = await _blobStorageService.UploadFileAsync(request.Image, PlantImagesContainer);
                 }
 
                 var plant = ContractToBusinessMapper.MapToPlant(request.PlantDetails);

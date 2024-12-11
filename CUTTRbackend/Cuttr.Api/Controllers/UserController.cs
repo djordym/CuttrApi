@@ -120,5 +120,27 @@ namespace Cuttr.Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        // PUT: api/users/{userId}/profile-picture
+        [HttpPut("{userId}/profile-picture")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateProfilePicture(int userId, [FromForm] UserProfileImageUpdateRequest request)
+        {
+            try
+            {
+                var userResponse = await _userManager.UpdateUserProfileImageAsync(userId, request);
+                return Ok(userResponse);
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, $"User with ID {userId} not found.");
+                return NotFound(ex.Message);
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, $"Error updating profile picture for user with ID {userId}.");
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }
