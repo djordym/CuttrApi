@@ -80,8 +80,7 @@ namespace Cuttr.Infrastructure
                     .HasForeignKey(m => m.SenderUserId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.Property(u => u.Location)
-                .HasColumnType("geography").NetTopologySuite.Geometries.HasSrid(4326);
+
             });
 
             // ----------------------------

@@ -7,6 +7,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using Cuttr.Infrastructure.Common;
+using NetTopologySuite.Geometries;
 
 namespace Cuttr.Infrastructure.Entities
 {
@@ -39,7 +40,7 @@ namespace Cuttr.Infrastructure.Entities
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
-        public Microsoft.SqlServer.Types.SqlGeography Location { get; set; }
+        public Point Location { get; set; }
 
         // Navigation properties
         public virtual ICollection<PlantEF> Plants { get; set; }
