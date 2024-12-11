@@ -14,5 +14,6 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
         Task<User> GetUserByEmailAsync(string email);
         Task UpdateUserAsync(User user);
         Task DeleteUserAsync(int userId);
+        Task UpdateUserLocationAsync(int userId, double latitude, double longitude);
     }
 }

@@ -10,7 +10,7 @@ namespace Cuttr.Business.Entities
     {
         public int UserId { get; set; }
 
-        public double SearchRadius { get; set; }
+        public int SearchRadius { get; set; }
 
         public List<string> PreferredCategories { get; set; } // Could be a list in the business layer
 

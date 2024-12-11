@@ -33,10 +33,6 @@ namespace Cuttr.Infrastructure.Entities
         [MaxLength(500)]
         public string Bio { get; set; }
 
-        public double? LocationLatitude { get; set; }
-
-        public double? LocationLongitude { get; set; }
-
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }

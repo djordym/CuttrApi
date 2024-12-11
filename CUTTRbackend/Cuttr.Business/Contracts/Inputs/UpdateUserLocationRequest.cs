@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace Cuttr.Business.Contracts.Inputs
 {
-    internal class UpdateUserLocationRequest
+    public class UpdateLocationRequest
     {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
+
 }

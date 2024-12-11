@@ -10,6 +10,7 @@ using Cuttr.Business.Utilities;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Authentication;
@@ -204,6 +205,26 @@ namespace Cuttr.Business.Managers
             {
                 _logger.LogError(ex, $"Error updating profile picture for user with ID {userId}.");
                 throw new BusinessException("Error updating profile picture.", ex);
+            }
+        }
+
+        public async Task UpdateUserLocationAsync(int userId, double latitude, double longitude)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if (user == null)
+                    throw new NotFoundException($"User with ID {userId} not found.");
+
+                // We'll update the repository mapping logic to map `User.Location` to `UserEF.Location`
+                await _userRepository.UpdateUserLocationAsync(userId, latitude, longitude);
+            } catch (NotFoundException)
+            {
+                throw;
+            } catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating location for user with ID {userId}.");
+                throw new BusinessException("Error updating location.", ex);
             }
         }
     }

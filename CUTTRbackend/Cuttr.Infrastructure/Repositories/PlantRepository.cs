@@ -4,6 +4,7 @@ using Cuttr.Infrastructure.Exceptions;
 using Cuttr.Infrastructure.Mappers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NetTopologySuite.Geometries;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -145,6 +146,23 @@ namespace Cuttr.Infrastructure.Repositories
                 _logger.LogError(ex, "An error occurred while retrieving all plants.");
                 throw new RepositoryException("An error occurred while retrieving all plants.", ex);
             }
+        }
+
+        public async Task<IEnumerable<Plant>> GetPlantsWithinRadiusAsync(double originLat, double originLon, double radiusKm)
+        {
+            // Convert radius to meters
+            double radiusMeters = radiusKm * 1000;
+
+            // Create an origin point
+            var origin = new Point(originLon, originLat) { SRID = 4326 };
+
+            // Query plants whose user's location is within the radius
+            var efPlants = await _context.Plants
+                .Include(p => p.User)
+                .Where(p => p.User.Location != null && p.User.Location.Distance(origin) <= radiusMeters)
+                .ToListAsync();
+
+            return efPlants.Select(EFToBusinessMapper.MapToPlant);
         }
     }
 }

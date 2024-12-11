@@ -14,7 +14,7 @@ namespace Cuttr.Infrastructure.Entities
         [Key, ForeignKey("User")]
         public int UserId { get; set; }
 
-        public double SearchRadius { get; set; } // e.g., in kilometers
+        public int SearchRadius { get; set; } // e.g., in kilometers
 
         public string PreferredCategories { get; set; } // JSON serialized list
 

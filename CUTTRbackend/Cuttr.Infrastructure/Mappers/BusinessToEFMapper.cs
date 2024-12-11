@@ -24,8 +24,6 @@ namespace Cuttr.Infrastructure.Mappers
                 Name = user.Name,
                 ProfilePictureUrl = user.ProfilePictureUrl,
                 Bio = user.Bio,
-                LocationLatitude = user.LocationLatitude,
-                LocationLongitude = user.LocationLongitude,
                 Plants = user.Plants?.Select(MapToPlantEFWithoutUser).ToList(),
                 Preferences = MapToUserPreferencesEF(user.Preferences),
                 // CreatedAt and UpdatedAt are handled by EF Core
@@ -85,8 +83,7 @@ namespace Cuttr.Infrastructure.Mappers
                 Name = user.Name,
                 ProfilePictureUrl = user.ProfilePictureUrl,
                 Bio = user.Bio,
-                LocationLatitude = user.LocationLatitude,
-                LocationLongitude = user.LocationLongitude,
+                // Location is not mapped for now to keep it simple, and should also not be necessary for now, location is updated through different means
                 // Plants are not mapped to prevent circular reference
                 Preferences = MapToUserPreferencesEF(user.Preferences),
                 // CreatedAt and UpdatedAt are handled by EF Core

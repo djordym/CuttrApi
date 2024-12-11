@@ -8,7 +8,7 @@ namespace Cuttr.Business.Contracts.Inputs
 {
     public class UserPreferencesRequest
     {
-        public double SearchRadius { get; set; }
+        public int SearchRadius { get; set; }
         public List<string> PreferredCategories { get; set; }
     }
 }

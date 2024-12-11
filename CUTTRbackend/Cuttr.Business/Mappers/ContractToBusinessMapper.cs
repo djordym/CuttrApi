@@ -27,8 +27,6 @@ namespace Cuttr.Business.Mappers
 
             user.Name = request.Name ?? user.Name;
             user.Bio = request.Bio ?? user.Bio;
-            user.LocationLatitude = request.LocationLatitude ?? user.LocationLatitude;
-            user.LocationLongitude = request.LocationLongitude ?? user.LocationLongitude;
         }
 
         // Map PlantRequest to Plant

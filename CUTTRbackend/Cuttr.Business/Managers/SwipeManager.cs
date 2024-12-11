@@ -19,10 +19,10 @@ namespace Cuttr.Business.Managers
         private readonly ISwipeRepository _swipeRepository;
         private readonly IPlantRepository _plantRepository;
         private readonly ILogger<SwipeManager> _logger;
+        private readonly IUserRepository _userRepository;
 
         public SwipeManager(
             ISwipeRepository swipeRepository,
-            IMatchRepository matchRepository,
             IPlantRepository plantRepository,
             IUserRepository userRepository,
             ILogger<SwipeManager> logger)
@@ -30,6 +30,7 @@ namespace Cuttr.Business.Managers
             _swipeRepository = swipeRepository;
             _plantRepository = plantRepository;
             _logger = logger;
+            _userRepository = userRepository;
         }
 
         public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests)
@@ -102,22 +103,45 @@ namespace Cuttr.Business.Managers
         {
             try
             {
-                // Retrieve user's plants
-                var userPlants = await _plantRepository.GetPlantsByUserIdAsync(userId);
-                if (userPlants == null || !userPlants.Any())
-                    throw new BusinessException("User has no plants in the gallery.");
+                // Retrieve the user to get their location
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if (user == null)
+                    throw new BusinessException("User not found.");
 
-                // Retrieve all plants except user's own
-                var allPlants = await _plantRepository.GetAllPlantsAsync();
-                var otherPlants = allPlants.Where(p => p.UserId != userId).ToList();
+                // Ensure user location is set, if not, fallback or throw
+                if (user.Preferences == null)
+                    throw new BusinessException("User preferences not found.");
+                int radius;
+                if (user.Preferences.SearchRadius == null)
+                {
+                    radius = 9999;
+                } else
+                {
+                    radius = user.Preferences.SearchRadius;
+                }
+
+                // Default location if not set, or throw if you require a set location
+                if (user.LocationLatitude == null || user.LocationLongitude == null)
+                    throw new BusinessException("User location not set.");
+
+                double userLat = user.LocationLatitude.Value;
+                double userLon = user.LocationLongitude.Value;
+
+                // Get only plants within the user's search radius
+                var candidatePlants = await _plantRepository.GetPlantsWithinRadiusAsync(userLat, userLon, radius);
+
+                // Exclude user’s own plants
+                candidatePlants = candidatePlants.Where(p => p.UserId != userId);
+
+                // Retrieve user's own plants
+                var userPlants = await _plantRepository.GetPlantsByUserIdAsync(userId);
 
                 var likablePlants = new List<PlantResponse>();
 
-                foreach (var plant in otherPlants)
+                foreach (var plant in candidatePlants)
                 {
-                    // Check if user has at least one plant that hasn't interacted with this plant, async method, if any of the results is true return true
                     bool hasUninteractedPlant = (await Task.WhenAll(userPlants.Select(async up =>
-                    !await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId)
+                        !await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId)
                     ))).Any(result => result);
 
                     if (hasUninteractedPlant)

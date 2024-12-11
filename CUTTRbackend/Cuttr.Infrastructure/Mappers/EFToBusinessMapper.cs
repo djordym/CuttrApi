@@ -24,8 +24,8 @@ namespace Cuttr.Infrastructure.Mappers
                 Name = efUser.Name,
                 ProfilePictureUrl = efUser.ProfilePictureUrl,
                 Bio = efUser.Bio,
-                LocationLatitude = efUser.LocationLatitude,
-                LocationLongitude = efUser.LocationLongitude,
+                LocationLatitude = efUser.Location?.Y,
+                LocationLongitude = efUser.Location?.X,
                 Plants = efUser.Plants?.Select(MapToPlantWithoutUser).ToList(),
                 Preferences = MapToUserPreferences(efUser.Preferences),
                 // Exclude CreatedAt and UpdatedAt
@@ -85,8 +85,7 @@ namespace Cuttr.Infrastructure.Mappers
                 Name = efUser.Name,
                 ProfilePictureUrl = efUser.ProfilePictureUrl,
                 Bio = efUser.Bio,
-                LocationLatitude = efUser.LocationLatitude,
-                LocationLongitude = efUser.LocationLongitude,
+                // Location is updated seperately and shouldn't be necessary to be mapped
                 // Plants are not mapped to prevent circular reference
                 Preferences = MapToUserPreferences(efUser.Preferences),
                 // Exclude CreatedAt and UpdatedAt

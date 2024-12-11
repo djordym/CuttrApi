@@ -19,7 +19,7 @@ namespace Cuttr.Business.Entities
         public string ProfilePictureUrl { get; set; }
 
         public string Bio { get; set; }
-
+        
         public double? LocationLatitude { get; set; }
 
         public double? LocationLongitude { get; set; }

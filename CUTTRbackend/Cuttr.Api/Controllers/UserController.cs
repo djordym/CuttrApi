@@ -142,5 +142,26 @@ namespace Cuttr.Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpPut("{userId}/location")]
+        public async Task<IActionResult> UpdateLocation(int userId, [FromBody] UpdateLocationRequest request)
+        {
+            try
+            {
+                await _userManager.UpdateUserLocationAsync(userId, request.Latitude, request.Longitude);
+                return NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, $"User with ID {userId} not found.");
+                return NotFound(ex.Message);
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, $"Error updating location for user with ID {userId}.");
+                return BadRequest(ex.Message);
+            }
+        }
+
     }
 }

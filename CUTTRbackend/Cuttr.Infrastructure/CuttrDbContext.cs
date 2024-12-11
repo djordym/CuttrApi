@@ -80,7 +80,8 @@ namespace Cuttr.Infrastructure
                     .HasForeignKey(m => m.SenderUserId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-
+                entity.Property(u => u.Location)
+                    .HasColumnType("geography");
             });
 
             // ----------------------------
@@ -226,8 +227,6 @@ namespace Cuttr.Infrastructure
             // ----------------------------
 
             // Geospatial Indexing on Users for Location-based queries
-            modelBuilder.Entity<UserEF>()
-                .HasIndex(u => new { u.LocationLatitude, u.LocationLongitude });
 
             // Automatically set default values for CreatedAt and UpdatedAt
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())

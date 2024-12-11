@@ -4,6 +4,7 @@ using Cuttr.Infrastructure.Exceptions;
 using Cuttr.Infrastructure.Mappers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NetTopologySuite.Geometries;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -137,5 +138,17 @@ namespace Cuttr.Infrastructure.Repositories
                 throw new RepositoryException("An error occurred while deleting user.", ex);
             }
         }
+        public async Task UpdateUserLocationAsync(int userId, double latitude, double longitude)
+        {
+            var point = new NetTopologySuite.Geometries.Point(longitude, latitude) { SRID = 4326 };
+
+            var efUser = await _context.Users.FindAsync(userId);
+            if (efUser == null)
+                throw new RepositoryException($"User with ID {userId} not found.");
+
+            efUser.Location = point;
+            await _context.SaveChangesAsync();
+        }
+
     }
 }
