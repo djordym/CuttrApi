@@ -126,10 +126,12 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task DeletePlantAsync(int plantId)
+        public async Task DeletePlantAsync(int plantId, int userId)
         {
             try
             {
+                //check if plant belongs to user
+
                 var plant = await _plantRepository.GetPlantByIdAsync(plantId);
                 if (plant == null)
                 {

@@ -1,4 +1,5 @@
-﻿using Cuttr.Business.Contracts.Inputs;
+﻿using Cuttr.Api.Common;
+using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
@@ -20,13 +21,14 @@ namespace Cuttr.Api.Controllers
             _logger = logger;
         }
 
-        // POST: api/messages
-        [HttpPost]
+        // POST: api/messages/me
+        [HttpPost("/me")]
         public async Task<IActionResult> SendMessage([FromBody] MessageRequest request)
         {
+            int senderUserId = 0;
             try
             {
-                int senderUserId = GetAuthenticatedUserId();
+                senderUserId = User.GetUserId();
 
                 var messageResponse = await _messageManager.SendMessageAsync(request, senderUserId);
                 return Ok(messageResponse);
@@ -41,15 +43,26 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, "Error sending message.");
                 return BadRequest(ex.Message);
             }
+            catch (Business.Exceptions.UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while sending message.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
         }
 
         // GET: api/matches/{matchId}/messages
         [HttpGet("/api/matches/{matchId}/messages")]
         public async Task<IActionResult> GetMessages(int matchId)
         {
+            int userId = 0;
             try
             {
-                int userId = GetAuthenticatedUserId();
+                userId = User.GetUserId();
 
                 var messages = await _messageManager.GetMessagesByMatchIdAsync(matchId, userId);
                 return Ok(messages);
@@ -69,12 +82,11 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, $"Error retrieving messages for match with ID {matchId}.");
                 return BadRequest(ex.Message);
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while accessing messages.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
         }
-
-        private int GetAuthenticatedUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        }
-
     }
 }

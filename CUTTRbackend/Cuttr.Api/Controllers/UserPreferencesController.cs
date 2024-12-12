@@ -1,4 +1,5 @@
-﻿using Cuttr.Business.Contracts.Inputs;
+﻿using Cuttr.Api.Common;
+using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
@@ -28,14 +29,14 @@ namespace Cuttr.Api.Controllers
         {
             try
             {
-                int userId = GetAuthenticatedUserId();
+                int userId = User.GetUserId();
 
                 var preferences = await _userPreferencesManager.GetUserPreferencesAsync(userId);
                 return Ok(preferences);
             }
             catch (NotFoundException ex)
             {
-                _logger.LogWarning(ex, $"User preferences for user ID {GetAuthenticatedUserId()} not found.");
+                _logger.LogWarning(ex, $"User preferences for user ID {User.GetUserId} not found.");
                 return NotFound(ex.Message);
             }
             catch (BusinessException ex)
@@ -51,7 +52,7 @@ namespace Cuttr.Api.Controllers
         {
             try
             {
-                int userId = GetAuthenticatedUserId();
+                int userId = User.GetUserId();
 
                 var preferences = await _userPreferencesManager.CreateOrUpdateUserPreferencesAsync(userId, request);
                 return Ok(preferences);
@@ -61,12 +62,6 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, "Error creating or updating user preferences.");
                 return BadRequest(ex.Message);
             }
-        }
-
-        private int GetAuthenticatedUserId()
-        {
-            // Extract user ID from JWT token claims
-            return int.Parse(User.FindFirst("sub")?.Value);
         }
     }
 }

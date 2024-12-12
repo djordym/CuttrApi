@@ -70,18 +70,8 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var efPreferences = await _context.UserPreferences
-                    .FirstOrDefaultAsync(up => up.UserId == preferences.UserId);
-
-                if (efPreferences == null)
-                {
-                    throw new RepositoryException($"User preferences for user ID {preferences.UserId} not found.");
-                }
-
-                // Update properties
-                efPreferences.SearchRadius = preferences.SearchRadius;
-                efPreferences.PreferredCategories = BusinessToEFMapper.SerializeCategories(preferences.PreferredCategories);
-
+                var efPreferences = BusinessToEFMapper.MapToUserPreferencesEF(preferences);
+                _context.UserPreferences.Update(efPreferences);
                 await _context.SaveChangesAsync();
             }
             catch (Exception ex)

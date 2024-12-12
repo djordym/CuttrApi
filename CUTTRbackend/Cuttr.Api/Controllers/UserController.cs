@@ -1,4 +1,5 @@
-﻿using Cuttr.Business.Contracts.Inputs;
+﻿using Cuttr.Api.Common;
+using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -83,12 +84,14 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        // PUT: api/users/{userId}
-        [HttpPut("{userId}")]
-        public async Task<IActionResult> UpdateUser(int userId, [FromBody] UserUpdateRequest request)
+        // PUT: api/me/users
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateUser([FromBody] UserUpdateRequest request)
         {
+            int userId = 0;
             try
             {
+                userId = User.GetUserId();
                 var userResponse = await _userManager.UpdateUserAsync(userId, request);
                 return Ok(userResponse);
             }
@@ -102,14 +105,26 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, $"Error updating user with ID {userId}.");
                 return BadRequest(ex.Message);
             }
+            catch (Business.Exceptions.UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while updating the user.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
         }
 
-        // DELETE: api/users/{userId}
-        [HttpDelete("{userId}")]
-        public async Task<IActionResult> DeleteUser(int userId)
+        // DELETE: api/users/me
+        [HttpDelete("me")]
+        public async Task<IActionResult> DeleteUser()
         {
+            int userId = 0;
             try
             {
+                userId = User.GetUserId();
                 await _userManager.DeleteUserAsync(userId);
                 return NoContent();
             }
@@ -123,15 +138,28 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, $"Error deleting user with ID {userId}.");
                 return BadRequest(ex.Message);
             }
+            catch (Business.Exceptions.UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An unexpected error occurred while deleting the user with ID {userId}.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
+
         }
 
-        // PUT: api/users/{userId}/profile-picture
-        [HttpPut("{userId}/profile-picture")]
+        // PUT: api/users/me/profile-picture
+        [HttpPut("me/profile-picture")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UpdateProfilePicture(int userId, [FromForm] UserProfileImageUpdateRequest request)
+        public async Task<IActionResult> UpdateProfilePicture([FromForm] UserProfileImageUpdateRequest request)
         {
+            int userId = 0;
             try
             {
+                userId = User.GetUserId();
                 var userResponse = await _userManager.UpdateUserProfileImageAsync(userId, request);
                 return Ok(userResponse);
             }
@@ -145,13 +173,25 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, $"Error updating profile picture for user with ID {userId}.");
                 return BadRequest(ex.Message);
             }
+            catch (Business.Exceptions.UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while updating the profile picture.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
         }
 
-        [HttpPut("{userId}/location")]
-        public async Task<IActionResult> UpdateLocation(int userId, [FromBody] UpdateLocationRequest request)
+        [HttpPut("me/location")]
+        public async Task<IActionResult> UpdateLocation([FromBody] UpdateLocationRequest request)
         {
+            int userId = 0;
             try
             {
+                userId = User.GetUserId();
                 await _userManager.UpdateUserLocationAsync(userId, request.Latitude, request.Longitude);
                 return NoContent();
             }
@@ -165,11 +205,16 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, $"Error updating location for user with ID {userId}.");
                 return BadRequest(ex.Message);
             }
-        }
-
-        private int GetAuthenticatedUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            catch (Business.Exceptions.UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while updating the location.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
         }
 
     }

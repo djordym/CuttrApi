@@ -1,8 +1,10 @@
-﻿using Cuttr.Business.Contracts.Inputs;
+﻿using Cuttr.Api.Common;
+using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using UnauthorizedAccessException = Cuttr.Business.Exceptions.UnauthorizedAccessException;
 
 namespace Cuttr.Api.Controllers
 {
@@ -20,13 +22,15 @@ namespace Cuttr.Api.Controllers
         }
 
         // POST: api/plants
-        [HttpPost]
+        [HttpPost("me")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> AddPlant([FromForm] PlantCreateRequest request)
         {
+            int userId = 0;
             try
             {
-                var plantResponse = await _plantManager.AddPlantAsync(request);
+                userId = User.GetUserId();
+                var plantResponse = await _plantManager.AddPlantAsync(request, userId);
                 return CreatedAtAction(nameof(GetPlantById), new { plantId = plantResponse.PlantId }, plantResponse);
             }
             catch (NotFoundException ex)
@@ -38,6 +42,16 @@ namespace Cuttr.Api.Controllers
             {
                 _logger.LogError(ex, "Error adding plant.");
                 return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while adding the plant.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
             }
         }
 
@@ -63,12 +77,13 @@ namespace Cuttr.Api.Controllers
         }
 
         // PUT: api/plants/{plantId}
-        [HttpPut("{plantId}")]
+        [HttpPut("me/{plantId}")]
         public async Task<IActionResult> UpdatePlant(int plantId, [FromBody] PlantRequest request)
         {
+            int userId = 0;
             try
             {
-                int userId = GetAuthenticatedUserId();
+                userId = User.GetUserId();
                 var plantResponse = await _plantManager.UpdatePlantAsync(plantId, userId, request);
                 return Ok(plantResponse);
             }
@@ -82,15 +97,27 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, $"Error updating plant with ID {plantId}.");
                 return BadRequest(ex.Message);
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while updating the plant.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
         }
 
         // DELETE: api/plants/{plantId}
-        [HttpDelete("{plantId}")]
+        [HttpDelete("me/{plantId}")]
         public async Task<IActionResult> DeletePlant(int plantId)
         {
+            int userId = 0;
             try
             {
-                await _plantManager.DeletePlantAsync(plantId);
+                userId = User.GetUserId();
+                await _plantManager.DeletePlantAsync(plantId, userId);
                 return NoContent();
             }
             catch (NotFoundException ex)
@@ -102,6 +129,16 @@ namespace Cuttr.Api.Controllers
             {
                 _logger.LogError(ex, $"Error deleting plant with ID {plantId}.");
                 return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while deleting the plant.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
             }
         }
 
@@ -121,10 +158,31 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        private int GetAuthenticatedUserId()
+        [HttpGet("/api/users/me/plants")]
+        public async Task<IActionResult> GetPlantsOfUser()
         {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            int userId = 0;
+            try
+            {
+                userId = User.GetUserId();
+                var plantResponses = await _plantManager.GetPlantsByUserIdAsync(userId);
+                return Ok(plantResponses);
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, $"Error retrieving plants for user with ID {userId}.");
+                return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving the plants.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
         }
-
     }
 }

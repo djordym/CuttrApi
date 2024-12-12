@@ -1,4 +1,5 @@
-﻿using Cuttr.Business.Contracts.Inputs;
+﻿using Cuttr.Api.Common;
+using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -21,12 +22,14 @@ namespace Cuttr.Api.Controllers
         }
 
         // Existing POST: api/swipes
-        [HttpPost]
+        [HttpPost("me")]
         public async Task<IActionResult> RecordSwipe([FromBody] List<SwipeRequest> requests)
         {
+            int userId = 0;
             try
             {
-                var swipeResponses = await _swipeManager.RecordSwipesAsync(requests);
+                userId = User.GetUserId();
+                var swipeResponses = await _swipeManager.RecordSwipesAsync(requests, userId);
                 return Ok(swipeResponses);
             }
             catch (NotFoundException ex)
@@ -42,12 +45,13 @@ namespace Cuttr.Api.Controllers
         }
 
         // New GET: api/swipes/likable-plants
-        [HttpGet("likable-plants")]
+        [HttpGet("me/likable-plants")]
         public async Task<IActionResult> GetLikablePlants()
         {
+            int userId = 0;
             try
             {
-                int userId = GetAuthenticatedUserId();
+                userId = User.GetUserId();  
                 var likablePlants = await _swipeManager.GetLikablePlantsAsync(userId);
                 return Ok(likablePlants);
             }
@@ -57,11 +61,5 @@ namespace Cuttr.Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
-
-        private int GetAuthenticatedUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        }
-
     }
 }

@@ -33,7 +33,7 @@ namespace Cuttr.Business.Managers
             _userRepository = userRepository;
         }
 
-        public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests)
+        public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests, int userId)
         {
             var responses = new List<SwipeResponse>();
 
@@ -49,6 +49,12 @@ namespace Cuttr.Business.Managers
                     var swipedPlant = await _plantRepository.GetPlantByIdAsync(request.SwipedPlantId);
                     if (swipedPlant == null)
                         throw new NotFoundException($"Swiped plant with ID {request.SwipedPlantId} not found.");
+
+                    // Validate that the user exists
+                    var user = await _userRepository.GetUserByIdAsync(userId);
+                    // Validate that the swiper plant belongs to the user
+                    if (swiperPlant.UserId != userId)
+                        throw new Exceptions.UnauthorizedAccessException("Swiper plant does not belong to the user.");
 
                     // Map request to Swipe entity
                     var swipe = ContractToBusinessMapper.MapToSwipe(request);

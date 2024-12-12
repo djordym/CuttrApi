@@ -2,4 +2,11 @@ Database connection string: do not bypass encryption/SSL for production
 
 Rate limiting on api
 
-Adress Liability Pet friendlyness
+Adress Liability Pet friendliness
+
+constraints for enums database side (in Onmodelcreating)
+
+More ready for production considerations:
+https://chatgpt.com/share/675abd72-fe10-8001-85b5-294daf82184c
+
+Validate your incoming requests (request contracts should have things like [required],[maxlength], …)

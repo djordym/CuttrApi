@@ -1,4 +1,5 @@
-﻿using Cuttr.Business.Entities;
+﻿using Cuttr.Api.Common;
+using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -19,15 +20,14 @@ namespace Cuttr.Api.Controllers
             _logger = logger;
         }
 
-        // GET: api/matches
-        [HttpGet]
+        // GET: api/matches/me
+        [HttpGet("me")]
         public async Task<IActionResult> GetMatches()
         {
+            int userId = 0;
             try
             {
-                // Assuming we have a way to get the authenticated user's ID
-                int userId = GetAuthenticatedUserId();
-
+                userId = User.GetUserId();
                 var matches = await _matchManager.GetMatchesByUserIdAsync(userId);
                 return Ok(matches);
             }
@@ -35,6 +35,16 @@ namespace Cuttr.Api.Controllers
             {
                 _logger.LogError(ex, $"Error retrieving matches for user.");
                 return BadRequest(ex.Message);
+            }
+            catch (Business.Exceptions.UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving matches.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
             }
         }
 
@@ -59,11 +69,7 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        // Helper method to get authenticated user ID
-        private int GetAuthenticatedUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        }
+        
 
     }
 }
