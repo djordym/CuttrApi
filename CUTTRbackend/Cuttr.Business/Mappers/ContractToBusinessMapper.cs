@@ -39,9 +39,8 @@ namespace Cuttr.Business.Mappers
             {
                 UserId = request.UserId,
                 SpeciesName = request.SpeciesName,
-                CareRequirements = request.CareRequirements,
                 Description = request.Description,
-                Category = request.Category,
+                
             };
         }
 

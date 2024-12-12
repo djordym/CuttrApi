@@ -1,4 +1,5 @@
 ﻿using Cuttr.Business.Entities;
+using Cuttr.Business.Enums;
 using Cuttr.Infrastructure.Entities;
 using System;
 using System.Collections.Generic;
@@ -41,9 +42,16 @@ namespace Cuttr.Infrastructure.Mappers
                 PlantId = plant.PlantId,
                 UserId = plant.UserId,
                 SpeciesName = plant.SpeciesName,
-                CareRequirements = plant.CareRequirements,
                 Description = plant.Description,
-                Category = plant.Category,
+                PlantStage = plant.PlantStage.ToString(),
+                PlantCategory = plant.PlantCategory.ToString(),
+                WateringNeed = plant.WateringNeed.ToString(),
+                LightRequirement = plant.LightRequirement.ToString(),
+                Size = plant.Size.ToString(),
+                IndoorOutdoor = plant.IndoorOutdoor.ToString(),
+                PropagationEase = plant.PropagationEase.ToString(),
+                PetFriendly = plant.PetFriendly.ToString(),
+                Extras = plant.Extras != null ? SerializeExtras(plant.Extras) : null,
                 ImageUrl = plant.ImageUrl,
                 User = MapToUserEFWithoutPlants(plant.User),
                 // CreatedAt and UpdatedAt are handled by EF Core
@@ -61,9 +69,16 @@ namespace Cuttr.Infrastructure.Mappers
                 PlantId = plant.PlantId,
                 UserId = plant.UserId,
                 SpeciesName = plant.SpeciesName,
-                CareRequirements = plant.CareRequirements,
                 Description = plant.Description,
-                Category = plant.Category,
+                PlantStage = plant.PlantStage.ToString(),
+                PlantCategory = plant.PlantCategory.ToString(),
+                WateringNeed = plant.WateringNeed.ToString(),
+                LightRequirement = plant.LightRequirement.ToString(),
+                Size = plant.Size.ToString(),
+                IndoorOutdoor = plant.IndoorOutdoor.ToString(),
+                PropagationEase = plant.PropagationEase.ToString(),
+                PetFriendly = plant.PetFriendly.ToString(),
+                Extras = plant.Extras != null ? SerializeExtras(plant.Extras) : null,
                 ImageUrl = plant.ImageUrl,
                 // User is not mapped to prevent circular reference
             };
@@ -192,6 +207,16 @@ namespace Cuttr.Infrastructure.Mappers
 
             // Assuming JSON serialization
             return System.Text.Json.JsonSerializer.Serialize(categories);
+        }
+
+        // Helper method to serialize List of Enums
+        public static string SerializeExtras(List<Extras> extras)
+        {
+            if (extras == null || !extras.Any())
+                return null;
+
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(extras);
         }
     }
 }

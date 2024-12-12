@@ -1,0 +1,5 @@
+Database connection string: do not bypass encryption/SSL for production
+
+Rate limiting on api
+
+Adress Liability Pet friendlyness

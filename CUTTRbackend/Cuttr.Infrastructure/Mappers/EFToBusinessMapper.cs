@@ -1,4 +1,5 @@
 ﻿using Cuttr.Business.Entities;
+using Cuttr.Business.Enums;
 using Cuttr.Infrastructure.Entities;
 using System;
 using System.Collections.Generic;
@@ -43,9 +44,16 @@ namespace Cuttr.Infrastructure.Mappers
                 PlantId = efPlant.PlantId,
                 UserId = efPlant.UserId,
                 SpeciesName = efPlant.SpeciesName,
-                CareRequirements = efPlant.CareRequirements,
                 Description = efPlant.Description,
-                Category = efPlant.Category,
+                PlantStage = Enum.Parse<PlantStage>(efPlant.PlantStage),
+                PlantCategory = Enum.Parse<PlantCategory>(efPlant.PlantCategory),
+                WateringNeed = Enum.Parse<WateringNeed>(efPlant.WateringNeed),
+                LightRequirement = Enum.Parse<LightRequirement>(efPlant.LightRequirement),
+                Size = Enum.Parse<Size>(efPlant.Size),
+                IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
+                PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
+                PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
+                Extras = efPlant.Extras != null ? DeserializeExtras(efPlant.Extras) : null,
                 ImageUrl = efPlant.ImageUrl,
                 User = MapToUserWithoutPlants(efPlant.User),
                 // Exclude CreatedAt and UpdatedAt
@@ -63,9 +71,16 @@ namespace Cuttr.Infrastructure.Mappers
                 PlantId = efPlant.PlantId,
                 UserId = efPlant.UserId,
                 SpeciesName = efPlant.SpeciesName,
-                CareRequirements = efPlant.CareRequirements,
                 Description = efPlant.Description,
-                Category = efPlant.Category,
+                PlantStage = Enum.Parse<PlantStage>(efPlant.PlantStage),
+                PlantCategory = Enum.Parse<PlantCategory>(efPlant.PlantCategory),
+                WateringNeed = Enum.Parse<WateringNeed>(efPlant.WateringNeed),
+                LightRequirement = Enum.Parse<LightRequirement>(efPlant.LightRequirement),
+                Size = Enum.Parse<Size>(efPlant.Size),
+                IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
+                PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
+                PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
+                Extras = efPlant.Extras != null ? DeserializeExtras(efPlant.Extras) : null,
                 ImageUrl = efPlant.ImageUrl,
                 // User is not mapped to prevent circular reference
             };
@@ -194,6 +209,15 @@ namespace Cuttr.Infrastructure.Mappers
 
             // Assuming JSON serialization
             return System.Text.Json.JsonSerializer.Deserialize<List<string>>(serializedCategories);
+        }
+
+        private static List<Extras> DeserializeExtras(string serializedExtras)
+        {
+            if (string.IsNullOrEmpty(serializedExtras))
+                return new List<Extras>();
+
+            // JSON deserialization
+            return System.Text.Json.JsonSerializer.Deserialize<List<Extras>>(serializedExtras);
         }
     }
 }

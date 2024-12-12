@@ -22,12 +22,38 @@ namespace Cuttr.Infrastructure.Entities
         [MaxLength(200)]
         public string SpeciesName { get; set; }
 
-        public string CareRequirements { get; set; }
-
         public string Description { get; set; }
 
-        [MaxLength(100)]
-        public string Category { get; set; }
+        // Enum properties stored as strings
+        [Required]
+        [MaxLength(50)]
+        public string PlantStage { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string PlantCategory { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string WateringNeed { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string LightRequirement { get; set; }
+
+        [MaxLength(50)]
+        public string Size { get; set; }
+
+        [MaxLength(50)]
+        public string IndoorOutdoor { get; set; }
+
+        [MaxLength(50)]
+        public string PropagationEase { get; set; }
+
+        [MaxLength(50)]
+        public string PetFriendly { get; set; }
+
+        public string Extras { get; set; } // Assuming serialized JSON string
 
         public string ImageUrl { get; set; }
 
