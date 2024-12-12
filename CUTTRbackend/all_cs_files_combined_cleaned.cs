@@ -13,10 +13,16 @@ Log.Logger = new LoggerConfiguration()
 .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
 .CreateLogger();
 builder.Host.UseSerilog();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+.AddJsonOptions(options =>
+{
+options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 builder.Services.AddDbContext<CuttrDbContext>(options =>
 {
-options.UseSqlServer(builder.Configuration.GetConnectionString("CuttrDb"));
+options.UseSqlServer(
+builder.Configuration.GetConnectionString("CuttrDb"),
+sqlOptions => sqlOptions.UseNetTopologySuite());
 });
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 builder.Services.AddScoped<IUserManager, UserManager>();
@@ -499,6 +505,25 @@ _logger.LogError(ex, $"Error updating profile picture for user with ID {userId}.
 return BadRequest(ex.Message);
 }
 }
+[HttpPut("{userId}/location")]
+public async Task<IActionResult> UpdateLocation(int userId, [FromBody] UpdateLocationRequest request)
+{
+try
+{
+await _userManager.UpdateUserLocationAsync(userId, request.Latitude, request.Longitude);
+return NoContent();
+}
+catch (NotFoundException ex)
+{
+_logger.LogWarning(ex, $"User with ID {userId} not found.");
+return NotFound(ex.Message);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, $"Error updating location for user with ID {userId}.");
+return BadRequest(ex.Message);
+}
+}
 }
 }
 //UserPreferencesController
@@ -690,17 +715,6 @@ public string Description { get; set; }
 public string Category { get; set; }
 }
 }
-//PlantUpdateRequest
-namespace Cuttr.Business.Contracts.Inputs
-{
-public class PlantUpdateRequest
-{
-public string SpeciesName { get; set; }
-public string CareRequirements { get; set; }
-public string Description { get; set; }
-public string Category { get; set; }
-}
-}
 //ReportRequest
 namespace Cuttr.Business.Contracts.Inputs
 {
@@ -721,6 +735,15 @@ public int SwipedPlantId { get; set; }
 public bool IsLike { get; set; }
 }
 }
+//UpdateUserLocationRequest
+namespace Cuttr.Business.Contracts.Inputs
+{
+public class UpdateLocationRequest
+{
+public double Latitude { get; set; }
+public double Longitude { get; set; }
+}
+}
 //UserLoginRequest
 namespace Cuttr.Business.Contracts.Inputs
 {
@@ -735,7 +758,7 @@ namespace Cuttr.Business.Contracts.Inputs
 {
 public class UserPreferencesRequest
 {
-public double SearchRadius { get; set; }
+public int SearchRadius { get; set; }
 public List<string> PreferredCategories { get; set; }
 }
 }
@@ -763,10 +786,7 @@ namespace Cuttr.Business.Contracts.Inputs
 public class UserUpdateRequest
 {
 public string Name { get; set; }
-public string ProfilePictureUrl { get; set; }
 public string Bio { get; set; }
-public double? LocationLatitude { get; set; }
-public double? LocationLongitude { get; set; }
 }
 }
 //MatchResponse
@@ -905,10 +925,17 @@ public class Plant
 public int PlantId { get; set; }
 public int UserId { get; set; }
 public string SpeciesName { get; set; }
-public string CareRequirements { get; set; }
-public string Description { get; set; }
-public string Category { get; set; }
-public string ImageUrl { get; set; }
+public string? Description { get; set; }
+public PlantStage PlantStage { get; set; }
+public PlantCategory PlantCategory { get; set; }
+public WateringNeed WateringNeed { get; set; }
+public LightRequirement LightRequirement { get; set; }
+public Size? Size { get; set; }
+public IndoorOutdoor? IndoorOutdoor { get; set; }
+public PropagationEase? PropagationEase { get; set; }
+public PetFriendly? PetFriendly { get; set; }
+public List<Extras>? Extras { get; set; }
+public string? ImageUrl { get; set; }
 public User User { get; set; }
 }
 }
@@ -964,9 +991,90 @@ namespace Cuttr.Business.Entities
 public class UserPreferences
 {
 public int UserId { get; set; }
-public double SearchRadius { get; set; }
+public int SearchRadius { get; set; }
 public List<string> PreferredCategories { get; set; }
 public User User { get; set; }
+}
+}
+//PlantProperties
+namespace Cuttr.Business.Enums
+{
+public enum PlantStage
+{
+Cutting,
+GrownPlantTree
+}
+public enum PlantCategory
+{
+Succulent,
+Cactus,
+Fern,
+Orchid,
+Herb,
+Palm,
+LeafyHouseplant,
+FloweringHouseplant,
+Other
+}
+public enum WateringNeed
+{
+VeryLowWater,
+LowWater,
+ModerateWater,
+HighWater,
+VeryHighWater
+}
+public enum LightRequirement
+{
+FullSun,
+PartialShade,
+Shade
+}
+public enum Size
+{
+Small,
+Medium,
+Large
+}
+public enum IndoorOutdoor
+{
+Indoor,
+Outdoor,
+Both
+}
+public enum PropagationEase
+{
+Easy,
+Moderate,
+Difficult
+}
+public enum PetFriendly
+{
+Yes,
+No
+}
+public enum Extras
+{
+Fragrant,
+Edible,
+Medicinal,
+AirPurifying,
+Decorative,
+Flowering,
+TropicalVibe,
+FoliageHeavy,
+DroughtTolerant,
+HumidityLoving,
+LowMaintenance,
+WinterHardy,
+BeginnerFriendly,
+Fruiting,
+PollinatorFriendly,
+FastGrowing,
+VariegatedFoliage,
+Climbing,
+GroundCover,
+Rare
 }
 }
 //AuthenticationException
@@ -1042,7 +1150,7 @@ public interface IPlantManager
 {
 Task<PlantResponse> AddPlantAsync(PlantCreateRequest request);
 Task<PlantResponse> GetPlantByIdAsync(int plantId);
-Task<PlantResponse> UpdatePlantAsync(int plantId, PlantUpdateRequest request);
+Task<PlantResponse> UpdatePlantAsync(int plantId, int userId, PlantUpdateRequest request);
 Task DeletePlantAsync(int plantId);
 Task<IEnumerable<PlantResponse>> GetPlantsByUserIdAsync(int userId);
 }
@@ -1075,6 +1183,7 @@ Task<UserResponse> GetUserByIdAsync(int userId);
 Task<UserResponse> UpdateUserAsync(int userId, UserUpdateRequest request);
 Task DeleteUserAsync(int userId);
 Task<UserResponse> UpdateUserProfileImageAsync(int userId, UserProfileImageUpdateRequest request);
+Task UpdateUserLocationAsync(int userId, double latitude, double longitude);
 }
 }
 //IUserPreferencesManager
@@ -1116,6 +1225,7 @@ Task UpdatePlantAsync(Plant plant);
 Task DeletePlantAsync(int plantId);
 Task<IEnumerable<Plant>> GetPlantsByUserIdAsync(int userId);
 Task<IEnumerable<Plant>> GetAllPlantsAsync();
+Task<IEnumerable<Plant>> GetPlantsWithinRadiusAsync(double originLat, double originLon, double radiusKm);
 }
 }
 //IReportRepository
@@ -1156,6 +1266,7 @@ Task<User> GetUserByIdAsync(int userId);
 Task<User> GetUserByEmailAsync(string email);
 Task UpdateUserAsync(User user);
 Task DeleteUserAsync(int userId);
+Task UpdateUserLocationAsync(int userId, double latitude, double longitude);
 }
 }
 //IBlobStorageService
@@ -1164,7 +1275,7 @@ namespace Cuttr.Business.Interfaces.Services
 public interface IBlobStorageService
 {
 Task<string> UploadFileAsync(IFormFile file, string containerName);
-Task DeleteFileAsync(string fileUrl, string containerName = null);
+Task DeleteFileAsync(string fileUrl, string containerName);
 }
 }
 //MatchManager
@@ -1296,6 +1407,7 @@ private readonly IPlantRepository _plantRepository;
 private readonly IUserRepository _userRepository;
 private readonly ILogger<PlantManager> _logger;
 private readonly IBlobStorageService _blobStorageService;
+private const string PlantImagesContainer = "plant-images";
 public PlantManager(IPlantRepository plantRepository, IUserRepository userRepository, ILogger<PlantManager> logger, IBlobStorageService blobStorageService)
 {
 _plantRepository = plantRepository;
@@ -1315,7 +1427,7 @@ throw new NotFoundException($"User with ID {request.PlantDetails.UserId} not fou
 string imageUrl = null;
 if (request.Image != null && request.Image.Length > 0)
 {
-imageUrl = await _blobStorageService.UploadFileAsync(request.Image);
+imageUrl = await _blobStorageService.UploadFileAsync(request.Image, PlantImagesContainer);
 }
 var plant = ContractToBusinessMapper.MapToPlant(request.PlantDetails);
 plant.ImageUrl = imageUrl;
@@ -1353,7 +1465,7 @@ _logger.LogError(ex, $"Error retrieving plant with ID {plantId}.");
 throw new BusinessException("Error retrieving plant.", ex);
 }
 }
-public async Task<PlantResponse> UpdatePlantAsync(int plantId, PlantUpdateRequest request)
+public async Task<PlantResponse> UpdatePlantAsync(int plantId,int userId, PlantUpdateRequest request)
 {
 try
 {
@@ -1361,6 +1473,10 @@ var plant = await _plantRepository.GetPlantByIdAsync(plantId);
 if (plant == null)
 {
 throw new NotFoundException($"Plant with ID {plantId} not found.");
+}
+if (plant.UserId != userId)
+{
+throw new BusinessException("Plant does not belong to user.");
 }
 ContractToBusinessMapper.MapToPlant(request, plant);
 await _plantRepository.UpdatePlantAsync(plant);
@@ -1480,9 +1596,9 @@ public class SwipeManager : ISwipeManager
 private readonly ISwipeRepository _swipeRepository;
 private readonly IPlantRepository _plantRepository;
 private readonly ILogger<SwipeManager> _logger;
+private readonly IUserRepository _userRepository;
 public SwipeManager(
 ISwipeRepository swipeRepository,
-IMatchRepository matchRepository,
 IPlantRepository plantRepository,
 IUserRepository userRepository,
 ILogger<SwipeManager> logger)
@@ -1490,6 +1606,7 @@ ILogger<SwipeManager> logger)
 _swipeRepository = swipeRepository;
 _plantRepository = plantRepository;
 _logger = logger;
+_userRepository = userRepository;
 }
 public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests)
 {
@@ -1545,13 +1662,28 @@ public async Task<List<PlantResponse>> GetLikablePlantsAsync(int userId)
 {
 try
 {
+var user = await _userRepository.GetUserByIdAsync(userId);
+if (user == null)
+throw new BusinessException("User not found.");
+if (user.Preferences == null)
+throw new BusinessException("User preferences not found.");
+int radius;
+if (user.Preferences.SearchRadius == null)
+{
+radius = 9999;
+} else
+{
+radius = user.Preferences.SearchRadius;
+}
+if (user.LocationLatitude == null || user.LocationLongitude == null)
+throw new BusinessException("User location not set.");
+double userLat = user.LocationLatitude.Value;
+double userLon = user.LocationLongitude.Value;
+var candidatePlants = await _plantRepository.GetPlantsWithinRadiusAsync(userLat, userLon, radius);
+candidatePlants = candidatePlants.Where(p => p.UserId != userId);
 var userPlants = await _plantRepository.GetPlantsByUserIdAsync(userId);
-if (userPlants == null || !userPlants.Any())
-throw new BusinessException("User has no plants in the gallery.");
-var allPlants = await _plantRepository.GetAllPlantsAsync();
-var otherPlants = allPlants.Where(p => p.UserId != userId).ToList();
 var likablePlants = new List<PlantResponse>();
-foreach (var plant in otherPlants)
+foreach (var plant in candidatePlants)
 {
 bool hasUninteractedPlant = (await Task.WhenAll(userPlants.Select(async up =>
 !await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId)
@@ -1580,6 +1712,7 @@ private readonly IUserRepository _userRepository;
 private readonly ILogger<UserManager> _logger;
 private readonly JwtTokenGenerator _jwtTokenGenerator;
 private readonly IBlobStorageService _blobStorageService;
+private const string ProfileImagesContainer = "profile-images";
 public UserManager(IUserRepository userRepository, ILogger<UserManager> logger, JwtTokenGenerator jwtTokenGenerator, IBlobStorageService blobStorageService)
 {
 _userRepository = userRepository;
@@ -1705,10 +1838,10 @@ throw new NotFoundException($"User with ID {userId} not found.");
 string imageUrl = null;
 if (request.Image != null && request.Image.Length > 0)
 {
-imageUrl = await _blobStorageService.UploadFileAsync(request.Image, "profile-images");
+imageUrl = await _blobStorageService.UploadFileAsync(request.Image, ProfileImagesContainer);
 if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
 {
-await _blobStorageService.DeleteFileAsync(user.ProfilePictureUrl);
+await _blobStorageService.DeleteFileAsync(user.ProfilePictureUrl, ProfileImagesContainer);
 }
 user.ProfilePictureUrl = imageUrl;
 }
@@ -1723,6 +1856,23 @@ catch (Exception ex)
 {
 _logger.LogError(ex, $"Error updating profile picture for user with ID {userId}.");
 throw new BusinessException("Error updating profile picture.", ex);
+}
+}
+public async Task UpdateUserLocationAsync(int userId, double latitude, double longitude)
+{
+try
+{
+var user = await _userRepository.GetUserByIdAsync(userId);
+if (user == null)
+throw new NotFoundException($"User with ID {userId} not found.");
+await _userRepository.UpdateUserLocationAsync(userId, latitude, longitude);
+} catch (NotFoundException)
+{
+throw;
+} catch (Exception ex)
+{
+_logger.LogError(ex, $"Error updating location for user with ID {userId}.");
+throw new BusinessException("Error updating location.", ex);
 }
 }
 }
@@ -1932,10 +2082,7 @@ public static void MapToUser(UserUpdateRequest request, User user)
 if (request == null || user == null)
 return;
 user.Name = request.Name ?? user.Name;
-user.ProfilePictureUrl = request.ProfilePictureUrl ?? user.ProfilePictureUrl;
 user.Bio = request.Bio ?? user.Bio;
-user.LocationLatitude = request.LocationLatitude ?? user.LocationLatitude;
-user.LocationLongitude = request.LocationLongitude ?? user.LocationLongitude;
 }
 public static Plant MapToPlant(PlantRequest request)
 {
@@ -1945,20 +2092,16 @@ return new Plant
 {
 UserId = request.UserId,
 SpeciesName = request.SpeciesName,
-CareRequirements = request.CareRequirements,
 Description = request.Description,
-Category = request.Category,
 };
 }
-public static void MapToPlant(PlantUpdateRequest request, Plant plant)
+public static void MapToPlantForUpdate(PlantRequest request, Plant plant)
 {
 if (request == null || plant == null)
 return;
 plant.SpeciesName = request.SpeciesName ?? plant.SpeciesName;
-plant.CareRequirements = request.CareRequirements ?? plant.CareRequirements;
 plant.Description = request.Description ?? plant.Description;
-plant.Category = request.Category ?? plant.Category;
-plant.ImageUrl = request.ImageUrl ?? plant.ImageUrl;
+plant.PlantStage = request.PlantStage ?? plant.PlantStage;
 }
 public static Swipe MapToSwipe(SwipeRequest request)
 {
@@ -2022,12 +2165,10 @@ public class BlobStorageService : IBlobStorageService
 {
 private readonly IConfiguration _configuration;
 private readonly ILogger<BlobStorageService> _logger;
-private readonly string _defaultContainerName;
 public BlobStorageService(IConfiguration configuration, ILogger<BlobStorageService> logger)
 {
 _configuration = configuration;
 _logger = logger;
-_defaultContainerName = _configuration["AzureBlobContainerName"];
 }
 public async Task<string> UploadFileAsync(IFormFile file, string containerName)
 {
@@ -2056,7 +2197,7 @@ _logger.LogError(ex, $"Error uploading file to Azure Blob Storage in container '
 throw new BusinessException("Error uploading image.", ex);
 }
 }
-public async Task DeleteFileAsync(string fileUrl, string containerName = null)
+public async Task DeleteFileAsync(string fileUrl, string containerName)
 {
 try
 {
@@ -2064,8 +2205,7 @@ if (string.IsNullOrEmpty(fileUrl))
 return;
 Uri uri = new Uri(fileUrl);
 string blobName = Path.GetFileName(uri.LocalPath);
-string container = containerName ?? _defaultContainerName;
-BlobContainerClient containerClient = GetContainerClient(container);
+BlobContainerClient containerClient = GetContainerClient(containerName);
 BlobClient blobClient = containerClient.GetBlobClient(blobName);
 await blobClient.DeleteIfExistsAsync();
 }
@@ -2183,6 +2323,8 @@ entity.HasMany(u => u.SentMessages)
 .WithOne(m => m.SenderUser)
 .HasForeignKey(m => m.SenderUserId)
 .OnDelete(DeleteBehavior.Restrict);
+entity.Property(u => u.Location)
+.HasColumnType("geography");
 });
 modelBuilder.Entity<PlantEF>(entity =>
 {
@@ -2273,8 +2415,6 @@ entity.Property(p => p.PreferredCategories)
 v => v,
 v => v);
 });
-modelBuilder.Entity<UserEF>()
-.HasIndex(u => new { u.LocationLatitude, u.LocationLongitude });
 foreach (var entityType in modelBuilder.Model.GetEntityTypes())
 {
 var clrType = entityType.ClrType;
@@ -2393,10 +2533,28 @@ public int UserId { get; set; }
 [Required]
 [MaxLength(200)]
 public string SpeciesName { get; set; }
-public string CareRequirements { get; set; }
 public string Description { get; set; }
-[MaxLength(100)]
-public string Category { get; set; }
+[Required]
+[MaxLength(50)]
+public string PlantStage { get; set; }
+[Required]
+[MaxLength(50)]
+public string PlantCategory { get; set; }
+[Required]
+[MaxLength(50)]
+public string WateringNeed { get; set; }
+[Required]
+[MaxLength(50)]
+public string LightRequirement { get; set; }
+[MaxLength(50)]
+public string Size { get; set; }
+[MaxLength(50)]
+public string IndoorOutdoor { get; set; }
+[MaxLength(50)]
+public string PropagationEase { get; set; }
+[MaxLength(50)]
+public string PetFriendly { get; set; }
+public string Extras { get; set; }
 public string ImageUrl { get; set; }
 public DateTime CreatedAt { get; set; }
 public DateTime UpdatedAt { get; set; }
@@ -2465,10 +2623,9 @@ public string Name { get; set; }
 public string ProfilePictureUrl { get; set; }
 [MaxLength(500)]
 public string Bio { get; set; }
-public double? LocationLatitude { get; set; }
-public double? LocationLongitude { get; set; }
 public DateTime CreatedAt { get; set; }
 public DateTime UpdatedAt { get; set; }
+public Point Location { get; set; }
 public virtual ICollection<PlantEF> Plants { get; set; }
 public virtual UserPreferencesEF Preferences { get; set; }
 public virtual ICollection<MessageEF> SentMessages { get; set; }
@@ -2483,8 +2640,16 @@ public class UserPreferencesEF
 {
 [Key, ForeignKey("User")]
 public int UserId { get; set; }
-public double SearchRadius { get; set; }
-public string PreferredCategories { get; set; }
+public int SearchRadius { get; set; }
+public List<string> PreferedPlantStage { get; set; }
+public List<string> PreferedPlantCategory { get; set; }
+public List<string> PreferedWateringNeed { get; set; }
+public List<string> PreferedLightRequirement { get; set; }
+public List<string> PreferedSize { get; set; }
+public List<string> PreferedIndoorOutdoor { get; set; }
+public List<string> PreferedPropagationEase { get; set; }
+public List<string> PreferedPetFriendly { get; set; }
+public List<string> PreferedExtras { get; set; }
 public virtual UserEF User { get; set; }
 }
 }
@@ -2517,8 +2682,6 @@ PasswordHash = user.PasswordHash,
 Name = user.Name,
 ProfilePictureUrl = user.ProfilePictureUrl,
 Bio = user.Bio,
-LocationLatitude = user.LocationLatitude,
-LocationLongitude = user.LocationLongitude,
 Plants = user.Plants?.Select(MapToPlantEFWithoutUser).ToList(),
 Preferences = MapToUserPreferencesEF(user.Preferences),
 };
@@ -2532,9 +2695,16 @@ return new PlantEF
 PlantId = plant.PlantId,
 UserId = plant.UserId,
 SpeciesName = plant.SpeciesName,
-CareRequirements = plant.CareRequirements,
 Description = plant.Description,
-Category = plant.Category,
+PlantStage = plant.PlantStage.ToString(),
+PlantCategory = plant.PlantCategory.ToString(),
+WateringNeed = plant.WateringNeed.ToString(),
+LightRequirement = plant.LightRequirement.ToString(),
+Size = plant.Size.ToString(),
+IndoorOutdoor = plant.IndoorOutdoor.ToString(),
+PropagationEase = plant.PropagationEase.ToString(),
+PetFriendly = plant.PetFriendly.ToString(),
+Extras = plant.Extras != null ? SerializeExtras(plant.Extras) : null,
 ImageUrl = plant.ImageUrl,
 User = MapToUserEFWithoutPlants(plant.User),
 };
@@ -2548,9 +2718,16 @@ return new PlantEF
 PlantId = plant.PlantId,
 UserId = plant.UserId,
 SpeciesName = plant.SpeciesName,
-CareRequirements = plant.CareRequirements,
 Description = plant.Description,
-Category = plant.Category,
+PlantStage = plant.PlantStage.ToString(),
+PlantCategory = plant.PlantCategory.ToString(),
+WateringNeed = plant.WateringNeed.ToString(),
+LightRequirement = plant.LightRequirement.ToString(),
+Size = plant.Size.ToString(),
+IndoorOutdoor = plant.IndoorOutdoor.ToString(),
+PropagationEase = plant.PropagationEase.ToString(),
+PetFriendly = plant.PetFriendly.ToString(),
+Extras = plant.Extras != null ? SerializeExtras(plant.Extras) : null,
 ImageUrl = plant.ImageUrl,
 };
 }
@@ -2566,8 +2743,6 @@ PasswordHash = user.PasswordHash,
 Name = user.Name,
 ProfilePictureUrl = user.ProfilePictureUrl,
 Bio = user.Bio,
-LocationLatitude = user.LocationLatitude,
-LocationLongitude = user.LocationLongitude,
 Preferences = MapToUserPreferencesEF(user.Preferences),
 };
 }
@@ -2653,6 +2828,12 @@ if (categories == null || !categories.Any())
 return null;
 return System.Text.Json.JsonSerializer.Serialize(categories);
 }
+public static string SerializeExtras(List<Extras> extras)
+{
+if (extras == null || !extras.Any())
+return null;
+return System.Text.Json.JsonSerializer.Serialize(extras);
+}
 }
 }
 //EFToBusinessMapper
@@ -2672,8 +2853,8 @@ PasswordHash = efUser.PasswordHash,
 Name = efUser.Name,
 ProfilePictureUrl = efUser.ProfilePictureUrl,
 Bio = efUser.Bio,
-LocationLatitude = efUser.LocationLatitude,
-LocationLongitude = efUser.LocationLongitude,
+LocationLatitude = efUser.Location?.Y,
+LocationLongitude = efUser.Location?.X,
 Plants = efUser.Plants?.Select(MapToPlantWithoutUser).ToList(),
 Preferences = MapToUserPreferences(efUser.Preferences),
 };
@@ -2687,9 +2868,16 @@ return new Plant
 PlantId = efPlant.PlantId,
 UserId = efPlant.UserId,
 SpeciesName = efPlant.SpeciesName,
-CareRequirements = efPlant.CareRequirements,
 Description = efPlant.Description,
-Category = efPlant.Category,
+PlantStage = Enum.Parse<PlantStage>(efPlant.PlantStage),
+PlantCategory = Enum.Parse<PlantCategory>(efPlant.PlantCategory),
+WateringNeed = Enum.Parse<WateringNeed>(efPlant.WateringNeed),
+LightRequirement = Enum.Parse<LightRequirement>(efPlant.LightRequirement),
+Size = Enum.Parse<Size>(efPlant.Size),
+IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
+PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
+PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
+Extras = efPlant.Extras != null ? DeserializeExtras(efPlant.Extras) : null,
 ImageUrl = efPlant.ImageUrl,
 User = MapToUserWithoutPlants(efPlant.User),
 };
@@ -2703,9 +2891,16 @@ return new Plant
 PlantId = efPlant.PlantId,
 UserId = efPlant.UserId,
 SpeciesName = efPlant.SpeciesName,
-CareRequirements = efPlant.CareRequirements,
 Description = efPlant.Description,
-Category = efPlant.Category,
+PlantStage = Enum.Parse<PlantStage>(efPlant.PlantStage),
+PlantCategory = Enum.Parse<PlantCategory>(efPlant.PlantCategory),
+WateringNeed = Enum.Parse<WateringNeed>(efPlant.WateringNeed),
+LightRequirement = Enum.Parse<LightRequirement>(efPlant.LightRequirement),
+Size = Enum.Parse<Size>(efPlant.Size),
+IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
+PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
+PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
+Extras = efPlant.Extras != null ? DeserializeExtras(efPlant.Extras) : null,
 ImageUrl = efPlant.ImageUrl,
 };
 }
@@ -2721,8 +2916,6 @@ PasswordHash = efUser.PasswordHash,
 Name = efUser.Name,
 ProfilePictureUrl = efUser.ProfilePictureUrl,
 Bio = efUser.Bio,
-LocationLatitude = efUser.LocationLatitude,
-LocationLongitude = efUser.LocationLongitude,
 Preferences = MapToUserPreferences(efUser.Preferences),
 };
 }
@@ -2807,6 +3000,12 @@ private static List<string> DeserializeCategories(string serializedCategories)
 if (string.IsNullOrEmpty(serializedCategories))
 return new List<string>();
 return System.Text.Json.JsonSerializer.Deserialize<List<string>>(serializedCategories);
+}
+private static List<Extras> DeserializeExtras(string serializedExtras)
+{
+if (string.IsNullOrEmpty(serializedExtras))
+return new List<Extras>();
+return System.Text.Json.JsonSerializer.Deserialize<List<Extras>>(serializedExtras);
 }
 }
 }
@@ -3397,19 +3596,42 @@ b.Navigation("SentMessages");
 }
 }
 }
-//CuttrDbContextModelSnapshot
+//20241211100233_AddUserLocationGeographyColumn
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+public partial class AddUserLocationGeographyColumn : Migration
+{
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.AddColumn<Point>(
+name: "Location",
+table: "Users",
+type: "geography",
+nullable: false);
+}
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.DropColumn(
+name: "Location",
+table: "Users");
+}
+}
+}
+//20241211100233_AddUserLocationGeographyColumn.Designer
 ﻿
 #nullable disable
 namespace Cuttr.Infrastructure.Migrations
 {
 [DbContext(typeof(CuttrDbContext))]
-partial class CuttrDbContextModelSnapshot : ModelSnapshot
+[Migration("20241211100233_AddUserLocationGeographyColumn")]
+partial class AddUserLocationGeographyColumn
 {
-protected override void BuildModel(ModelBuilder modelBuilder)
+protected override void BuildTargetModel(ModelBuilder modelBuilder)
 {
 #pragma warning disable 612, 618
 modelBuilder
-.HasAnnotation("ProductVersion", "8.0.11")
+.HasAnnotation("ProductVersion", "9.0.0")
 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
@@ -3569,6 +3791,327 @@ b.Property<string>("Email")
 .IsRequired()
 .HasMaxLength(256)
 .HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.IsRequired()
+.HasColumnType("geography");
+b.Property<double?>("LocationLatitude")
+.HasColumnType("float");
+b.Property<double?>("LocationLongitude")
+.HasColumnType("float");
+b.Property<string>("Name")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<string>("PasswordHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ProfilePictureUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.HasKey("UserId");
+b.HasIndex("Email")
+.IsUnique();
+b.HasIndex("LocationLatitude", "LocationLongitude");
+b.ToTable("Users");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("PreferredCategories")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<double>("SearchRadius")
+.HasColumnType("float");
+b.HasKey("UserId");
+b.ToTable("UserPreferences");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
+.WithMany()
+.HasForeignKey("PlantId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant2")
+.WithMany()
+.HasForeignKey("PlantId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Plant1");
+b.Navigation("Plant2");
+b.Navigation("User1");
+b.Navigation("User2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.MatchEF", "Match")
+.WithMany("Messages")
+.HasForeignKey("MatchId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
+.WithMany("SentMessages")
+.HasForeignKey("SenderUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Match");
+b.Navigation("SenderUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany("Plants")
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
+.WithMany("ReportsReceived")
+.HasForeignKey("ReportedUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReporterUser")
+.WithMany("ReportsMade")
+.HasForeignKey("ReporterUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("ReportedUser");
+b.Navigation("ReporterUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwipedPlant")
+.WithMany()
+.HasForeignKey("SwipedPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
+.WithMany()
+.HasForeignKey("SwiperPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("SwipedPlant");
+b.Navigation("SwiperPlant");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithOne("Preferences")
+.HasForeignKey("Cuttr.Infrastructure.Entities.UserPreferencesEF", "UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Navigation("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Navigation("Plants");
+b.Navigation("Preferences")
+.IsRequired();
+b.Navigation("ReportsMade");
+b.Navigation("ReportsReceived");
+b.Navigation("SentMessages");
+});
+#pragma warning restore 612, 618
+}
+}
+}
+//CuttrDbContextModelSnapshot
+﻿
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+[DbContext(typeof(CuttrDbContext))]
+partial class CuttrDbContextModelSnapshot : ModelSnapshot
+{
+protected override void BuildModel(ModelBuilder modelBuilder)
+{
+#pragma warning disable 612, 618
+modelBuilder
+.HasAnnotation("ProductVersion", "9.0.0")
+.HasAnnotation("Relational:MaxIdentifierLength", 128);
+SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Property<int>("MatchId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("PlantId1")
+.HasColumnType("int");
+b.Property<int>("PlantId2")
+.HasColumnType("int");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.HasKey("MatchId");
+b.HasIndex("PlantId2");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.HasIndex("PlantId1", "PlantId2")
+.IsUnique();
+b.ToTable("Matches", t =>
+{
+t.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
+});
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.Property<int>("MessageId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsRead")
+.HasColumnType("bit");
+b.Property<int>("MatchId")
+.HasColumnType("int");
+b.Property<string>("MessageText")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SenderUserId")
+.HasColumnType("int");
+b.HasKey("MessageId");
+b.HasIndex("MatchId");
+b.HasIndex("SenderUserId");
+b.ToTable("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.Property<int>("PlantId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
+b.Property<string>("CareRequirements")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("Category")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Description")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ImageUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("SpeciesName")
+.IsRequired()
+.HasMaxLength(200)
+.HasColumnType("nvarchar(200)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.HasKey("PlantId");
+b.HasIndex("UserId");
+b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.Property<int>("ReportId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportId"));
+b.Property<string>("Comments")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsResolved")
+.HasColumnType("bit");
+b.Property<string>("Reason")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("ReportedUserId")
+.HasColumnType("int");
+b.Property<int>("ReporterUserId")
+.HasColumnType("int");
+b.HasKey("ReportId");
+b.HasIndex("ReportedUserId");
+b.HasIndex("ReporterUserId");
+b.ToTable("Reports");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.Property<int>("SwipeId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SwipeId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsLike")
+.HasColumnType("bit");
+b.Property<int>("SwipedPlantId")
+.HasColumnType("int");
+b.Property<int>("SwiperPlantId")
+.HasColumnType("int");
+b.HasKey("SwipeId");
+b.HasIndex("SwipedPlantId");
+b.HasIndex("SwiperPlantId", "SwipedPlantId")
+.IsUnique();
+b.ToTable("Swipes");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Property<int>("UserId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+b.Property<string>("Bio")
+.IsRequired()
+.HasMaxLength(500)
+.HasColumnType("nvarchar(500)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Email")
+.IsRequired()
+.HasMaxLength(256)
+.HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.IsRequired()
+.HasColumnType("geography");
 b.Property<double?>("LocationLatitude")
 .HasColumnType("float");
 b.Property<double?>("LocationLongitude")
@@ -3718,12 +4261,15 @@ b.Navigation("SentMessages");
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3f01acb5ca0887cb31cd65b7d48aa71dfca7b170")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 //Cuttr.Infrastructure.GlobalUsings.g
 
+//EFCoreSqlServerNetTopologySuite
+[assembly: Microsoft.EntityFrameworkCore.Design.DesignTimeServicesReferenceAttribute("Microsoft.EntityFrameworkCore.SqlServer.Design.Internal.SqlServerNetTopologySuite" +
+"DesignTimeServices, Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite", "Microsoft.EntityFrameworkCore.SqlServer")]
 //MatchRepository
 namespace Cuttr.Infrastructure.Repositories
 {
@@ -3958,6 +4504,16 @@ catch (Exception ex)
 _logger.LogError(ex, "An error occurred while retrieving all plants.");
 throw new RepositoryException("An error occurred while retrieving all plants.", ex);
 }
+}
+public async Task<IEnumerable<Plant>> GetPlantsWithinRadiusAsync(double originLat, double originLon, double radiusKm)
+{
+double radiusMeters = radiusKm * 1000;
+var origin = new Point(originLon, originLat) { SRID = 4326 };
+var efPlants = await _context.Plants
+.Include(p => p.User)
+.Where(p => p.User.Location != null && p.User.Location.Distance(origin) <= radiusMeters)
+.ToListAsync();
+return efPlants.Select(EFToBusinessMapper.MapToPlant);
 }
 }
 }
@@ -4227,6 +4783,15 @@ catch (Exception ex)
 _logger.LogError(ex, $"An error occurred while deleting user with ID {userId}.");
 throw new RepositoryException("An error occurred while deleting user.", ex);
 }
+}
+public async Task UpdateUserLocationAsync(int userId, double latitude, double longitude)
+{
+var point = new NetTopologySuite.Geometries.Point(longitude, latitude) { SRID = 4326 };
+var efUser = await _context.Users.FindAsync(userId);
+if (efUser == null)
+throw new RepositoryException($"User with ID {userId} not found.");
+efUser.Location = point;
+await _context.SaveChangesAsync();
 }
 }
 }

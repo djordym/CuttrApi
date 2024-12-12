@@ -3,6 +3,7 @@ using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Cuttr.Api.Controllers
 {
@@ -42,12 +43,11 @@ namespace Cuttr.Api.Controllers
 
         // New GET: api/swipes/likable-plants
         [HttpGet("likable-plants")]
-        [Authorize]
         public async Task<IActionResult> GetLikablePlants()
         {
             try
             {
-                var userId = int.Parse(User.FindFirst("sub")?.Value ?? "0");
+                int userId = GetAuthenticatedUserId();
                 var likablePlants = await _swipeManager.GetLikablePlantsAsync(userId);
                 return Ok(likablePlants);
             }
@@ -57,5 +57,11 @@ namespace Cuttr.Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        private int GetAuthenticatedUserId()
+        {
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        }
+
     }
 }

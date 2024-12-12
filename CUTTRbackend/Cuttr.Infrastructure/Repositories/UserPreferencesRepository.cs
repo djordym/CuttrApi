@@ -28,7 +28,15 @@ namespace Cuttr.Infrastructure.Repositories
             try
             {
                 var efPreferences = await _context.UserPreferences
-                    .Include(up => up.PreferredCategories)
+                    .Include(up => up.PreferedPlantStage)
+                    .Include(up => up.PreferedPlantCategory)
+                    .Include(up => up.PreferedWateringNeed)
+                    .Include(up => up.PreferedLightRequirement)
+                    .Include(up => up.PreferedSize)
+                    .Include(up => up.PreferedIndoorOutdoor)
+                    .Include(up => up.PreferedPropagationEase)
+                    .Include(up => up.PreferedPetFriendly)
+                    .Include(up => up.PreferedExtras)
                     .FirstOrDefaultAsync(up => up.UserId == userId);
 
                 return EFToBusinessMapper.MapToUserPreferences(efPreferences);

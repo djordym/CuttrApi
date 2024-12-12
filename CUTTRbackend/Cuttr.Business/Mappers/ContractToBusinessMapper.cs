@@ -37,23 +37,36 @@ namespace Cuttr.Business.Mappers
 
             return new Plant
             {
-                UserId = request.UserId,
                 SpeciesName = request.SpeciesName,
                 Description = request.Description,
-                
+                PlantStage = request.PlantStage,
+                PlantCategory = request.PlantCategory,
+                WateringNeed = request.WateringNeed,
+                LightRequirement = request.LightRequirement,
+                Size = request.Size,
+                IndoorOutdoor = request.IndoorOutdoor,
+                PropagationEase = request.PropagationEase,
+                PetFriendly = request.PetFriendly,
+                Extras = request.Extras       
             };
         }
 
-        // Map PlantUpdateRequest to existing Plant
-        public static void MapToPlant(PlantUpdateRequest request, Plant plant)
+        public static void MapToPlantForUpdate(PlantRequest request, Plant plant)
         {
             if (request == null || plant == null)
                 return;
 
             plant.SpeciesName = request.SpeciesName ?? plant.SpeciesName;
-            plant.CareRequirements = request.CareRequirements ?? plant.CareRequirements;
             plant.Description = request.Description ?? plant.Description;
-            plant.Category = request.Category ?? plant.Category;
+            plant.PlantStage = request.PlantStage;
+            plant.PlantCategory = request.PlantCategory;
+            plant.WateringNeed = request.WateringNeed;
+            plant.LightRequirement = request.LightRequirement;
+            plant.Size = request.Size;
+            plant.IndoorOutdoor = request.IndoorOutdoor;
+            plant.PropagationEase = request.PropagationEase;
+            plant.PetFriendly = request.PetFriendly;
+            plant.Extras = request.Extras;
         }
 
         public static Swipe MapToSwipe(SwipeRequest request)
@@ -92,18 +105,16 @@ namespace Cuttr.Business.Mappers
             return new UserPreferences
             {
                 SearchRadius = request.SearchRadius,
-                PreferredCategories = request.PreferredCategories
+                PreferedPlantStage = request.PreferedPlantStage,
+                PreferedPlantCategory = request.PreferedPlantCategory,
+                PreferedWateringNeed = request.PreferedWateringNeed,
+                PreferedLightRequirement = request.PreferedLightRequirement,
+                PreferedSize = request.PreferedSize,
+                PreferedIndoorOutdoor = request.PreferedIndoorOutdoor,
+                PreferedPropagationEase = request.PreferedPropagationEase,
+                PreferedPetFriendly = request.PreferedPetFriendly,
+                PreferedExtras = request.PreferedExtras
             };
         }
-
-        public static void MapToUserPreferences(UserPreferencesRequest request, UserPreferences preferences)
-        {
-            if (request == null || preferences == null)
-                return;
-
-            preferences.SearchRadius = request.SearchRadius;
-            preferences.PreferredCategories = request.PreferredCategories;
-        }
-
     }
 }

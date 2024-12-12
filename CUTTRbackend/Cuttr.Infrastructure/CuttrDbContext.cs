@@ -93,8 +93,6 @@ namespace Cuttr.Infrastructure
                     .IsRequired()
                     .HasMaxLength(200);
 
-                entity.Property(p => p.Category)
-                    .HasMaxLength(100);
 
                 // Relationships
                 entity.HasOne(p => p.User)
@@ -216,10 +214,6 @@ namespace Cuttr.Infrastructure
                     .HasForeignKey<UserPreferencesEF>(p => p.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.Property(p => p.PreferredCategories)
-                    .HasConversion(
-                        v => v, // Assuming it's a JSON string
-                        v => v); // Adjust conversion if storing as a collection
             });
 
             // ----------------------------

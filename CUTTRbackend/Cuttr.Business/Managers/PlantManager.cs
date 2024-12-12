@@ -32,15 +32,15 @@ namespace Cuttr.Business.Managers
             _blobStorageService = blobStorageService;
         }
 
-        public async Task<PlantResponse> AddPlantAsync(PlantCreateRequest request)
+        public async Task<PlantResponse> AddPlantAsync(PlantCreateRequest request, int userId)
         {
             try
-            {
+            { 
                 // Validate that the user exists
-                var user = await _userRepository.GetUserByIdAsync(request.PlantDetails.UserId);
+                var user = await _userRepository.GetUserByIdAsync(userId);
                 if (user == null)
                 {
-                    throw new NotFoundException($"User with ID {request.PlantDetails.UserId} not found.");
+                    throw new NotFoundException($"User with ID {userId} not found.");
                 }
 
                 string imageUrl = null;
@@ -91,18 +91,25 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task<PlantResponse> UpdatePlantAsync(int plantId, PlantUpdateRequest request)
+        public async Task<PlantResponse> UpdatePlantAsync(int plantId,int userId, PlantRequest request)
         {
             try
             {
+
                 var plant = await _plantRepository.GetPlantByIdAsync(plantId);
                 if (plant == null)
                 {
                     throw new NotFoundException($"Plant with ID {plantId} not found.");
                 }
 
+                // check if plant belong to user
+                if (plant.UserId != userId)
+                {
+                    throw new BusinessException("Plant does not belong to user.");
+                }
+
                 // Update plant properties
-                ContractToBusinessMapper.MapToPlant(request, plant);
+                ContractToBusinessMapper.MapToPlantForUpdate(request, plant);
 
                 await _plantRepository.UpdatePlantAsync(plant);
 

@@ -2,6 +2,7 @@
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Cuttr.Api.Controllers
 {
@@ -61,9 +62,8 @@ namespace Cuttr.Api.Controllers
         // Helper method to get authenticated user ID
         private int GetAuthenticatedUserId()
         {
-            // Implementation depends on authentication setup (e.g., JWT)
-            // For example, extract user ID from JWT claims
-            return int.Parse(User.FindFirst("sub")?.Value);
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
         }
+
     }
 }

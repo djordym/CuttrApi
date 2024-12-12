@@ -43,10 +43,17 @@ namespace Cuttr.Business.Mappers
                 PlantId = plant.PlantId,
                 UserId = plant.UserId,
                 SpeciesName = plant.SpeciesName,
-                CareRequirements = plant.CareRequirements,
                 Description = plant.Description,
-                Category = plant.Category,
-                ImageUrl = plant.ImageUrl
+                ImageUrl = plant.ImageUrl,
+                PlantStage = plant.PlantStage,
+                PlantCategory = plant.PlantCategory,
+                WateringNeed = plant.WateringNeed,
+                LightRequirement = plant.LightRequirement,
+                Size = plant.Size,
+                IndoorOutdoor = plant.IndoorOutdoor,
+                PropagationEase = plant.PropagationEase,
+                PetFriendly = plant.PetFriendly,
+                Extras = plant.Extras
                 // Exclude any internal fields
             };
         }
@@ -125,7 +132,15 @@ namespace Cuttr.Business.Mappers
             {
                 UserId = preferences.UserId,
                 SearchRadius = preferences.SearchRadius,
-                PreferredCategories = preferences.PreferredCategories
+                PreferedPlantStage = preferences.PreferedPlantStage,
+                PreferedPlantCategory = preferences.PreferedPlantCategory,
+                PreferedWateringNeed = preferences.PreferedWateringNeed,
+                PreferedLightRequirement = preferences.PreferedLightRequirement,
+                PreferedSize = preferences.PreferedSize,
+                PreferedIndoorOutdoor = preferences.PreferedIndoorOutdoor,
+                PreferedPropagationEase = preferences.PreferedPropagationEase,
+                PreferedPetFriendly = preferences.PreferedPetFriendly,
+                PreferedExtras = preferences.PreferedExtras
             };
         }
     }

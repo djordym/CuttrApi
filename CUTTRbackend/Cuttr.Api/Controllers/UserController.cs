@@ -1,9 +1,11 @@
 ﻿using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Authentication;
+using System.Security.Claims;
 using AuthenticationException = Cuttr.Business.Exceptions.AuthenticationException;
 
 namespace Cuttr.Api.Controllers
@@ -22,6 +24,7 @@ namespace Cuttr.Api.Controllers
         }
 
         // POST: api/users/register
+        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserRegistrationRequest request)
         {
@@ -38,6 +41,7 @@ namespace Cuttr.Api.Controllers
         }
 
         // POST: api/users/login
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
         {
@@ -161,6 +165,11 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, $"Error updating location for user with ID {userId}.");
                 return BadRequest(ex.Message);
             }
+        }
+
+        private int GetAuthenticatedUserId()
+        {
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
         }
 
     }

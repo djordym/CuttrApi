@@ -2,6 +2,7 @@
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Cuttr.Api.Controllers
 {
@@ -63,11 +64,12 @@ namespace Cuttr.Api.Controllers
 
         // PUT: api/plants/{plantId}
         [HttpPut("{plantId}")]
-        public async Task<IActionResult> UpdatePlant(int plantId, [FromBody] PlantUpdateRequest request)
+        public async Task<IActionResult> UpdatePlant(int plantId, [FromBody] PlantRequest request)
         {
             try
             {
-                var plantResponse = await _plantManager.UpdatePlantAsync(plantId, request);
+                int userId = GetAuthenticatedUserId();
+                var plantResponse = await _plantManager.UpdatePlantAsync(plantId, userId, request);
                 return Ok(plantResponse);
             }
             catch (NotFoundException ex)
@@ -118,5 +120,11 @@ namespace Cuttr.Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        private int GetAuthenticatedUserId()
+        {
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        }
+
     }
 }

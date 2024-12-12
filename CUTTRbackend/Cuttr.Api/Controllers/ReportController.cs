@@ -4,6 +4,7 @@ using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Cuttr.Api.Controllers
 {
@@ -51,8 +52,8 @@ namespace Cuttr.Api.Controllers
 
         private int GetAuthenticatedUserId()
         {
-            // Extract user ID from JWT token claims
-            return int.Parse(User.FindFirst("sub")?.Value);
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
         }
+
     }
 }

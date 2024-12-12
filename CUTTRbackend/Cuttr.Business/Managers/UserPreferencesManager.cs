@@ -77,7 +77,7 @@ namespace Cuttr.Business.Managers
                 else
                 {
                     // Update existing preferences
-                    ContractToBusinessMapper.MapToUserPreferences(request, preferences);
+                    ContractToBusinessMapper.MapToUserPreferencesForUpdate(request, preferences);
                     await _userPreferencesRepository.UpdateUserPreferencesAsync(preferences);
 
                     return BusinessToContractMapper.MapToUserPreferencesResponse(preferences);

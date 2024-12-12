@@ -194,7 +194,7 @@ namespace Cuttr.Infrastructure.Mappers
             {
                 UserId = preferences.UserId,
                 SearchRadius = preferences.SearchRadius,
-                PreferredCategories = SerializeCategories(preferences.PreferredCategories),
+                
                 // User is not mapped to prevent circular reference
             };
         }

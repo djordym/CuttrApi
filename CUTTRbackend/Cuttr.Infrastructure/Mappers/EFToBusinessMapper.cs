@@ -80,7 +80,7 @@ namespace Cuttr.Infrastructure.Mappers
                 IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
                 PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
                 PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
-                Extras = efPlant.Extras != null ? DeserializeExtras(efPlant.Extras) : null,
+                Extras = DeserializeExtras(efPlant.Extras),
                 ImageUrl = efPlant.ImageUrl,
                 // User is not mapped to prevent circular reference
             };
@@ -196,20 +196,92 @@ namespace Cuttr.Infrastructure.Mappers
             {
                 UserId = efPreferences.UserId,
                 SearchRadius = efPreferences.SearchRadius,
-                PreferredCategories = DeserializeCategories(efPreferences.PreferredCategories),
-                // User is not mapped to prevent circular reference
+                PreferedPlantStage = DeserializePlantStage(efPreferences.PreferedPlantStage),
+                PreferedPlantCategory = DeserializePlantCategory(efPreferences.PreferedPlantCategory),
+                PreferedWateringNeed = DeserializeWateringNeed(efPreferences.PreferedWateringNeed),
+                PreferedLightRequirement = DeserializeLightRequirement(efPreferences.PreferedLightRequirement),
+                PreferedSize = DeserializeSize(efPreferences.PreferedSize),
+                PreferedIndoorOutdoor = DeserializeIndoorOutdoor(efPreferences.PreferedIndoorOutdoor),
+                PreferedPropagationEase = DeserializePropagationEase(efPreferences.PreferedPropagationEase),
+                PreferedPetFriendly = DeserializePetFriendly(efPreferences.PreferedPetFriendly),
+                PreferedExtras = DeserializeExtras(efPreferences.PreferedExtras),
             };
         }
 
-        // Helper method to deserialize PreferredCategories
-        private static List<string> DeserializeCategories(string serializedCategories)
+        // Helper method to deserialize Plantstage
+        private static List<PlantStage> DeserializePlantStage(string plantstages)
         {
-            if (string.IsNullOrEmpty(serializedCategories))
-                return new List<string>();
-
-            // Assuming JSON serialization
-            return System.Text.Json.JsonSerializer.Deserialize<List<string>>(serializedCategories);
+            if (string.IsNullOrEmpty(plantstages))
+                return new List<PlantStage>();
+            return System.Text.Json.JsonSerializer.Deserialize<List<PlantStage>>(plantstages);
         }
+
+        // Helper Method to deserialize PlantCategory
+
+        private static List<PlantCategory> DeserializePlantCategory(string plantcategories)
+        {
+            if (string.IsNullOrEmpty(plantcategories))
+                return new List<PlantCategory>();
+            return System.Text.Json.JsonSerializer.Deserialize<List<PlantCategory>>(plantcategories);
+        }
+
+        // Helper method to deserialize WateringNeed
+
+        private static List<WateringNeed> DeserializeWateringNeed(string wateringneeds)
+        {
+            if (string.IsNullOrEmpty(wateringneeds))
+                return new List<WateringNeed>();
+            return System.Text.Json.JsonSerializer.Deserialize<List<WateringNeed>>(wateringneeds);
+        }
+
+        // Helper method to deserialize LightRequirement
+
+        private static List<LightRequirement> DeserializeLightRequirement(string lightrequirements)
+        {
+            if (string.IsNullOrEmpty(lightrequirements))
+                return new List<LightRequirement>();
+            return System.Text.Json.JsonSerializer.Deserialize<List<LightRequirement>>(lightrequirements);
+        }
+
+        // Helper method to deserialize Size
+
+        private static List<Size> DeserializeSize(string sizes)
+        {
+            if (string.IsNullOrEmpty(sizes))
+                return new List<Size>();
+            return System.Text.Json.JsonSerializer.Deserialize<List<Size>>(sizes);
+        }
+
+        // Helper method to deserialize IndoorOutdoor
+
+        private static List<IndoorOutdoor> DeserializeIndoorOutdoor(string indooroutdoors)
+        {
+            if (string.IsNullOrEmpty(indooroutdoors))
+                return new List<IndoorOutdoor>();
+            return System.Text.Json.JsonSerializer.Deserialize<List<IndoorOutdoor>>(indooroutdoors);
+        }
+
+        // Helper method to deserialize PropagationEase
+
+        private static List<PropagationEase> DeserializePropagationEase(string propagationeases)
+
+
+        {
+            if (string.IsNullOrEmpty(propagationeases))
+                return new List<PropagationEase>();
+            return System.Text.Json.JsonSerializer.Deserialize<List<PropagationEase>>(propagationeases);
+        }
+
+        // Helper method to deserialize PetFriendly
+
+        private static List<PetFriendly> DeserializePetFriendly(string petfriendlies)
+        {
+            if (string.IsNullOrEmpty(petfriendlies))
+                return new List<PetFriendly>();
+            return System.Text.Json.JsonSerializer.Deserialize<List<PetFriendly>>(petfriendlies);
+        }
+
+        // Helper method to deserialize Extras
 
         private static List<Extras> DeserializeExtras(string serializedExtras)
         {
