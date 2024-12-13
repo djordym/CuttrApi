@@ -13,7 +13,13 @@ Log.Logger = new LoggerConfiguration()
 .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
 .CreateLogger();
 builder.Host.UseSerilog();
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+{
+var policy = new AuthorizationPolicyBuilder()
+.RequireAuthenticatedUser()
+.Build();
+options.Filters.Add(new AuthorizeFilter(policy));
+})
 .AddJsonOptions(options =>
 {
 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -42,6 +48,25 @@ builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IUserPreferencesRepository, UserPreferencesRepository>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+var secretKey = builder.Configuration["Jwt:Secret"];
+var key = Encoding.ASCII.GetBytes(secretKey);
+builder.Services
+.AddAuthentication(options =>
+{
+options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(cfg =>
+{
+cfg.TokenValidationParameters = new TokenValidationParameters
+{
+ValidateIssuer = false,
+ValidateAudience = false,
+ValidateLifetime = true,
+ValidateIssuerSigningKey = true,
+IssuerSigningKey = new SymmetricSecurityKey(key)
+};
+});
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
@@ -58,6 +83,22 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
+//GetInfoFromClaims
+namespace Cuttr.Api.Common
+{
+public static class GetInfoFromClaims
+{
+public static int GetUserId(this ClaimsPrincipal user)
+{
+var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+if (int.TryParse(userIdClaim, out int userId))
+{
+return userId;
+}
+throw new Business.Exceptions.UnauthorizedAccessException("Invalid token: User ID Claim is not valid.");
+}
+}
+}
 //MatchController
 namespace Cuttr.Api.Controllers
 {
@@ -72,12 +113,13 @@ public MatchController(IMatchManager matchManager, ILogger<MatchController> logg
 _matchManager = matchManager;
 _logger = logger;
 }
-[HttpGet]
+[HttpGet("me")]
 public async Task<IActionResult> GetMatches()
 {
+int userId = 0;
 try
 {
-int userId = GetAuthenticatedUserId();
+userId = User.GetUserId();
 var matches = await _matchManager.GetMatchesByUserIdAsync(userId);
 return Ok(matches);
 }
@@ -85,6 +127,16 @@ catch (BusinessException ex)
 {
 _logger.LogError(ex, $"Error retrieving matches for user.");
 return BadRequest(ex.Message);
+}
+catch (Business.Exceptions.UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while retrieving matches.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
 [HttpGet("{matchId}")]
@@ -106,10 +158,6 @@ _logger.LogError(ex, $"Error retrieving match with ID {matchId}.");
 return BadRequest(ex.Message);
 }
 }
-private int GetAuthenticatedUserId()
-{
-return int.Parse(User.FindFirst("sub")?.Value);
-}
 }
 }
 //MessageController
@@ -126,12 +174,13 @@ public MessageController(IMessageManager messageManager, ILogger<MessageControll
 _messageManager = messageManager;
 _logger = logger;
 }
-[HttpPost]
+[HttpPost("/me")]
 public async Task<IActionResult> SendMessage([FromBody] MessageRequest request)
 {
+int senderUserId = 0;
 try
 {
-int senderUserId = GetAuthenticatedUserId();
+senderUserId = User.GetUserId();
 var messageResponse = await _messageManager.SendMessageAsync(request, senderUserId);
 return Ok(messageResponse);
 }
@@ -145,13 +194,24 @@ catch (BusinessException ex)
 _logger.LogError(ex, "Error sending message.");
 return BadRequest(ex.Message);
 }
+catch (Business.Exceptions.UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while sending message.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
 }
 [HttpGet("/api/matches/{matchId}/messages")]
 public async Task<IActionResult> GetMessages(int matchId)
 {
+int userId = 0;
 try
 {
-int userId = GetAuthenticatedUserId();
+userId = User.GetUserId();
 var messages = await _messageManager.GetMessagesByMatchIdAsync(matchId, userId);
 return Ok(messages);
 }
@@ -170,10 +230,11 @@ catch (BusinessException ex)
 _logger.LogError(ex, $"Error retrieving messages for match with ID {matchId}.");
 return BadRequest(ex.Message);
 }
-}
-private int GetAuthenticatedUserId()
+catch (Exception ex)
 {
-return int.Parse(User.FindFirst("sub")?.Value);
+_logger.LogError(ex, "An unexpected error occurred while accessing messages.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
 }
 }
 }
@@ -191,13 +252,15 @@ public PlantController(IPlantManager plantManager, ILogger<PlantController> logg
 _plantManager = plantManager;
 _logger = logger;
 }
-[HttpPost]
+[HttpPost("me")]
 [Consumes("multipart/form-data")]
 public async Task<IActionResult> AddPlant([FromForm] PlantCreateRequest request)
 {
+int userId = 0;
 try
 {
-var plantResponse = await _plantManager.AddPlantAsync(request);
+userId = User.GetUserId();
+var plantResponse = await _plantManager.AddPlantAsync(request, userId);
 return CreatedAtAction(nameof(GetPlantById), new { plantId = plantResponse.PlantId }, plantResponse);
 }
 catch (NotFoundException ex)
@@ -209,6 +272,16 @@ catch (BusinessException ex)
 {
 _logger.LogError(ex, "Error adding plant.");
 return BadRequest(ex.Message);
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while adding the plant.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
 [HttpGet("{plantId}")]
@@ -230,12 +303,14 @@ _logger.LogError(ex, $"Error retrieving plant with ID {plantId}.");
 return BadRequest(ex.Message);
 }
 }
-[HttpPut("{plantId}")]
-public async Task<IActionResult> UpdatePlant(int plantId, [FromBody] PlantUpdateRequest request)
+[HttpPut("me/{plantId}")]
+public async Task<IActionResult> UpdatePlant(int plantId, [FromBody] PlantRequest request)
 {
+int userId = 0;
 try
 {
-var plantResponse = await _plantManager.UpdatePlantAsync(plantId, request);
+userId = User.GetUserId();
+var plantResponse = await _plantManager.UpdatePlantAsync(plantId, userId, request);
 return Ok(plantResponse);
 }
 catch (NotFoundException ex)
@@ -248,13 +323,25 @@ catch (BusinessException ex)
 _logger.LogError(ex, $"Error updating plant with ID {plantId}.");
 return BadRequest(ex.Message);
 }
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
 }
-[HttpDelete("{plantId}")]
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while updating the plant.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
+}
+[HttpDelete("me/{plantId}")]
 public async Task<IActionResult> DeletePlant(int plantId)
 {
+int userId = 0;
 try
 {
-await _plantManager.DeletePlantAsync(plantId);
+userId = User.GetUserId();
+await _plantManager.DeletePlantAsync(plantId, userId);
 return NoContent();
 }
 catch (NotFoundException ex)
@@ -266,6 +353,16 @@ catch (BusinessException ex)
 {
 _logger.LogError(ex, $"Error deleting plant with ID {plantId}.");
 return BadRequest(ex.Message);
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while deleting the plant.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
 [HttpGet("/api/users/{userId}/plants")]
@@ -280,6 +377,32 @@ catch (BusinessException ex)
 {
 _logger.LogError(ex, $"Error retrieving plants for user with ID {userId}.");
 return BadRequest(ex.Message);
+}
+}
+[HttpGet("/api/users/me/plants")]
+public async Task<IActionResult> GetPlantsOfUser()
+{
+int userId = 0;
+try
+{
+userId = User.GetUserId();
+var plantResponses = await _plantManager.GetPlantsByUserIdAsync(userId);
+return Ok(plantResponses);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, $"Error retrieving plants for user with ID {userId}.");
+return BadRequest(ex.Message);
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while retrieving the plants.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
 }
@@ -302,9 +425,10 @@ _logger = logger;
 [Authorize]
 public async Task<IActionResult> CreateReport([FromBody] ReportRequest request)
 {
+int reporterUserId = 0;
 try
 {
-int reporterUserId = GetAuthenticatedUserId();
+reporterUserId = User.GetUserId();
 var reportResponse = await _reportManager.CreateReportAsync(request, reporterUserId);
 return Ok(reportResponse);
 }
@@ -318,15 +442,16 @@ catch (BusinessException ex)
 _logger.LogError(ex, "Error creating report.");
 return BadRequest(ex.Message);
 }
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
 catch (Exception ex)
 {
 _logger.LogError(ex, "Unexpected error creating report.");
 return StatusCode(500, "An unexpected error occurred.");
 }
-}
-private int GetAuthenticatedUserId()
-{
-return int.Parse(User.FindFirst("sub")?.Value);
 }
 }
 }
@@ -344,12 +469,14 @@ public SwipeController(ISwipeManager swipeManager, ILogger<SwipeController> logg
 _swipeManager = swipeManager;
 _logger = logger;
 }
-[HttpPost]
+[HttpPost("me")]
 public async Task<IActionResult> RecordSwipe([FromBody] List<SwipeRequest> requests)
 {
+int userId = 0;
 try
 {
-var swipeResponses = await _swipeManager.RecordSwipesAsync(requests);
+userId = User.GetUserId();
+var swipeResponses = await _swipeManager.RecordSwipesAsync(requests, userId);
 return Ok(swipeResponses);
 }
 catch (NotFoundException ex)
@@ -363,13 +490,13 @@ _logger.LogError(ex, "Error recording swipes.");
 return BadRequest(ex.Message);
 }
 }
-[HttpGet("likable-plants")]
-[Authorize]
+[HttpGet("me/likable-plants")]
 public async Task<IActionResult> GetLikablePlants()
 {
+int userId = 0;
 try
 {
-var userId = int.Parse(User.FindFirst("sub")?.Value ?? "0");
+userId = User.GetUserId();
 var likablePlants = await _swipeManager.GetLikablePlantsAsync(userId);
 return Ok(likablePlants);
 }
@@ -395,6 +522,7 @@ public UserController(IUserManager userManager, ILogger<UserController> logger)
 _userManager = userManager;
 _logger = logger;
 }
+[AllowAnonymous]
 [HttpPost("register")]
 public async Task<IActionResult> Register([FromBody] UserRegistrationRequest request)
 {
@@ -409,6 +537,7 @@ _logger.LogError(ex, "Error registering user.");
 return BadRequest(ex.Message);
 }
 }
+[AllowAnonymous]
 [HttpPost("login")]
 public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
 {
@@ -447,11 +576,13 @@ _logger.LogError(ex, $"Error retrieving user with ID {userId}.");
 return BadRequest(ex.Message);
 }
 }
-[HttpPut("{userId}")]
-public async Task<IActionResult> UpdateUser(int userId, [FromBody] UserUpdateRequest request)
+[HttpPut("me")]
+public async Task<IActionResult> UpdateUser([FromBody] UserUpdateRequest request)
 {
+int userId = 0;
 try
 {
+userId = User.GetUserId();
 var userResponse = await _userManager.UpdateUserAsync(userId, request);
 return Ok(userResponse);
 }
@@ -465,12 +596,24 @@ catch (BusinessException ex)
 _logger.LogError(ex, $"Error updating user with ID {userId}.");
 return BadRequest(ex.Message);
 }
-}
-[HttpDelete("{userId}")]
-public async Task<IActionResult> DeleteUser(int userId)
+catch (Business.Exceptions.UnauthorizedAccessException ex)
 {
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while updating the user.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
+}
+[HttpDelete("me")]
+public async Task<IActionResult> DeleteUser()
+{
+int userId = 0;
 try
 {
+userId = User.GetUserId();
 await _userManager.DeleteUserAsync(userId);
 return NoContent();
 }
@@ -484,13 +627,25 @@ catch (BusinessException ex)
 _logger.LogError(ex, $"Error deleting user with ID {userId}.");
 return BadRequest(ex.Message);
 }
-}
-[HttpPut("{userId}/profile-picture")]
-[Consumes("multipart/form-data")]
-public async Task<IActionResult> UpdateProfilePicture(int userId, [FromForm] UserProfileImageUpdateRequest request)
+catch (Business.Exceptions.UnauthorizedAccessException ex)
 {
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, $"An unexpected error occurred while deleting the user with ID {userId}.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
+}
+[HttpPut("me/profile-picture")]
+[Consumes("multipart/form-data")]
+public async Task<IActionResult> UpdateProfilePicture([FromForm] UserProfileImageUpdateRequest request)
+{
+int userId = 0;
 try
 {
+userId = User.GetUserId();
 var userResponse = await _userManager.UpdateUserProfileImageAsync(userId, request);
 return Ok(userResponse);
 }
@@ -504,12 +659,24 @@ catch (BusinessException ex)
 _logger.LogError(ex, $"Error updating profile picture for user with ID {userId}.");
 return BadRequest(ex.Message);
 }
-}
-[HttpPut("{userId}/location")]
-public async Task<IActionResult> UpdateLocation(int userId, [FromBody] UpdateLocationRequest request)
+catch (Business.Exceptions.UnauthorizedAccessException ex)
 {
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while updating the profile picture.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
+}
+[HttpPut("me/location")]
+public async Task<IActionResult> UpdateLocation([FromBody] UpdateLocationRequest request)
+{
+int userId = 0;
 try
 {
+userId = User.GetUserId();
 await _userManager.UpdateUserLocationAsync(userId, request.Latitude, request.Longitude);
 return NoContent();
 }
@@ -522,6 +689,16 @@ catch (BusinessException ex)
 {
 _logger.LogError(ex, $"Error updating location for user with ID {userId}.");
 return BadRequest(ex.Message);
+}
+catch (Business.Exceptions.UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while updating the location.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
 }
@@ -546,13 +723,13 @@ public async Task<IActionResult> GetUserPreferences()
 {
 try
 {
-int userId = GetAuthenticatedUserId();
+int userId = User.GetUserId();
 var preferences = await _userPreferencesManager.GetUserPreferencesAsync(userId);
 return Ok(preferences);
 }
 catch (NotFoundException ex)
 {
-_logger.LogWarning(ex, $"User preferences for user ID {GetAuthenticatedUserId()} not found.");
+_logger.LogWarning(ex, $"User preferences for user ID {User.GetUserId} not found.");
 return NotFound(ex.Message);
 }
 catch (BusinessException ex)
@@ -566,7 +743,7 @@ public async Task<IActionResult> CreateOrUpdateUserPreferences([FromBody] UserPr
 {
 try
 {
-int userId = GetAuthenticatedUserId();
+int userId = User.GetUserId();
 var preferences = await _userPreferencesManager.CreateOrUpdateUserPreferencesAsync(userId, request);
 return Ok(preferences);
 }
@@ -575,10 +752,6 @@ catch (BusinessException ex)
 _logger.LogError(ex, "Error creating or updating user preferences.");
 return BadRequest(ex.Message);
 }
-}
-private int GetAuthenticatedUserId()
-{
-return int.Parse(User.FindFirst("sub")?.Value);
 }
 }
 }
@@ -676,7 +849,7 @@ text);
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00deee3ac11edd4e1e5a820ae41e986873ca2de8")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -708,7 +881,24 @@ namespace Cuttr.Business.Contracts.Inputs
 {
 public class PlantRequest
 {
-public int UserId { get; set; }
+public string SpeciesName { get; set; }
+public string Description { get; set; }
+public PlantStage PlantStage { get; set; }
+public PlantCategory PlantCategory { get; set; }
+public WateringNeed WateringNeed { get; set; }
+public LightRequirement LightRequirement { get; set; }
+public Size? Size { get; set; }
+public IndoorOutdoor? IndoorOutdoor { get; set; }
+public PropagationEase? PropagationEase { get; set; }
+public PetFriendly? PetFriendly { get; set; }
+public List<Extras>? Extras { get; set; }
+}
+}
+//PlantUpdateRequest
+namespace Cuttr.Business.Contracts.Inputs
+{
+public class PlantUpdateRequest
+{
 public string SpeciesName { get; set; }
 public string CareRequirements { get; set; }
 public string Description { get; set; }
@@ -759,7 +949,15 @@ namespace Cuttr.Business.Contracts.Inputs
 public class UserPreferencesRequest
 {
 public int SearchRadius { get; set; }
-public List<string> PreferredCategories { get; set; }
+public List<PlantStage> PreferedPlantStage { get; set; }
+public List<PlantCategory> PreferedPlantCategory { get; set; }
+public List<WateringNeed> PreferedWateringNeed { get; set; }
+public List<LightRequirement> PreferedLightRequirement { get; set; }
+public List<Size> PreferedSize { get; set; }
+public List<IndoorOutdoor> PreferedIndoorOutdoor { get; set; }
+public List<PropagationEase> PreferedPropagationEase { get; set; }
+public List<PetFriendly> PreferedPetFriendly { get; set; }
+public List<Extras> PreferedExtras { get; set; }
 }
 }
 //UserProfileImageUpdateRequest
@@ -822,9 +1020,16 @@ public class PlantResponse
 public int PlantId { get; set; }
 public int UserId { get; set; }
 public string SpeciesName { get; set; }
-public string CareRequirements { get; set; }
 public string Description { get; set; }
-public string Category { get; set; }
+public PlantStage PlantStage { get; set; }
+public PlantCategory PlantCategory { get; set; }
+public WateringNeed WateringNeed { get; set; }
+public LightRequirement LightRequirement { get; set; }
+public Size? Size { get; set; }
+public IndoorOutdoor? IndoorOutdoor { get; set; }
+public PropagationEase? PropagationEase { get; set; }
+public PetFriendly? PetFriendly { get; set; }
+public List<Extras>? Extras { get; set; }
 public string ImageUrl { get; set; }
 }
 }
@@ -867,7 +1072,15 @@ public class UserPreferencesResponse
 {
 public int UserId { get; set; }
 public double SearchRadius { get; set; }
-public List<string> PreferredCategories { get; set; }
+public List<PlantStage> PreferedPlantStage { get; set; }
+public List<PlantCategory> PreferedPlantCategory { get; set; }
+public List<WateringNeed> PreferedWateringNeed { get; set; }
+public List<LightRequirement> PreferedLightRequirement { get; set; }
+public List<Size> PreferedSize { get; set; }
+public List<IndoorOutdoor> PreferedIndoorOutdoor { get; set; }
+public List<PropagationEase> PreferedPropagationEase { get; set; }
+public List<PetFriendly> PreferedPetFriendly { get; set; }
+public List<Extras> PreferedExtras { get; set; }
 }
 }
 //UserResponse
@@ -992,7 +1205,15 @@ public class UserPreferences
 {
 public int UserId { get; set; }
 public int SearchRadius { get; set; }
-public List<string> PreferredCategories { get; set; }
+public List<PlantStage> PreferedPlantStage { get; set; }
+public List<PlantCategory> PreferedPlantCategory { get; set; }
+public List<WateringNeed> PreferedWateringNeed { get; set; }
+public List<LightRequirement> PreferedLightRequirement { get; set; }
+public List<Size> PreferedSize { get; set; }
+public List<IndoorOutdoor> PreferedIndoorOutdoor { get; set; }
+public List<PropagationEase> PreferedPropagationEase { get; set; }
+public List<PetFriendly> PreferedPetFriendly { get; set; }
+public List<Extras> PreferedExtras { get; set; }
 public User User { get; set; }
 }
 }
@@ -1148,10 +1369,10 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
 public interface IPlantManager
 {
-Task<PlantResponse> AddPlantAsync(PlantCreateRequest request);
+Task<PlantResponse> AddPlantAsync(PlantCreateRequest request, int userId);
 Task<PlantResponse> GetPlantByIdAsync(int plantId);
-Task<PlantResponse> UpdatePlantAsync(int plantId, int userId, PlantUpdateRequest request);
-Task DeletePlantAsync(int plantId);
+Task<PlantResponse> UpdatePlantAsync(int plantId, int userId, PlantRequest request);
+Task DeletePlantAsync(int plantId, int userId);
 Task<IEnumerable<PlantResponse>> GetPlantsByUserIdAsync(int userId);
 }
 }
@@ -1168,7 +1389,7 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
 public interface ISwipeManager
 {
-Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests);
+Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests, int userId);
 Task<List<PlantResponse>> GetLikablePlantsAsync(int userId);
 }
 }
@@ -1415,14 +1636,14 @@ _userRepository = userRepository;
 _logger = logger;
 _blobStorageService = blobStorageService;
 }
-public async Task<PlantResponse> AddPlantAsync(PlantCreateRequest request)
+public async Task<PlantResponse> AddPlantAsync(PlantCreateRequest request, int userId)
 {
 try
 {
-var user = await _userRepository.GetUserByIdAsync(request.PlantDetails.UserId);
+var user = await _userRepository.GetUserByIdAsync(userId);
 if (user == null)
 {
-throw new NotFoundException($"User with ID {request.PlantDetails.UserId} not found.");
+throw new NotFoundException($"User with ID {userId} not found.");
 }
 string imageUrl = null;
 if (request.Image != null && request.Image.Length > 0)
@@ -1465,7 +1686,7 @@ _logger.LogError(ex, $"Error retrieving plant with ID {plantId}.");
 throw new BusinessException("Error retrieving plant.", ex);
 }
 }
-public async Task<PlantResponse> UpdatePlantAsync(int plantId,int userId, PlantUpdateRequest request)
+public async Task<PlantResponse> UpdatePlantAsync(int plantId,int userId, PlantRequest request)
 {
 try
 {
@@ -1478,7 +1699,7 @@ if (plant.UserId != userId)
 {
 throw new BusinessException("Plant does not belong to user.");
 }
-ContractToBusinessMapper.MapToPlant(request, plant);
+ContractToBusinessMapper.MapToPlantForUpdate(request, plant);
 await _plantRepository.UpdatePlantAsync(plant);
 return BusinessToContractMapper.MapToPlantResponse(plant);
 }
@@ -1492,7 +1713,7 @@ _logger.LogError(ex, $"Error updating plant with ID {plantId}.");
 throw new BusinessException("Error updating plant.", ex);
 }
 }
-public async Task DeletePlantAsync(int plantId)
+public async Task DeletePlantAsync(int plantId, int userId)
 {
 try
 {
@@ -1608,7 +1829,7 @@ _plantRepository = plantRepository;
 _logger = logger;
 _userRepository = userRepository;
 }
-public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests)
+public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests, int userId)
 {
 var responses = new List<SwipeResponse>();
 foreach (var request in requests)
@@ -1621,6 +1842,9 @@ throw new NotFoundException($"Swiper plant with ID {request.SwiperPlantId} not f
 var swipedPlant = await _plantRepository.GetPlantByIdAsync(request.SwipedPlantId);
 if (swipedPlant == null)
 throw new NotFoundException($"Swiped plant with ID {request.SwipedPlantId} not found.");
+var user = await _userRepository.GetUserByIdAsync(userId);
+if (swiperPlant.UserId != userId)
+throw new Exceptions.UnauthorizedAccessException("Swiper plant does not belong to the user.");
 var swipe = ContractToBusinessMapper.MapToSwipe(request);
 await _swipeRepository.AddSwipeAsync(swipe);
 Swipe oppositeSwipe = null;
@@ -1934,8 +2158,7 @@ return BusinessToContractMapper.MapToUserPreferencesResponse(createdPreferences)
 }
 else
 {
-ContractToBusinessMapper.MapToUserPreferences(request, preferences);
-await _userPreferencesRepository.UpdateUserPreferencesAsync(preferences);
+await _userPreferencesRepository.UpdateUserPreferencesAsync(ContractToBusinessMapper.MapToUserPreferences(request));
 return BusinessToContractMapper.MapToUserPreferencesResponse(preferences);
 }
 }
@@ -1988,10 +2211,17 @@ return new PlantResponse
 PlantId = plant.PlantId,
 UserId = plant.UserId,
 SpeciesName = plant.SpeciesName,
-CareRequirements = plant.CareRequirements,
 Description = plant.Description,
-Category = plant.Category,
-ImageUrl = plant.ImageUrl
+ImageUrl = plant.ImageUrl,
+PlantStage = plant.PlantStage,
+PlantCategory = plant.PlantCategory,
+WateringNeed = plant.WateringNeed,
+LightRequirement = plant.LightRequirement,
+Size = plant.Size,
+IndoorOutdoor = plant.IndoorOutdoor,
+PropagationEase = plant.PropagationEase,
+PetFriendly = plant.PetFriendly,
+Extras = plant.Extras
 };
 }
 public static IEnumerable<PlantResponse> MapToPlantResponse(IEnumerable<Plant> plants)
@@ -2056,7 +2286,15 @@ return new UserPreferencesResponse
 {
 UserId = preferences.UserId,
 SearchRadius = preferences.SearchRadius,
-PreferredCategories = preferences.PreferredCategories
+PreferedPlantStage = preferences.PreferedPlantStage,
+PreferedPlantCategory = preferences.PreferedPlantCategory,
+PreferedWateringNeed = preferences.PreferedWateringNeed,
+PreferedLightRequirement = preferences.PreferedLightRequirement,
+PreferedSize = preferences.PreferedSize,
+PreferedIndoorOutdoor = preferences.PreferedIndoorOutdoor,
+PreferedPropagationEase = preferences.PreferedPropagationEase,
+PreferedPetFriendly = preferences.PreferedPetFriendly,
+PreferedExtras = preferences.PreferedExtras
 };
 }
 }
@@ -2090,9 +2328,17 @@ if (request == null)
 return null;
 return new Plant
 {
-UserId = request.UserId,
 SpeciesName = request.SpeciesName,
 Description = request.Description,
+PlantStage = request.PlantStage,
+PlantCategory = request.PlantCategory,
+WateringNeed = request.WateringNeed,
+LightRequirement = request.LightRequirement,
+Size = request.Size,
+IndoorOutdoor = request.IndoorOutdoor,
+PropagationEase = request.PropagationEase,
+PetFriendly = request.PetFriendly,
+Extras = request.Extras
 };
 }
 public static void MapToPlantForUpdate(PlantRequest request, Plant plant)
@@ -2101,7 +2347,15 @@ if (request == null || plant == null)
 return;
 plant.SpeciesName = request.SpeciesName ?? plant.SpeciesName;
 plant.Description = request.Description ?? plant.Description;
-plant.PlantStage = request.PlantStage ?? plant.PlantStage;
+plant.PlantStage = request.PlantStage;
+plant.PlantCategory = request.PlantCategory;
+plant.WateringNeed = request.WateringNeed;
+plant.LightRequirement = request.LightRequirement;
+plant.Size = request.Size;
+plant.IndoorOutdoor = request.IndoorOutdoor;
+plant.PropagationEase = request.PropagationEase;
+plant.PetFriendly = request.PetFriendly;
+plant.Extras = request.Extras;
 }
 public static Swipe MapToSwipe(SwipeRequest request)
 {
@@ -2134,15 +2388,16 @@ return null;
 return new UserPreferences
 {
 SearchRadius = request.SearchRadius,
-PreferredCategories = request.PreferredCategories
+PreferedPlantStage = request.PreferedPlantStage,
+PreferedPlantCategory = request.PreferedPlantCategory,
+PreferedWateringNeed = request.PreferedWateringNeed,
+PreferedLightRequirement = request.PreferedLightRequirement,
+PreferedSize = request.PreferedSize,
+PreferedIndoorOutdoor = request.PreferedIndoorOutdoor,
+PreferedPropagationEase = request.PreferedPropagationEase,
+PreferedPetFriendly = request.PreferedPetFriendly,
+PreferedExtras = request.PreferedExtras
 };
-}
-public static void MapToUserPreferences(UserPreferencesRequest request, UserPreferences preferences)
-{
-if (request == null || preferences == null)
-return;
-preferences.SearchRadius = request.SearchRadius;
-preferences.PreferredCategories = request.PreferredCategories;
 }
 }
 }
@@ -2152,7 +2407,7 @@ preferences.PreferredCategories = request.PreferredCategories;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00deee3ac11edd4e1e5a820ae41e986873ca2de8")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -2331,8 +2586,6 @@ modelBuilder.Entity<PlantEF>(entity =>
 entity.Property(p => p.SpeciesName)
 .IsRequired()
 .HasMaxLength(200);
-entity.Property(p => p.Category)
-.HasMaxLength(100);
 entity.HasOne(p => p.User)
 .WithMany(u => u.Plants)
 .HasForeignKey(p => p.UserId)
@@ -2410,10 +2663,6 @@ entity.HasOne(p => p.User)
 .WithOne(u => u.Preferences)
 .HasForeignKey<UserPreferencesEF>(p => p.UserId)
 .OnDelete(DeleteBehavior.Cascade);
-entity.Property(p => p.PreferredCategories)
-.HasConversion(
-v => v,
-v => v);
 });
 foreach (var entityType in modelBuilder.Model.GetEntityTypes())
 {
@@ -2641,15 +2890,15 @@ public class UserPreferencesEF
 [Key, ForeignKey("User")]
 public int UserId { get; set; }
 public int SearchRadius { get; set; }
-public List<string> PreferedPlantStage { get; set; }
-public List<string> PreferedPlantCategory { get; set; }
-public List<string> PreferedWateringNeed { get; set; }
-public List<string> PreferedLightRequirement { get; set; }
-public List<string> PreferedSize { get; set; }
-public List<string> PreferedIndoorOutdoor { get; set; }
-public List<string> PreferedPropagationEase { get; set; }
-public List<string> PreferedPetFriendly { get; set; }
-public List<string> PreferedExtras { get; set; }
+public string PreferedPlantStage { get; set; }
+public string PreferedPlantCategory { get; set; }
+public string PreferedWateringNeed { get; set; }
+public string PreferedLightRequirement { get; set; }
+public string PreferedSize { get; set; }
+public string PreferedIndoorOutdoor { get; set; }
+public string PreferedPropagationEase { get; set; }
+public string PreferedPetFriendly { get; set; }
+public string PreferedExtras { get; set; }
 public virtual UserEF User { get; set; }
 }
 }
@@ -2819,7 +3068,6 @@ return new UserPreferencesEF
 {
 UserId = preferences.UserId,
 SearchRadius = preferences.SearchRadius,
-PreferredCategories = SerializeCategories(preferences.PreferredCategories),
 };
 }
 public static string SerializeCategories(List<string> categories)
@@ -2900,7 +3148,7 @@ Size = Enum.Parse<Size>(efPlant.Size),
 IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
 PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
 PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
-Extras = efPlant.Extras != null ? DeserializeExtras(efPlant.Extras) : null,
+Extras = DeserializeExtras(efPlant.Extras),
 ImageUrl = efPlant.ImageUrl,
 };
 }
@@ -2992,14 +3240,64 @@ return new UserPreferences
 {
 UserId = efPreferences.UserId,
 SearchRadius = efPreferences.SearchRadius,
-PreferredCategories = DeserializeCategories(efPreferences.PreferredCategories),
+PreferedPlantStage = DeserializePlantStage(efPreferences.PreferedPlantStage),
+PreferedPlantCategory = DeserializePlantCategory(efPreferences.PreferedPlantCategory),
+PreferedWateringNeed = DeserializeWateringNeed(efPreferences.PreferedWateringNeed),
+PreferedLightRequirement = DeserializeLightRequirement(efPreferences.PreferedLightRequirement),
+PreferedSize = DeserializeSize(efPreferences.PreferedSize),
+PreferedIndoorOutdoor = DeserializeIndoorOutdoor(efPreferences.PreferedIndoorOutdoor),
+PreferedPropagationEase = DeserializePropagationEase(efPreferences.PreferedPropagationEase),
+PreferedPetFriendly = DeserializePetFriendly(efPreferences.PreferedPetFriendly),
+PreferedExtras = DeserializeExtras(efPreferences.PreferedExtras),
 };
 }
-private static List<string> DeserializeCategories(string serializedCategories)
+private static List<PlantStage> DeserializePlantStage(string plantstages)
 {
-if (string.IsNullOrEmpty(serializedCategories))
-return new List<string>();
-return System.Text.Json.JsonSerializer.Deserialize<List<string>>(serializedCategories);
+if (string.IsNullOrEmpty(plantstages))
+return new List<PlantStage>();
+return System.Text.Json.JsonSerializer.Deserialize<List<PlantStage>>(plantstages);
+}
+private static List<PlantCategory> DeserializePlantCategory(string plantcategories)
+{
+if (string.IsNullOrEmpty(plantcategories))
+return new List<PlantCategory>();
+return System.Text.Json.JsonSerializer.Deserialize<List<PlantCategory>>(plantcategories);
+}
+private static List<WateringNeed> DeserializeWateringNeed(string wateringneeds)
+{
+if (string.IsNullOrEmpty(wateringneeds))
+return new List<WateringNeed>();
+return System.Text.Json.JsonSerializer.Deserialize<List<WateringNeed>>(wateringneeds);
+}
+private static List<LightRequirement> DeserializeLightRequirement(string lightrequirements)
+{
+if (string.IsNullOrEmpty(lightrequirements))
+return new List<LightRequirement>();
+return System.Text.Json.JsonSerializer.Deserialize<List<LightRequirement>>(lightrequirements);
+}
+private static List<Size> DeserializeSize(string sizes)
+{
+if (string.IsNullOrEmpty(sizes))
+return new List<Size>();
+return System.Text.Json.JsonSerializer.Deserialize<List<Size>>(sizes);
+}
+private static List<IndoorOutdoor> DeserializeIndoorOutdoor(string indooroutdoors)
+{
+if (string.IsNullOrEmpty(indooroutdoors))
+return new List<IndoorOutdoor>();
+return System.Text.Json.JsonSerializer.Deserialize<List<IndoorOutdoor>>(indooroutdoors);
+}
+private static List<PropagationEase> DeserializePropagationEase(string propagationeases)
+{
+if (string.IsNullOrEmpty(propagationeases))
+return new List<PropagationEase>();
+return System.Text.Json.JsonSerializer.Deserialize<List<PropagationEase>>(propagationeases);
+}
+private static List<PetFriendly> DeserializePetFriendly(string petfriendlies)
+{
+if (string.IsNullOrEmpty(petfriendlies))
+return new List<PetFriendly>();
+return System.Text.Json.JsonSerializer.Deserialize<List<PetFriendly>>(petfriendlies);
 }
 private static List<Extras> DeserializeExtras(string serializedExtras)
 {
@@ -3937,15 +4235,245 @@ b.Navigation("SentMessages");
 }
 }
 }
-//CuttrDbContextModelSnapshot
+//20241213060227_AddFilters
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+public partial class AddFilters : Migration
+{
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.DropIndex(
+name: "IX_Users_LocationLatitude_LocationLongitude",
+table: "Users");
+migrationBuilder.DropColumn(
+name: "LocationLatitude",
+table: "Users");
+migrationBuilder.DropColumn(
+name: "LocationLongitude",
+table: "Users");
+migrationBuilder.DropColumn(
+name: "Category",
+table: "Plants");
+migrationBuilder.RenameColumn(
+name: "PreferredCategories",
+table: "UserPreferences",
+newName: "PreferedWateringNeed");
+migrationBuilder.RenameColumn(
+name: "CareRequirements",
+table: "Plants",
+newName: "Extras");
+migrationBuilder.AlterColumn<int>(
+name: "SearchRadius",
+table: "UserPreferences",
+type: "int",
+nullable: false,
+oldClrType: typeof(double),
+oldType: "float");
+migrationBuilder.AddColumn<string>(
+name: "PreferedExtras",
+table: "UserPreferences",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PreferedIndoorOutdoor",
+table: "UserPreferences",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PreferedLightRequirement",
+table: "UserPreferences",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PreferedPetFriendly",
+table: "UserPreferences",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PreferedPlantCategory",
+table: "UserPreferences",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PreferedPlantStage",
+table: "UserPreferences",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PreferedPropagationEase",
+table: "UserPreferences",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PreferedSize",
+table: "UserPreferences",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "IndoorOutdoor",
+table: "Plants",
+type: "nvarchar(50)",
+maxLength: 50,
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "LightRequirement",
+table: "Plants",
+type: "nvarchar(50)",
+maxLength: 50,
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PetFriendly",
+table: "Plants",
+type: "nvarchar(50)",
+maxLength: 50,
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PlantCategory",
+table: "Plants",
+type: "nvarchar(50)",
+maxLength: 50,
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PlantStage",
+table: "Plants",
+type: "nvarchar(50)",
+maxLength: 50,
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "PropagationEase",
+table: "Plants",
+type: "nvarchar(50)",
+maxLength: 50,
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "Size",
+table: "Plants",
+type: "nvarchar(50)",
+maxLength: 50,
+nullable: false,
+defaultValue: "");
+migrationBuilder.AddColumn<string>(
+name: "WateringNeed",
+table: "Plants",
+type: "nvarchar(50)",
+maxLength: 50,
+nullable: false,
+defaultValue: "");
+}
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.DropColumn(
+name: "PreferedExtras",
+table: "UserPreferences");
+migrationBuilder.DropColumn(
+name: "PreferedIndoorOutdoor",
+table: "UserPreferences");
+migrationBuilder.DropColumn(
+name: "PreferedLightRequirement",
+table: "UserPreferences");
+migrationBuilder.DropColumn(
+name: "PreferedPetFriendly",
+table: "UserPreferences");
+migrationBuilder.DropColumn(
+name: "PreferedPlantCategory",
+table: "UserPreferences");
+migrationBuilder.DropColumn(
+name: "PreferedPlantStage",
+table: "UserPreferences");
+migrationBuilder.DropColumn(
+name: "PreferedPropagationEase",
+table: "UserPreferences");
+migrationBuilder.DropColumn(
+name: "PreferedSize",
+table: "UserPreferences");
+migrationBuilder.DropColumn(
+name: "IndoorOutdoor",
+table: "Plants");
+migrationBuilder.DropColumn(
+name: "LightRequirement",
+table: "Plants");
+migrationBuilder.DropColumn(
+name: "PetFriendly",
+table: "Plants");
+migrationBuilder.DropColumn(
+name: "PlantCategory",
+table: "Plants");
+migrationBuilder.DropColumn(
+name: "PlantStage",
+table: "Plants");
+migrationBuilder.DropColumn(
+name: "PropagationEase",
+table: "Plants");
+migrationBuilder.DropColumn(
+name: "Size",
+table: "Plants");
+migrationBuilder.DropColumn(
+name: "WateringNeed",
+table: "Plants");
+migrationBuilder.RenameColumn(
+name: "PreferedWateringNeed",
+table: "UserPreferences",
+newName: "PreferredCategories");
+migrationBuilder.RenameColumn(
+name: "Extras",
+table: "Plants",
+newName: "CareRequirements");
+migrationBuilder.AddColumn<double>(
+name: "LocationLatitude",
+table: "Users",
+type: "float",
+nullable: true);
+migrationBuilder.AddColumn<double>(
+name: "LocationLongitude",
+table: "Users",
+type: "float",
+nullable: true);
+migrationBuilder.AlterColumn<double>(
+name: "SearchRadius",
+table: "UserPreferences",
+type: "float",
+nullable: false,
+oldClrType: typeof(int),
+oldType: "int");
+migrationBuilder.AddColumn<string>(
+name: "Category",
+table: "Plants",
+type: "nvarchar(100)",
+maxLength: 100,
+nullable: false,
+defaultValue: "");
+migrationBuilder.CreateIndex(
+name: "IX_Users_LocationLatitude_LocationLongitude",
+table: "Users",
+columns: new[] { "LocationLatitude", "LocationLongitude" });
+}
+}
+}
+//20241213060227_AddFilters.Designer
 ﻿
 #nullable disable
 namespace Cuttr.Infrastructure.Migrations
 {
 [DbContext(typeof(CuttrDbContext))]
-partial class CuttrDbContextModelSnapshot : ModelSnapshot
+[Migration("20241213060227_AddFilters")]
+partial class AddFilters
 {
-protected override void BuildModel(ModelBuilder modelBuilder)
+protected override void BuildTargetModel(ModelBuilder modelBuilder)
 {
 #pragma warning disable 612, 618
 modelBuilder
@@ -4011,13 +4539,6 @@ b.Property<int>("PlantId")
 .ValueGeneratedOnAdd()
 .HasColumnType("int");
 SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
-b.Property<string>("CareRequirements")
-.IsRequired()
-.HasColumnType("nvarchar(max)");
-b.Property<string>("Category")
-.IsRequired()
-.HasMaxLength(100)
-.HasColumnType("nvarchar(100)");
 b.Property<DateTime>("CreatedAt")
 .ValueGeneratedOnAdd()
 .HasColumnType("datetime2")
@@ -4025,9 +4546,40 @@ b.Property<DateTime>("CreatedAt")
 b.Property<string>("Description")
 .IsRequired()
 .HasColumnType("nvarchar(max)");
+b.Property<string>("Extras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
 b.Property<string>("ImageUrl")
 .IsRequired()
 .HasColumnType("nvarchar(max)");
+b.Property<string>("IndoorOutdoor")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("LightRequirement")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PetFriendly")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantCategory")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantStage")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PropagationEase")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("Size")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
 b.Property<string>("SpeciesName")
 .IsRequired()
 .HasMaxLength(200)
@@ -4038,6 +4590,10 @@ b.Property<DateTime>("UpdatedAt")
 .HasDefaultValueSql("GETUTCDATE()");
 b.Property<int>("UserId")
 .HasColumnType("int");
+b.Property<string>("WateringNeed")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
 b.HasKey("PlantId");
 b.HasIndex("UserId");
 b.ToTable("Plants");
@@ -4112,10 +4668,6 @@ b.Property<string>("Email")
 b.Property<Point>("Location")
 .IsRequired()
 .HasColumnType("geography");
-b.Property<double?>("LocationLatitude")
-.HasColumnType("float");
-b.Property<double?>("LocationLongitude")
-.HasColumnType("float");
 b.Property<string>("Name")
 .IsRequired()
 .HasMaxLength(100)
@@ -4133,18 +4685,406 @@ b.Property<DateTime>("UpdatedAt")
 b.HasKey("UserId");
 b.HasIndex("Email")
 .IsUnique();
-b.HasIndex("LocationLatitude", "LocationLongitude");
 b.ToTable("Users");
 });
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
 {
 b.Property<int>("UserId")
 .HasColumnType("int");
-b.Property<string>("PreferredCategories")
+b.Property<string>("PreferedExtras")
 .IsRequired()
 .HasColumnType("nvarchar(max)");
-b.Property<double>("SearchRadius")
-.HasColumnType("float");
+b.Property<string>("PreferedIndoorOutdoor")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedLightRequirement")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPetFriendly")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantCategory")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantStage")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPropagationEase")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedSize")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedWateringNeed")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SearchRadius")
+.HasColumnType("int");
+b.HasKey("UserId");
+b.ToTable("UserPreferences");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
+.WithMany()
+.HasForeignKey("PlantId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant2")
+.WithMany()
+.HasForeignKey("PlantId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Plant1");
+b.Navigation("Plant2");
+b.Navigation("User1");
+b.Navigation("User2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.MatchEF", "Match")
+.WithMany("Messages")
+.HasForeignKey("MatchId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
+.WithMany("SentMessages")
+.HasForeignKey("SenderUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Match");
+b.Navigation("SenderUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany("Plants")
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
+.WithMany("ReportsReceived")
+.HasForeignKey("ReportedUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReporterUser")
+.WithMany("ReportsMade")
+.HasForeignKey("ReporterUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("ReportedUser");
+b.Navigation("ReporterUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwipedPlant")
+.WithMany()
+.HasForeignKey("SwipedPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
+.WithMany()
+.HasForeignKey("SwiperPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("SwipedPlant");
+b.Navigation("SwiperPlant");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithOne("Preferences")
+.HasForeignKey("Cuttr.Infrastructure.Entities.UserPreferencesEF", "UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Navigation("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Navigation("Plants");
+b.Navigation("Preferences")
+.IsRequired();
+b.Navigation("ReportsMade");
+b.Navigation("ReportsReceived");
+b.Navigation("SentMessages");
+});
+#pragma warning restore 612, 618
+}
+}
+}
+//CuttrDbContextModelSnapshot
+﻿
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+[DbContext(typeof(CuttrDbContext))]
+partial class CuttrDbContextModelSnapshot : ModelSnapshot
+{
+protected override void BuildModel(ModelBuilder modelBuilder)
+{
+#pragma warning disable 612, 618
+modelBuilder
+.HasAnnotation("ProductVersion", "9.0.0")
+.HasAnnotation("Relational:MaxIdentifierLength", 128);
+SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Property<int>("MatchId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("PlantId1")
+.HasColumnType("int");
+b.Property<int>("PlantId2")
+.HasColumnType("int");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.HasKey("MatchId");
+b.HasIndex("PlantId2");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.HasIndex("PlantId1", "PlantId2")
+.IsUnique();
+b.ToTable("Matches", t =>
+{
+t.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
+});
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.Property<int>("MessageId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsRead")
+.HasColumnType("bit");
+b.Property<int>("MatchId")
+.HasColumnType("int");
+b.Property<string>("MessageText")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SenderUserId")
+.HasColumnType("int");
+b.HasKey("MessageId");
+b.HasIndex("MatchId");
+b.HasIndex("SenderUserId");
+b.ToTable("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.Property<int>("PlantId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Description")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("Extras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ImageUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("IndoorOutdoor")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("LightRequirement")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PetFriendly")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantCategory")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantStage")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PropagationEase")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("Size")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("SpeciesName")
+.IsRequired()
+.HasMaxLength(200)
+.HasColumnType("nvarchar(200)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("WateringNeed")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.HasKey("PlantId");
+b.HasIndex("UserId");
+b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.Property<int>("ReportId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportId"));
+b.Property<string>("Comments")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsResolved")
+.HasColumnType("bit");
+b.Property<string>("Reason")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("ReportedUserId")
+.HasColumnType("int");
+b.Property<int>("ReporterUserId")
+.HasColumnType("int");
+b.HasKey("ReportId");
+b.HasIndex("ReportedUserId");
+b.HasIndex("ReporterUserId");
+b.ToTable("Reports");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.Property<int>("SwipeId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SwipeId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsLike")
+.HasColumnType("bit");
+b.Property<int>("SwipedPlantId")
+.HasColumnType("int");
+b.Property<int>("SwiperPlantId")
+.HasColumnType("int");
+b.HasKey("SwipeId");
+b.HasIndex("SwipedPlantId");
+b.HasIndex("SwiperPlantId", "SwipedPlantId")
+.IsUnique();
+b.ToTable("Swipes");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Property<int>("UserId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+b.Property<string>("Bio")
+.IsRequired()
+.HasMaxLength(500)
+.HasColumnType("nvarchar(500)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Email")
+.IsRequired()
+.HasMaxLength(256)
+.HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.IsRequired()
+.HasColumnType("geography");
+b.Property<string>("Name")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<string>("PasswordHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ProfilePictureUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.HasKey("UserId");
+b.HasIndex("Email")
+.IsUnique();
+b.ToTable("Users");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("PreferedExtras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedIndoorOutdoor")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedLightRequirement")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPetFriendly")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantCategory")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantStage")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPropagationEase")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedSize")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedWateringNeed")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SearchRadius")
+.HasColumnType("int");
 b.HasKey("UserId");
 b.ToTable("UserPreferences");
 });
@@ -4261,7 +5201,7 @@ b.Navigation("SentMessages");
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00deee3ac11edd4e1e5a820ae41e986873ca2de8")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -4624,7 +5564,15 @@ public async Task<UserPreferences> GetUserPreferencesAsync(int userId)
 try
 {
 var efPreferences = await _context.UserPreferences
-.Include(up => up.PreferredCategories)
+.Include(up => up.PreferedPlantStage)
+.Include(up => up.PreferedPlantCategory)
+.Include(up => up.PreferedWateringNeed)
+.Include(up => up.PreferedLightRequirement)
+.Include(up => up.PreferedSize)
+.Include(up => up.PreferedIndoorOutdoor)
+.Include(up => up.PreferedPropagationEase)
+.Include(up => up.PreferedPetFriendly)
+.Include(up => up.PreferedExtras)
 .FirstOrDefaultAsync(up => up.UserId == userId);
 return EFToBusinessMapper.MapToUserPreferences(efPreferences);
 }
@@ -4653,14 +5601,8 @@ public async Task UpdateUserPreferencesAsync(UserPreferences preferences)
 {
 try
 {
-var efPreferences = await _context.UserPreferences
-.FirstOrDefaultAsync(up => up.UserId == preferences.UserId);
-if (efPreferences == null)
-{
-throw new RepositoryException($"User preferences for user ID {preferences.UserId} not found.");
-}
-efPreferences.SearchRadius = preferences.SearchRadius;
-efPreferences.PreferredCategories = BusinessToEFMapper.SerializeCategories(preferences.PreferredCategories);
+var efPreferences = BusinessToEFMapper.MapToUserPreferencesEF(preferences);
+_context.UserPreferences.Update(efPreferences);
 await _context.SaveChangesAsync();
 }
 catch (Exception ex)
