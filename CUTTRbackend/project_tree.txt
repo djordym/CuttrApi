@@ -1,6 +1,9 @@
 CUTTRbackend
 ├── Cuttr.Api
+│   ├── Common
+│   │   └── GetInfoFromClaims.cs
 │   ├── Controllers
+│   │   ├── AuthController.cs
 │   │   ├── MatchController.cs
 │   │   ├── MessageController.cs
 │   │   ├── PlantController.cs
@@ -29,14 +32,17 @@ CUTTRbackend
 │   │   │   ├── PlantCreateRequest.cs
 │   │   │   ├── PlantRequest.cs
 │   │   │   ├── PlantUpdateRequest.cs
+│   │   │   ├── RefreshTokenRequest.cs
 │   │   │   ├── ReportRequest.cs
 │   │   │   ├── SwipeRequest.cs
+│   │   │   ├── UpdateUserLocationRequest.cs
 │   │   │   ├── UserLoginRequest.cs
 │   │   │   ├── UserPreferencesRequest.cs
 │   │   │   ├── UserProfileImageUpdateRequest.cs
 │   │   │   ├── UserRegistrationRequest.cs
 │   │   │   └── UserUpdateRequest.cs
 │   │   └── Outputs
+│   │       ├── AuthTokenResponse.cs
 │   │       ├── MatchResponse.cs
 │   │       ├── MessageResponse.cs
 │   │       ├── PlantResponse.cs
@@ -50,10 +56,13 @@ CUTTRbackend
 │   │   ├── Match.cs
 │   │   ├── Message.cs
 │   │   ├── Plant.cs
+│   │   ├── RefreshToken.cs
 │   │   ├── Report.cs
 │   │   ├── Swipe.cs
 │   │   ├── User.cs
 │   │   └── UserPreferences.cs
+│   ├── Enums
+│   │   └── PlantProperties.cs
 │   ├── Exceptions
 │   │   ├── AuthenticationException.cs
 │   │   ├── BusinessException.cs
@@ -61,6 +70,7 @@ CUTTRbackend
 │   │   └── UnauthorizedAccessException.cs
 │   ├── Interfaces
 │   │   ├── ManagerInterfaces
+│   │   │   ├── IAuthManager.cs
 │   │   │   ├── IMatchManager.cs
 │   │   │   ├── IMessageManager.cs
 │   │   │   ├── IPlantManager.cs
@@ -72,6 +82,7 @@ CUTTRbackend
 │   │   │   ├── IMatchRepository.cs
 │   │   │   ├── IMessageRepository.cs
 │   │   │   ├── IPlantRepository.cs
+│   │   │   ├── IRefreshTokenRepository.cs
 │   │   │   ├── IReportRepository.cs
 │   │   │   ├── ISwipeRepository.cs
 │   │   │   ├── IUserPreferencesRepository.cs
@@ -79,6 +90,7 @@ CUTTRbackend
 │   │   └── Services
 │   │       └── IBlobStorageService.cs
 │   ├── Managers
+│   │   ├── AuthManager.cs
 │   │   ├── MatchManager.cs
 │   │   ├── MessageManager.cs
 │   │   ├── PlantManager.cs
@@ -104,6 +116,7 @@ CUTTRbackend
 │   │   ├── MatchEF.cs
 │   │   ├── MessageEF.cs
 │   │   ├── PlantEF.cs
+│   │   ├── RefreshTokenEF.cs
 │   │   ├── ReportEF.cs
 │   │   ├── SwipeEF.cs
 │   │   ├── UserEF.cs
@@ -116,11 +129,18 @@ CUTTRbackend
 │   ├── Migrations
 │   │   ├── 20241205083810_InitialCreate.Designer.cs
 │   │   ├── 20241205083810_InitialCreate.cs
+│   │   ├── 20241211100233_AddUserLocationGeographyColumn.Designer.cs
+│   │   ├── 20241211100233_AddUserLocationGeographyColumn.cs
+│   │   ├── 20241213060227_AddFilters.Designer.cs
+│   │   ├── 20241213060227_AddFilters.cs
+│   │   ├── 20241218113032_AddRefreshTooken.Designer.cs
+│   │   ├── 20241218113032_AddRefreshTooken.cs
 │   │   └── CuttrDbContextModelSnapshot.cs
 │   ├── Repositories
 │   │   ├── MatchRepository.cs
 │   │   ├── MessageRepository.cs
 │   │   ├── PlantRepository.cs
+│   │   ├── RefreshTokenRepository.cs
 │   │   ├── ReportRepository.cs
 │   │   ├── SwipeRepository.cs
 │   │   ├── UserPreferencesRepository.cs

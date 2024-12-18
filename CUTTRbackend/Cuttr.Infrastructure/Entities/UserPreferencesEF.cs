@@ -13,8 +13,6 @@ namespace Cuttr.Infrastructure.Entities
     {
         [Key, ForeignKey("User")]
         public int UserId { get; set; }
-
-
         //filters
         public int SearchRadius { get; set; } // e.g., in kilometers
         public string PreferedPlantStage { get; set; }

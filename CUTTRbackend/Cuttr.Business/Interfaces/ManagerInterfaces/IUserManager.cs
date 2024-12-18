@@ -18,5 +18,6 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
         Task DeleteUserAsync(int userId);
         Task<UserResponse> UpdateUserProfileImageAsync(int userId, UserProfileImageUpdateRequest request);
         Task UpdateUserLocationAsync(int userId, double latitude, double longitude);
+        Task LogoutUserAsync(int userId);
     }
 }

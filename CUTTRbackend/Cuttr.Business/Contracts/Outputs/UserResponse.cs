@@ -15,6 +15,5 @@ namespace Cuttr.Business.Contracts.Outputs
         public string Bio { get; set; }
         public double? LocationLatitude { get; set; }
         public double? LocationLongitude { get; set; }
-        // Additional properties as needed
     }
 }

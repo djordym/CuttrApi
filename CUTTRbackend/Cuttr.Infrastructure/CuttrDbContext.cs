@@ -29,6 +29,8 @@ namespace Cuttr.Infrastructure
         public DbSet<MessageEF> Messages { get; set; }
         public DbSet<ReportEF> Reports { get; set; }
         public DbSet<UserPreferencesEF> UserPreferences { get; set; }
+        public DbSet<RefreshTokenEF> RefreshTokens { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

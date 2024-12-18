@@ -10,3 +10,5 @@ More ready for production considerations:
 https://chatgpt.com/share/675abd72-fe10-8001-85b5-294daf82184c
 
 Validate your incoming requests (request contracts should have things like [required],[maxlength], …)
+
+Ensure GDPR and other privacy laws compliance by adding proper consent management and privacy policies.
