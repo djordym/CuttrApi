@@ -1,0 +1,71 @@
+CuttrApp
+├── %ProgramData%
+│   └── Microsoft
+│       └── Windows
+│           └── UUS
+│               └── State
+│                   └── _active.uusver
+├── .gitignore
+├── App.jsx
+├── Gather all files.py
+├── README.md
+├── all_mobile_app_files_combined_cleaned.txt
+├── app.json
+├── assets
+├── babel.config.js
+├── eas.json
+├── expo-env.d.ts
+├── package.json
+├── project_tree.txt
+├── scripts
+│   └── reset-project.js
+├── src
+│   ├── api
+│   │   ├── apiClient.js
+│   │   ├── apiConfig.js
+│   │   ├── authService.js
+│   │   ├── plantExhangeService.ts
+│   │   └── profileService.ts
+│   ├── assets
+│   │   ├── adaptive-icon.png
+│   │   ├── addbutton.json
+│   │   ├── app_logo.png
+│   │   ├── defaultprofilepic.png
+│   │   ├── defaultprofilepic.svg
+│   │   ├── favicon.png
+│   │   ├── icon.png
+│   │   ├── loading_animation.json
+│   │   ├── match.png
+│   │   ├── profile.png
+│   │   ├── settings.png
+│   │   ├── splash.png
+│   │   ├── swiping.png
+│   │   └── tradingicon.png
+│   ├── context
+│   │   ├── AuthContext.js
+│   │   └── AuthProvider.js
+│   ├── modals
+│   │   ├── AddPlantModal.tsx
+│   │   └── SelectPlantsModal.tsx
+│   ├── navigation
+│   │   ├── AuthNavigator.jsx
+│   │   └── MainAppNavigator.jsx
+│   ├── reducers
+│   │   └── authReducer.js
+│   ├── screens
+│   │   ├── auth
+│   │   │   ├── LoginScreen.jsx
+│   │   │   ├── SignUpScreen.jsx
+│   │   │   └── SplashScreen.tsx
+│   │   └── main
+│   │       ├── LikerScreen.tsx
+│   │       ├── MatchesScreen.tsx
+│   │       ├── SettingsScreen.tsx
+│   │       └── UserProfileScreen.tsx
+│   ├── types
+│   │   └── types.ts
+│   └── utils
+├── treestrucutre.py
+├── tsconfig.json
+├── yarn-error.log
+└── yarn.lock

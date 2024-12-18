@@ -1,0 +1,2284 @@
+
+// File: app.json
+{
+"expo": {
+"name": "CuttrApp",
+"slug": "CuttrApp",
+"version": "1.0.0",
+"orientation": "portrait",
+"icon": "./src/assets/icon.png",
+"scheme": "myapp",
+"userInterfaceStyle": "automatic",
+"splash": {
+"image": "./src/assets/splash.png",
+"resizeMode": "contain",
+"backgroundColor": "#ffffff"
+},
+"ios": {
+"supportsTablet": true
+},
+"android": {
+"adaptiveIcon": {
+"foregroundImage": "./src/assets/adaptive-icon.png",
+"backgroundColor": "#ffffff"
+},
+"package": "com.djordym.CuttrApp"
+},
+"web": {
+"bundler": "metro",
+"output": "static",
+"favicon": "./src/assets/favicon.png"
+},
+"plugins": [
+"expo-router",
+[
+"expo-image-picker",
+{
+"photosPermission": "The app accesses your photos to let you share them with your friends.",
+"cameraPermission": "The app accesses your camera to let you take photos."
+}
+]
+],
+"experiments": {
+"typedRoutes": true
+},
+"extra": {
+"router": {
+"origin": false
+},
+"eas": {
+"projectId": "669f3974-35e0-45a6-9a00-58e8481a5c03"
+}
+}
+}
+}
+// File: App.jsx
+export default function App() {
+return (
+<SafeAreaProvider>
+<AuthProvider>
+<NavigationContainer>
+<AppContent />
+</NavigationContainer>
+</AuthProvider>
+</SafeAreaProvider>
+);
+}
+const AppContent = () => {
+const { state } = useContext(AuthContext);
+const [isTokenValid, setIsTokenValid] = useState(false);
+if (state.isLoading) {
+return <SplashScreen />;
+}
+return state.userToken ? <MainAppNavigator /> : <AuthNavigator />;
+};
+// File: babel.config.js
+module.exports = function (api) {
+api.cache(true);
+return {
+presets: ['babel-preset-expo'],
+};
+};
+// File: eas.json
+{
+"cli": {
+"version": ">= 9.0.6"
+},
+"build": {
+"development": {
+"developmentClient": true,
+"distribution": "internal"
+},
+"preview": {
+"distribution": "internal"
+},
+"production": {}
+},
+"submit": {
+"production": {}
+}
+}
+// File: expo-env.d.ts
+
+// File: package.json
+{
+"name": "cuttrapp",
+"main": "node_modules/expo/AppEntry.js",
+"version": "1.0.0",
+"scripts": {
+"start": "expo start",
+"reset-project": "node ./scripts/reset-project.js",
+"android": "expo run:android",
+"ios": "expo run:ios",
+"web": "expo start --web",
+"test": "jest --watchAll",
+"lint": "expo lint"
+},
+"jest": {
+"preset": "jest-expo"
+},
+"dependencies": {
+"@babel/preset-env": "^7.24.5",
+"@expo/vector-icons": "^14.0.0",
+"@react-navigation/native": "^6.0.2",
+"@react-navigation/stack": "^6.3.29",
+"axios": "^1.6.8",
+"expo": "~51.0.6",
+"expo-constants": "~16.0.1",
+"expo-dev-client": "~4.0.14",
+"expo-font": "~12.0.5",
+"expo-image-picker": "~15.0.5",
+"expo-linking": "~6.3.1",
+"expo-module-scripts": "^3.5.1",
+"expo-modules-autolinking": "~1.11.0",
+"expo-router": "~3.5.14",
+"expo-secure-store": "~13.0.1",
+"expo-splash-screen": "~0.27.4",
+"expo-status-bar": "~1.12.1",
+"expo-system-ui": "~3.0.4",
+"expo-web-browser": "~13.0.3",
+"lottie-react-native": "6.7.0",
+"mime": "^4.0.3",
+"react": "18.2.0",
+"react-dom": "18.2.0",
+"react-native": "0.74.1",
+"react-native-deck-swiper": "^2.0.17",
+"react-native-elements": "^3.4.3",
+"react-native-gesture-handler": "~2.16.1",
+"react-native-reanimated": "~3.10.1",
+"react-native-safe-area-context": "4.10.1",
+"react-native-screens": "3.31.1",
+"react-native-vector-icons": "^10.1.0",
+"react-native-view-overflow": "^0.0.5",
+"react-native-web": "~0.19.10"
+},
+"devDependencies": {
+"@babel/core": "^7.24.0",
+"@types/jest": "^29.5.12",
+"@types/react": "~18.2.79",
+"@types/react-test-renderer": "^18.0.7",
+"jest": "^29.4.0",
+"jest-expo": "^51.0.0",
+"react-test-renderer": "18.2.0",
+"typescript": "~5.3.3"
+},
+"private": true
+}
+// File: tsconfig.json
+{
+"extends": "expo/tsconfig.base",
+"compilerOptions": {
+"strict": true,
+"paths": {
+"@*.ts",
+"***.ts",
+"expo-env.d.ts"
+]
+}
+// File: scripts\reset-project.js
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const root = process.cwd();
+const oldDirPath = path.join(root, 'app');
+const newDirPath = path.join(root, 'app-example');
+const newAppDirPath = path.join(root, 'app');
+const indexContent = `import { Text, View } from "react-native";
+export default function Index() {
+return (
+<View
+style={{
+flex: 1,
+justifyContent: "center",
+alignItems: "center",
+}}
+>
+<Text>Edit app/index.tsx to edit this screen.</Text>
+</View>
+);
+}
+`;
+const layoutContent = `import { Stack } from "expo-router";
+export default function RootLayout() {
+return (
+<Stack>
+<Stack.Screen name="index" />
+</Stack>
+);
+}
+`;
+fs.rename(oldDirPath, newDirPath, (error) => {
+if (error) {
+return console.error(`Error renaming directory: ${error}`);
+}
+console.log('/app moved to /app-example.');
+fs.mkdir(newAppDirPath, { recursive: true }, (error) => {
+if (error) {
+return console.error(`Error creating new app directory: ${error}`);
+}
+console.log('New /app directory created.');
+const indexPath = path.join(newAppDirPath, 'index.tsx');
+fs.writeFile(indexPath, indexContent, (error) => {
+if (error) {
+return console.error(`Error creating index.tsx: ${error}`);
+}
+console.log('app/index.tsx created.');
+const layoutPath = path.join(newAppDirPath, '_layout.tsx');
+fs.writeFile(layoutPath, layoutContent, (error) => {
+if (error) {
+return console.error(`Error creating _layout.tsx: ${error}`);
+}
+console.log('app/_layout.tsx created.');
+});
+});
+});
+});
+// File: src\api\apiClient.js
+export const createApiClient = async (token) => {
+const baseURL = await getApiUrl();
+return axios.create({
+baseURL,
+headers: {
+'Authorization': `Bearer ${token}`
+}
+});
+};
+// File: src\api\apiConfig.js
+export const getApiUrl = async () => {
+const API_URL = `http:
+return API_URL;
+};
+// File: src\api\authService.js
+export const login = async (email, password) => {
+try {
+const apiClient = await createApiClient();
+const url = `/User/token`;
+console.debug("Attempted URL: ", url);
+const response = await apiClient.post(url, { email, password });
+if (response.data) {
+console.log('Login successful:', response.data);
+console.debug('Token:', response.data);
+}
+return response.data;
+} catch (error) {
+console.error('Login error:', error.response?.data || error.message);
+throw error;
+}
+};
+export const postSignUp = async (name, email, password) => {
+try {
+const apiClient = await createApiClient();
+const url = `/User/signup`;
+console.debug("Attempted URL: ", url);
+console.debug("Name: ", name);
+console.debug("Email: ", email);
+console.debug("Password: ", password);
+const response = await apiClient.post(url, { name, email, password });
+console.log('Signup successful:', response.data);
+return response.data;
+} catch (error) {
+console.error('Signup error:', error.response?.data || error.message);
+throw error;
+}
+};
+export const validateToken = async (token) => {
+try {
+const apiClient = await createApiClient(token);
+const url = `/User/validateToken`;
+console.debug("Attempted URL: ", url);
+const response = await apiClient.get(url);
+console.log('Token validation successful:', response.data);
+return true;
+} catch (error) {
+console.error('Token validation error:', error.response?.data || error.message);
+return false;
+}
+};
+// File: src\api\plantExhangeService.ts
+export const fetchPlantsToLike = async (token: string, amount: number): Promise<Plant[]> => {
+try {
+const apiClient = await createApiClient(token);
+const url = `/PlantAndExchange/LikablePlants/${amount}`;
+console.debug("Attempted URL: ", url);
+const response = await apiClient.get<Plant[]>(url);
+console.log("fetchPlantsToLike response: ", response.data);
+return response.data;
+} catch (error: any) {
+console.error('Error fetching plants to like:', error.response?.data || error.message);
+throw error;
+}
+};
+export const fetchMatches = async (token: string): Promise<Match> => {
+try {
+const apiClient = await createApiClient(token);
+const url = `/PlantAndExchange/Matches`;
+console.debug("Attempted URL: ", url);
+const response = await apiClient.get<Match>(url);
+console.log("fetchMatches response: ", response.data);
+return response.data;
+} catch (error: any) {
+console.error('Error fetching matches:', error.response?.data || error.message);
+throw error;
+}
+};
+export const putPossiblePlantExchange = async (token: string, exchange: any) => {
+try {
+const apiClient = await createApiClient(token);
+const url = `/PlantAndExchange/PossibleExchanges`;
+console.debug("Attempted URL: ", url);
+const response = await apiClient.put(url, exchange);
+console.log("putPossiblePlantExchange response: ", response.data);
+return response.data;
+} catch (error: any) {
+console.error('Error putting possible plant exchange:', error.response?.data || error.message);
+throw error;
+}
+};
+export const getMatches = async (token: string): Promise<Match[]> => {
+try {
+const apiClient = await createApiClient(token);
+const url = `/PlantAndExchange/Matches`;
+console.debug("Attempted URL: ", url);
+const response = await apiClient.get<Match[]>(url);
+console.log("getMatches response: ", response.data);
+return response.data;
+} catch (error: any) {
+console.error('Error fetching matches:', error.response?.data || error.message);
+throw error;
+}
+}
+// File: src\api\profileService.ts
+export const getCurrentUserProfile = async (
+token: string
+): Promise<UserProfile> => {
+try {
+const apiClient = await createApiClient(token);
+const url = `/Profile/CurrentUserdata`;
+console.debug("Attempted URL: ", url);
+const response = await apiClient.get<UserProfile>(url);
+console.log("Profile retrieval successful:", response.data);
+return response.data;
+} catch (error: any) {
+console.error(
+"Profile retrieval error:",
+error.response?.data || error.message
+);
+throw error;
+}
+};
+export const patchUserProfile = async (token: string, patchDocument: any) => {
+try {
+const apiClient = await createApiClient(token);
+const url = `/Profile`;
+console.debug("Attempted URL: ", url);
+const response = await apiClient.patch(url, patchDocument);
+console.log("Profile update successful:", response.data);
+return response.data;
+} catch (error: any) {
+console.error("Failed to patch user profile:", error);
+throw error;
+}
+};
+export const uploadProfilePicture = async (token: string, asset: any) => {
+const formData = new FormData();
+formData.append('photo', {
+uri: asset.uri,
+name: asset.fileName,
+type: asset.mimeType,
+});
+try {
+const apiClient = await createApiClient(token);
+const url = "/UploadFile/ProfilePic";
+console.debug("Attempted URL: ", apiClient.defaults.baseURL + url);
+const response = await apiClient.post(url, formData, {
+headers: {
+"Content-Type": "multipart/form-data",
+},
+});
+console.log("Profile picture upload successful:", response.data);
+return response.data;
+} catch (error: any) {
+if (error.response) {
+console.error("Error response data:", error.response.data);
+console.error("Error response status:", error.response.status);
+console.error("Error response headers:", error.response.headers);
+} else if (error.request) {
+console.error("No response received:", error.request);
+} else {
+console.error("Error in setting up request:", error.message);
+}
+throw error;
+}
+};
+export const addPlantWithImage = async (
+token: string,
+plant: { name: string; description: string; imageUrl: string },
+asset: any
+) => {
+const formData = new FormData();
+const plantInfo = JSON.stringify({
+name: plant.name,
+description: plant.description,
+imageUrl: plant.imageUrl,
+});
+formData.append('plantinfo', plantInfo);
+formData.append('photo', {
+uri: asset.uri,
+name: asset.fileName,
+type: asset.mimeType,
+});
+try {
+const apiClient = await createApiClient(token);
+const url = "/UploadFile/PlantPic";
+console.debug("Attempted URL: ", apiClient.defaults.baseURL + url);
+const response = await apiClient.post(url, formData, {
+headers: {
+"Content-Type": "multipart/form-data",
+},
+});
+console.log("Plant addition successful:", response.data);
+return response.data;
+} catch (error: any) {
+if (error.response) {
+console.error("Error response data:", error.response.data);
+console.error("Error response status:", error.response.status);
+console.error("Error response headers:", error.response.headers);
+} else if (error.request) {
+console.error("No response received:", error.request);
+} else {
+console.error("Error in setting up request:", error.message);
+}
+throw error;
+}
+};
+// File: src\context\AuthContext.js
+const AuthContext = createContext();
+export default AuthContext;
+// File: src\context\AuthProvider.js
+const AuthProvider = ({ children }) => {
+const [state, dispatch] = useReducer(authReducer, {
+isLoading: true,
+isSignout: false,
+userToken: null,
+});
+useEffect(() => {
+const bootstrapAsync = async () => {
+let userToken;
+try {
+userToken = await SecureStore.getItemAsync('userToken');
+} catch (e) {
+console.error("Error restoring token: ", e);
+}
+dispatch({ type: 'RESTORE_TOKEN', token: userToken });
+};
+bootstrapAsync();
+}, []);
+const authContext = useMemo(
+() => ({
+signIn: async (data) => {
+const userToken = await login(data.email, data.password);
+if(userToken){
+try {
+console.log('Storing token:', userToken);
+await SecureStore.setItemAsync('userToken', userToken);
+dispatch({ type: 'SIGN_IN', token: userToken });
+} catch (e) {
+console.error("Error storing the user token:", e);
+}
+}
+},
+signOut: () => {
+console.log('Signing out');
+SecureStore.deleteItemAsync('userToken');
+dispatch({ type: 'SIGN_OUT' })
+},
+signUp: async (name, email, password) => {
+try{
+await postSignUp(name, email, password);
+} catch (e) {
+console.error("Error signing up:", e);
+}
+},
+state
+}),
+[state]
+);
+return <AuthContext.Provider value={authContext}>{children}</AuthContext.Provider>;
+};
+export default AuthProvider;
+// File: src\modals\AddPlantModal.tsx
+View,
+Text,
+TextInput,
+StyleSheet,
+Image,
+Modal,
+TouchableOpacity,
+Alert,
+ScrollView,
+Platform,
+} from 'react-native';
+const COLORS = {
+primary: '#3EB489',
+background: '#F2F2F2',
+accent: '#FF6F61',
+text: '#2F4F4F',
+white: '#FFFFFF',
+};
+SplashScreen.preventAutoHideAsync();
+const AddPlantModal = ({
+visible,
+onClose,
+onAddPlant,
+}: {
+visible: boolean;
+onClose: () => void;
+onAddPlant: (
+plantinfo: { name: string; description: string; imageUrl: string },
+asset: any
+) => void;
+}) => {
+const [plantName, setPlantName] = useState('');
+const [plantDescription, setPlantDescription] = useState('');
+const [plantImage, setPlantImage] = useState('');
+const [asset, setAsset] = useState<any>(null);
+const [fontsLoaded] = useFonts({
+Montserrat_400Regular,
+Montserrat_700Bold,
+});
+useEffect(() => {
+if (fontsLoaded) {
+SplashScreen.hideAsync();
+}
+}, [fontsLoaded]);
+const handleImagePick = async () => {
+const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+if (status !== 'granted') {
+Alert.alert('Permission Denied', 'Permission to access media library is required!');
+return;
+}
+let result = await ImagePicker.launchImageLibraryAsync({
+mediaTypes: ImagePicker.MediaTypeOptions.Images,
+allowsEditing: true,
+quality: 0.7,
+aspect: [3, 4],
+});
+if (!result.canceled && result.assets && result.assets.length > 0) {
+setPlantImage(result.assets[0].uri);
+setAsset(result.assets[0]);
+}
+};
+const handleAddPlant = () => {
+if (!plantName || !plantDescription || !plantImage) {
+Alert.alert('Error', 'Please fill all fields and select an image.');
+return;
+}
+onAddPlant({ name: plantName, description: plantDescription, imageUrl: plantImage }, asset);
+setPlantName('');
+setPlantDescription('');
+setPlantImage('');
+onClose();
+};
+if (!fontsLoaded) {
+return null;
+}
+return (
+<Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
+<View style={styles.modalOverlay}>
+<View style={styles.modalView}>
+<Text style={styles.modalTitle}>Add New Plant</Text>
+<ScrollView contentContainerStyle={styles.scrollContent}>
+<TextInput
+style={styles.input}
+placeholder="Plant Name"
+value={plantName}
+onChangeText={setPlantName}
+placeholderTextColor="#888"
+/>
+<TextInput
+style={[styles.input, styles.descriptionInput]}
+placeholder="Plant Description"
+value={plantDescription}
+onChangeText={setPlantDescription}
+placeholderTextColor="#888"
+multiline
+/>
+<TouchableOpacity style={styles.imagePicker} onPress={handleImagePick}>
+{plantImage ? (
+<Image source={{ uri: plantImage }} style={styles.imagePreview} />
+) : (
+<Ionicons name="camera" size={50} color={COLORS.primary} />
+)}
+</TouchableOpacity>
+<Text style={styles.imageText}>
+{plantImage ? 'Tap to change image' : 'Tap to select image'}
+</Text>
+<TouchableOpacity style={styles.addButton} onPress={handleAddPlant}>
+<Text style={styles.addButtonText}>Add Plant</Text>
+</TouchableOpacity>
+<TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+<Text style={styles.cancelButtonText}>Cancel</Text>
+</TouchableOpacity>
+</ScrollView>
+</View>
+</View>
+</Modal>
+);
+};
+const styles = StyleSheet.create({
+modalOverlay: {
+flex: 1,
+backgroundColor: 'rgba(0, 0, 0, 0.5)',
+justifyContent: 'center',
+alignItems: 'center',
+},
+modalView: {
+width: '90%',
+backgroundColor: COLORS.white,
+borderRadius: 15,
+paddingVertical: 20,
+paddingHorizontal: 20,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.2,
+shadowRadius: 5,
+},
+android: {
+elevation: 5,
+},
+}),
+},
+scrollContent: {
+alignItems: 'center',
+},
+modalTitle: {
+fontSize: 24,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.primary,
+textAlign: 'center',
+marginBottom: 20,
+},
+input: {
+width: '100%',
+borderWidth: 1,
+borderColor: COLORS.primary,
+borderRadius: 10,
+padding: 15,
+marginBottom: 15,
+backgroundColor: COLORS.white,
+fontSize: 16,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.text,
+},
+descriptionInput: {
+height: 100,
+textAlignVertical: 'top',
+},
+imagePicker: {
+width: 120,
+height: 160,
+borderRadius: 15,
+borderWidth: 1,
+borderColor: COLORS.primary,
+justifyContent: 'center',
+alignItems: 'center',
+backgroundColor: COLORS.background,
+marginBottom: 10,
+},
+imagePreview: {
+width: '100%',
+height: '100%',
+borderRadius: 15,
+},
+imageText: {
+fontSize: 14,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.text,
+marginBottom: 20,
+},
+addButton: {
+backgroundColor: COLORS.primary,
+paddingVertical: 15,
+borderRadius: 10,
+alignItems: 'center',
+width: '100%',
+marginBottom: 10,
+},
+addButtonText: {
+fontSize: 18,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.white,
+},
+cancelButton: {
+backgroundColor: COLORS.accent,
+paddingVertical: 15,
+borderRadius: 10,
+alignItems: 'center',
+width: '100%',
+},
+cancelButtonText: {
+fontSize: 18,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.white,
+},
+});
+export default AddPlantModal;
+// File: src\modals\SelectPlantsModal.tsx
+View,
+Text,
+Modal,
+StyleSheet,
+FlatList,
+Image,
+TouchableOpacity,
+Alert,
+Platform,
+} from 'react-native';
+const COLORS = {
+primary: '#3EB489',
+background: '#F2F2F2',
+accent: '#FF6F61',
+text: '#2F4F4F',
+white: '#FFFFFF',
+};
+SplashScreen.preventAutoHideAsync();
+interface SelectPlantsModalProps {
+visible: boolean;
+onClose: () => void;
+ownedPlants: Plant[];
+onConfirm: (selectedPlants: Plant[]) => void;
+}
+const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
+visible,
+onClose,
+ownedPlants,
+onConfirm,
+}) => {
+const [selectedPlants, setSelectedPlants] = useState<Plant[]>([]);
+const [fontsLoaded] = useFonts({
+Montserrat_400Regular,
+Montserrat_700Bold,
+});
+useEffect(() => {
+if (fontsLoaded) {
+SplashScreen.hideAsync();
+}
+if (!visible) {
+setSelectedPlants([]);
+}
+}, [fontsLoaded, visible]);
+const handlePlantSelection = (plant: Plant) => {
+setSelectedPlants((prevSelected) =>
+prevSelected.includes(plant)
+? prevSelected.filter((p) => p.plantId !== plant.plantId)
+: [...prevSelected, plant]
+);
+};
+const handleConfirm = () => {
+if (selectedPlants.length === 0) {
+Alert.alert('Error', 'Please select at least one plant.');
+return;
+}
+onConfirm(selectedPlants);
+};
+if (!fontsLoaded) {
+return null;
+}
+return (
+<Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+<View style={styles.modalOverlay}>
+<View style={styles.modalContainer}>
+<Text style={styles.modalTitle}>Select Plants</Text>
+<FlatList
+data={ownedPlants}
+keyExtractor={(item) => item.plantId.toString()}
+numColumns={3}
+contentContainerStyle={styles.flatListContent}
+renderItem={({ item }) => (
+<TouchableOpacity
+style={[
+styles.plantContainer,
+selectedPlants.includes(item) && styles.selectedPlantContainer,
+]}
+onPress={() => handlePlantSelection(item)}
+>
+<Image source={{ uri: item.imageUrl }} style={styles.plantImage} />
+<Text style={styles.plantName}>{item.name}</Text>
+{selectedPlants.includes(item) && (
+<Ionicons
+name="checkmark-circle"
+size={24}
+color={COLORS.primary}
+style={styles.checkIcon}
+/>
+)}
+</TouchableOpacity>
+)}
+/>
+<View style={styles.buttonContainer}>
+<TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+<Text style={styles.cancelButtonText}>Cancel</Text>
+</TouchableOpacity>
+<TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
+<Text style={styles.confirmButtonText}>Confirm</Text>
+</TouchableOpacity>
+</View>
+</View>
+</View>
+</Modal>
+);
+};
+const styles = StyleSheet.create({
+modalOverlay: {
+flex: 1,
+backgroundColor: 'rgba(0, 0, 0, 0.5)',
+justifyContent: 'center',
+alignItems: 'center',
+},
+modalContainer: {
+width: '90%',
+backgroundColor: COLORS.white,
+borderRadius: 15,
+paddingVertical: 20,
+paddingHorizontal: 15,
+maxHeight: '80%',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.2,
+shadowRadius: 5,
+},
+android: {
+elevation: 5,
+},
+}),
+},
+modalTitle: {
+fontSize: 24,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.primary,
+textAlign: 'center',
+marginBottom: 15,
+},
+flatListContent: {
+paddingBottom: 20,
+},
+plantContainer: {
+flex: 1,
+margin: 5,
+alignItems: 'center',
+borderWidth: 2,
+borderColor: 'transparent',
+borderRadius: 15,
+padding: 10,
+position: 'relative',
+},
+selectedPlantContainer: {
+borderColor: COLORS.primary,
+},
+plantImage: {
+width: 80,
+height: 80,
+borderRadius: 10,
+},
+plantName: {
+textAlign: 'center',
+marginTop: 5,
+fontSize: 14,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.text,
+},
+checkIcon: {
+position: 'absolute',
+top: 5,
+right: 5,
+},
+buttonContainer: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+marginTop: 15,
+},
+cancelButton: {
+backgroundColor: COLORS.accent,
+paddingVertical: 12,
+borderRadius: 10,
+alignItems: 'center',
+flex: 1,
+marginRight: 10,
+},
+cancelButtonText: {
+fontSize: 16,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.white,
+},
+confirmButton: {
+backgroundColor: COLORS.primary,
+paddingVertical: 12,
+borderRadius: 10,
+alignItems: 'center',
+flex: 1,
+marginLeft: 10,
+},
+confirmButtonText: {
+fontSize: 16,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.white,
+},
+});
+export default SelectPlantsModal;
+// File: src\navigation\AuthNavigator.jsx
+const Stack = createStackNavigator();
+export default function StackNavigator() {
+return (
+<Stack.Navigator>
+<Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+<Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
+</Stack.Navigator>
+);
+}
+// File: src\navigation\MainAppNavigator.jsx
+const Tab = createBottomTabNavigator();
+const icons = {
+UserProfile: require('../assets/profile.png'),
+LikerScreen: require('../assets/swiping.png'),
+Matches: require('../assets/match.png'),
+Settings: require('../assets/settings.png'),
+};
+export default function BottomTabNavigator() {
+return (
+<Tab.Navigator
+screenOptions={({ route }) => ({
+headerShown: false,
+tabBarIcon: ({ focused, color, size }) => {
+const iconSource = icons[route.name];
+return (
+<Image
+source={iconSource}
+style={[
+styles.icon,
+{ tintColor: focused ? '#673ab7' : '#222' },
+{ width: size, height: size },
+]}
+/>
+);
+},
+tabBarActiveTintColor: '#673ab7',
+tabBarInactiveTintColor: 'gray',
+})}
+>
+<Tab.Screen name="UserProfile" component={UserProfileScreen} />
+<Tab.Screen name="LikerScreen" component={LikerScreen} />
+<Tab.Screen name="Matches" component={MatchesScreen} />
+<Tab.Screen name="Settings" component={SettingsScreen} />
+</Tab.Navigator>
+);
+}
+const styles = StyleSheet.create({
+icon: {
+width: 24,
+height: 24,
+},
+});
+// File: src\reducers\authReducer.js
+const authReducer = (prevState, action) => {
+switch (action.type) {
+case 'RESTORE_TOKEN':
+return {
+...prevState,
+userToken: action.token,
+isLoading: false,
+};
+case 'SIGN_IN':
+return {
+...prevState,
+isSignout: false,
+userToken: action.token,
+};
+case 'SIGN_OUT':
+return {
+...prevState,
+isSignout: true,
+userToken: null,
+};
+default:
+return prevState;
+}
+};
+export default authReducer;
+// File: src\screens\auth\LoginScreen.jsx
+View,
+Text,
+TextInput,
+StyleSheet,
+TouchableOpacity,
+Image,
+Alert,
+Platform,
+ScrollView,
+} from 'react-native';
+const COLORS = {
+primary: '#3EB489',
+background: '#F2F2F2',
+accent: '#FF6F61',
+text: '#2F4F4F',
+white: '#FFFFFF',
+};
+SplashScreen.preventAutoHideAsync();
+const LoginScreen = ({ navigation }) => {
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const { signIn } = useContext(AuthContext);
+const [fontsLoaded] = useFonts({
+Montserrat_400Regular,
+Montserrat_700Bold,
+});
+React.useEffect(() => {
+if (fontsLoaded) {
+SplashScreen.hideAsync();
+}
+}, [fontsLoaded]);
+const handleSignIn = () => {
+try {
+signIn({ email, password });
+} catch (error) {
+Alert.alert('Error', 'Error signing in');
+}
+};
+if (!fontsLoaded) {
+return null;
+}
+return (
+<ScrollView contentContainerStyle={styles.container}>
+<Image source={require('../../assets/app_logo.png')} style={styles.logo} />
+<Text style={styles.title}>Cuttr</Text>
+<Text style={styles.signInText}>Sign In</Text>
+<TextInput
+style={styles.input}
+placeholder="Email"
+value={email}
+onChangeText={setEmail}
+placeholderTextColor="#888"
+keyboardType="email-address"
+autoCapitalize="none"
+/>
+<TextInput
+style={styles.input}
+placeholder="Password"
+secureTextEntry
+value={password}
+onChangeText={setPassword}
+placeholderTextColor="#888"
+/>
+<TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+<Text style={styles.signInButtonText}>Sign In</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+<Text style={styles.switchText}>Don't have an account yet? Sign Up</Text>
+</TouchableOpacity>
+</ScrollView>
+);
+};
+const styles = StyleSheet.create({
+container: {
+flexGrow: 1,
+justifyContent: 'center',
+padding: 20,
+backgroundColor: COLORS.background,
+},
+logo: {
+width: 120,
+height: 120,
+alignSelf: 'center',
+marginBottom: 20,
+resizeMode: 'contain',
+},
+title: {
+fontSize: 32,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.primary,
+textAlign: 'center',
+marginBottom: 10,
+},
+signInText: {
+fontSize: 24,
+fontFamily: 'Montserrat_700Bold',
+marginBottom: 20,
+color: COLORS.text,
+textAlign: 'center',
+},
+input: {
+marginBottom: 15,
+borderWidth: 1,
+borderColor: COLORS.primary,
+padding: 15,
+borderRadius: 10,
+backgroundColor: COLORS.white,
+fontSize: 16,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.text,
+},
+signInButton: {
+backgroundColor: COLORS.primary,
+paddingVertical: 15,
+borderRadius: 10,
+alignItems: 'center',
+marginTop: 10,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.2,
+shadowRadius: 5,
+},
+android: {
+elevation: 4,
+},
+}),
+},
+signInButtonText: {
+fontSize: 18,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.white,
+},
+switchText: {
+marginTop: 20,
+color: COLORS.primary,
+textAlign: 'center',
+fontSize: 16,
+fontFamily: 'Montserrat_400Regular',
+},
+});
+export default LoginScreen;
+// File: src\screens\auth\SignUpScreen.jsx
+View,
+Text,
+TextInput,
+StyleSheet,
+TouchableOpacity,
+Image,
+Alert,
+Platform,
+ScrollView,
+} from 'react-native';
+const COLORS = {
+primary: '#3EB489',
+background: '#F2F2F2',
+accent: '#FF6F61',
+text: '#2F4F4F',
+white: '#FFFFFF',
+};
+SplashScreen.preventAutoHideAsync();
+const SignUpScreen = ({ navigation }) => {
+const [username, setUsername] = useState('');
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const [confirmPassword, setConfirmPassword] = useState('');
+const { signUp } = useContext(AuthContext);
+const [fontsLoaded] = useFonts({
+Montserrat_400Regular,
+Montserrat_700Bold,
+});
+React.useEffect(() => {
+if (fontsLoaded) {
+SplashScreen.hideAsync();
+}
+}, [fontsLoaded]);
+const handleSignUp = () => {
+if (password !== confirmPassword) {
+Alert.alert('Error', 'Passwords do not match');
+return;
+}
+signUp(username, email, password);
+Alert.alert('Success', 'Sign up successful');
+navigation.navigate('Login');
+};
+if (!fontsLoaded) {
+return null;
+}
+return (
+<ScrollView contentContainerStyle={styles.container}>
+<Image source={require('../../assets/app_logo.png')} style={styles.logo} />
+<Text style={styles.appTitle}>Cuttr</Text>
+<Text style={styles.signUpText}>Create Your Account</Text>
+<TextInput
+style={styles.input}
+placeholder="Username"
+value={username}
+onChangeText={setUsername}
+placeholderTextColor="#888"
+/>
+<TextInput
+style={styles.input}
+placeholder="Email"
+value={email}
+onChangeText={setEmail}
+placeholderTextColor="#888"
+keyboardType="email-address"
+autoCapitalize="none"
+/>
+<TextInput
+style={styles.input}
+placeholder="Password"
+secureTextEntry
+value={password}
+onChangeText={setPassword}
+placeholderTextColor="#888"
+/>
+<TextInput
+style={styles.input}
+placeholder="Confirm Password"
+secureTextEntry
+value={confirmPassword}
+onChangeText={setConfirmPassword}
+placeholderTextColor="#888"
+/>
+<TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
+<Text style={styles.signUpButtonText}>Sign Up</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={() => navigation.navigate('Login')}>
+<Text style={styles.switchText}>Already have an account? Sign In</Text>
+</TouchableOpacity>
+</ScrollView>
+);
+};
+const styles = StyleSheet.create({
+container: {
+flexGrow: 1,
+justifyContent: 'center',
+padding: 20,
+backgroundColor: COLORS.background,
+},
+logo: {
+width: 120,
+height: 120,
+alignSelf: 'center',
+marginBottom: 20,
+resizeMode: 'contain',
+},
+appTitle: {
+fontSize: 32,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.primary,
+textAlign: 'center',
+marginBottom: 10,
+},
+signUpText: {
+fontSize: 24,
+fontFamily: 'Montserrat_700Bold',
+marginBottom: 20,
+color: COLORS.text,
+textAlign: 'center',
+},
+input: {
+marginBottom: 15,
+borderWidth: 1,
+borderColor: COLORS.primary,
+padding: 15,
+borderRadius: 10,
+backgroundColor: COLORS.white,
+fontSize: 16,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.text,
+},
+signUpButton: {
+backgroundColor: COLORS.primary,
+paddingVertical: 15,
+borderRadius: 10,
+alignItems: 'center',
+marginTop: 10,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.2,
+shadowRadius: 5,
+},
+android: {
+elevation: 4,
+},
+}),
+},
+signUpButtonText: {
+fontSize: 18,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.white,
+},
+switchText: {
+marginTop: 20,
+color: COLORS.primary,
+textAlign: 'center',
+fontSize: 16,
+fontFamily: 'Montserrat_400Regular',
+},
+});
+export default SignUpScreen;
+// File: src\screens\auth\SplashScreen.tsx
+const COLORS = {
+primary: '#3EB489',
+background: '#F2F2F2',
+white: '#FFFFFF',
+};
+const windowWidth = Dimensions.get('window').width;
+const windowHeight = Dimensions.get('window').height;
+SplashScreenExpo.preventAutoHideAsync();
+function SplashScreen() {
+const [fontsLoaded] = useFonts({
+Montserrat_400Regular,
+});
+useEffect(() => {
+if (fontsLoaded) {
+SplashScreenExpo.hideAsync();
+}
+}, [fontsLoaded]);
+if (!fontsLoaded) {
+return null;
+}
+return (
+<View style={styles.container}>
+<Image source={require('../../assets/app_logo.png')} style={styles.logo} />
+<LottieView
+source={require('../../assets/loading_animation.json')}
+autoPlay
+loop
+style={styles.animation}
+/>
+</View>
+);
+}
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+alignItems: 'center',
+justifyContent: 'center',
+},
+logo: {
+width: windowWidth * 0.6,
+height: windowWidth * 0.6,
+marginBottom: 30,
+resizeMode: 'contain',
+},
+animation: {
+width: windowWidth * 0.2,
+height: windowWidth * 0.2,
+},
+});
+export default SplashScreen;
+// File: src\screens\main\LikerScreen.tsx
+View,
+Text,
+StyleSheet,
+ActivityIndicator,
+Image,
+Alert,
+Dimensions,
+Platform,
+} from 'react-native';
+fetchPlantsToLike,
+putPossiblePlantExchange,
+} from '../../api/plantExhangeService';
+const COLORS = {
+primary: '#3EB489',
+secondary: '#FDCB6E',
+background: '#F2F2F2',
+accent: '#FF6F61',
+text: '#2F4F4F',
+white: '#FFFFFF',
+};
+const windowWidth = Dimensions.get('window').width;
+const windowHeight = Dimensions.get('window').height;
+SplashScreen.preventAutoHideAsync();
+const createOrUpdatePossibleExchanges = async (
+userToken: string,
+ownedPlants: Plant[],
+targetPlant: Plant,
+userApproval: boolean
+) => {
+const exchangesToSend = [];
+for (const ownedPlant of ownedPlants) {
+const existingExchange: PlantExchange | undefined = ownedPlant.exchangesAsResponding.find(
+(exchange: PlantExchange) => exchange.initiatingPlantId === targetPlant.plantId
+);
+if (existingExchange) {
+existingExchange.respondingUserApproval = userApproval;
+exchangesToSend.push(existingExchange);
+if (existingExchange.initiatingUserApproval && existingExchange.respondingUserApproval) {
+Alert.alert('Match!', 'You have a match! Go check it out!');
+}
+} else {
+const newExchange: PlantExchange = {
+plantExchangeResponseId: 0,
+initiatingPlantId: ownedPlant.plantId,
+respondingPlantId: targetPlant.plantId,
+initiatingUserApproval: userApproval,
+respondingUserApproval: null,
+};
+exchangesToSend.push(newExchange);
+}
+}
+await putPossiblePlantExchange(userToken, exchangesToSend);
+};
+const LikerScreen = () => {
+const [userData, setUserData] = useState<UserProfile | null>(null);
+const [plants, setPlants] = useState<Plant[]>([]);
+const [loading, setLoading] = useState(true);
+const { state } = useContext(AuthContext);
+const [modalVisible, setModalVisible] = useState(false);
+const [currentPlant, setCurrentPlant] = useState<Plant | null>(null);
+const [fontsLoaded] = useFonts({
+Montserrat_400Regular,
+Montserrat_700Bold,
+});
+useEffect(() => {
+if (fontsLoaded) {
+SplashScreen.hideAsync();
+}
+}, [fontsLoaded]);
+useEffect(() => {
+const loadInitialPlants = async () => {
+try {
+const initialPlants = await fetchPlantsToLike(state.userToken, 5);
+setPlants(initialPlants);
+} catch (error) {
+console.error('Failed to load plants:', error);
+} finally {
+setLoading(false);
+}
+};
+loadInitialPlants();
+const fetchUserData = async () => {
+try {
+const data = await getCurrentUserProfile(state.userToken);
+setUserData(data);
+} catch (error) {
+console.error('Failed to fetch user data:', error);
+}
+};
+fetchUserData();
+}, [state.userToken]);
+const handleSwiped = async (cardIndex: number) => {
+if (cardIndex >= plants.length - 1) {
+const newPlant = await fetchPlantsToLike(state.userToken, 1);
+setPlants((prevPlants) => [...prevPlants, ...newPlant]);
+}
+};
+const handleDislike = async (plant: Plant) => {
+try {
+if (userData)
+await createOrUpdatePossibleExchanges(state.userToken, userData.ownedPlants, plant, false);
+else Alert.alert('Error', 'User data not loaded yet');
+} catch (error) {
+console.error('Failed to dislike plant:', error);
+}
+};
+const handleLike = (plant: Plant) => {
+setCurrentPlant(plant);
+setModalVisible(true);
+};
+const handlePlantSelection = async (selectedPlants: Plant[]) => {
+if (!currentPlant) return;
+try {
+await createOrUpdatePossibleExchanges(state.userToken, selectedPlants, currentPlant, true);
+} catch (error) {
+console.error('Failed to like plant:', error);
+Alert.alert('Error', 'Failed to submit plant exchange request.');
+} finally {
+setModalVisible(false);
+}
+};
+if (!fontsLoaded) {
+return null;
+}
+if (loading) {
+return (
+<View style={styles.loadingContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+</View>
+);
+}
+return (
+<SafeAreaView style={styles.container}>
+<View style={styles.swiperContainer}>
+<Swiper
+cards={plants}
+renderCard={(card) => {
+if (!card) return null;
+return (
+<View style={styles.card}>
+<Image source={{ uri: card.imageUrl }} style={styles.plantImage} />
+<View style={styles.cardDetails}>
+<Text style={styles.plantTitle}>{card.name}</Text>
+<Text style={styles.plantDescription}>{card.description}</Text>
+</View>
+</View>
+);
+}}
+onSwiped={(cardIndex) => handleSwiped(cardIndex)}
+onSwipedAll={() => console.log('All cards have been swiped.')}
+cardIndex={0}
+backgroundColor={'transparent'}
+stackSize={3}
+onSwipedLeft={(cardIndex) => handleDislike(plants[cardIndex])}
+onSwipedRight={(cardIndex) => handleLike(plants[cardIndex])}
+overlayLabels={{
+left: {
+title: 'NOPE',
+style: {
+label: {
+backgroundColor: 'transparent',
+borderColor: COLORS.accent,
+color: COLORS.accent,
+borderWidth: 2,
+fontSize: 32,
+fontFamily: 'Montserrat_700Bold',
+padding: 10,
+},
+wrapper: {
+flexDirection: 'column',
+alignItems: 'flex-end',
+justifyContent: 'flex-start',
+marginTop: 20,
+marginLeft: -20,
+},
+},
+},
+right: {
+title: 'LIKE',
+style: {
+label: {
+backgroundColor: 'transparent',
+borderColor: COLORS.primary,
+color: COLORS.primary,
+borderWidth: 2,
+fontSize: 32,
+fontFamily: 'Montserrat_700Bold',
+padding: 10,
+},
+wrapper: {
+flexDirection: 'column',
+alignItems: 'flex-start',
+justifyContent: 'flex-start',
+marginTop: 20,
+marginLeft: 20,
+},
+},
+},
+}}
+/>
+</View>
+{userData && (
+<SelectPlantsModal
+visible={modalVisible}
+onClose={() => setModalVisible(false)}
+ownedPlants={userData.ownedPlants}
+onConfirm={handlePlantSelection}
+/>
+)}
+</SafeAreaView>
+);
+};
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+},
+loadingContainer: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+backgroundColor: COLORS.background,
+},
+swiperContainer: {
+flex: 1,
+paddingTop: 20,
+},
+card: {
+flex: 0.75,
+borderRadius: 15,
+backgroundColor: COLORS.white,
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+elevation: 3,
+overflow: 'hidden',
+},
+plantImage: {
+width: '100%',
+height: '65%',
+},
+cardDetails: {
+padding: 15,
+},
+plantTitle: {
+fontSize: 24,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.primary,
+marginBottom: 10,
+},
+plantDescription: {
+fontSize: 16,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.text,
+},
+});
+export default LikerScreen;
+// File: src\screens\main\MatchesScreen.tsx
+ScrollView,
+View,
+Text,
+Image,
+StyleSheet,
+Platform,
+Dimensions,
+} from 'react-native';
+const COLORS = {
+primary: '#3EB489',
+secondary: '#FDCB6E',
+background: '#F2F2F2',
+accent: '#FF6F61',
+text: '#2F4F4F',
+white: '#FFFFFF',
+};
+const windowWidth = Dimensions.get('window').width;
+SplashScreen.preventAutoHideAsync();
+const MatchesScreen = () => {
+const { state } = useContext(AuthContext);
+const [matches, setMatches] = useState<Match[]>([]);
+const isFocused = useIsFocused();
+const [fontsLoaded] = useFonts({
+Montserrat_400Regular,
+Montserrat_700Bold,
+});
+useEffect(() => {
+if (fontsLoaded) {
+SplashScreen.hideAsync();
+}
+}, [fontsLoaded]);
+useEffect(() => {
+const fetchMatches = async () => {
+try {
+const data = await getMatches(state.userToken);
+setMatches(data);
+console.log('Matches fetched successfully:', data);
+} catch (error) {
+console.error('Failed to fetch matches:', error);
+}
+};
+fetchMatches();
+}, [isFocused]);
+if (!fontsLoaded) {
+return null;
+}
+return (
+<SafeAreaView style={styles.container}>
+<ScrollView contentContainerStyle={styles.scrollContent}>
+<Text style={styles.header}>Matches</Text>
+{matches.map((match, index) => (
+<View key={index} style={styles.matchCard}>
+<View style={styles.matchDetails}>
+<View style={styles.userContainer}>
+<Image source={{ uri: match.plant1.imageUrl }} style={styles.plantImage} />
+<Text style={styles.plantTitle}>{match.plant1.name}</Text>
+</View>
+<Ionicons name="swap-horizontal" size={30} color={COLORS.primary} />
+<View style={styles.userContainer}>
+<Image source={{ uri: match.plant2.imageUrl }} style={styles.plantImage} />
+<Text style={styles.plantTitle}>{match.plant2.name}</Text>
+</View>
+</View>
+</View>
+))}
+</ScrollView>
+</SafeAreaView>
+);
+};
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+},
+scrollContent: {
+paddingBottom: 20,
+},
+header: {
+fontSize: 28,
+fontFamily: 'Montserrat_700Bold',
+marginTop: 30,
+marginBottom: 20,
+marginHorizontal: 20,
+color: COLORS.text,
+},
+matchCard: {
+backgroundColor: COLORS.white,
+borderRadius: 15,
+marginHorizontal: 20,
+marginBottom: 20,
+paddingVertical: 20,
+paddingHorizontal: 15,
+alignItems: 'center',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+},
+android: {
+elevation: 3,
+},
+}),
+},
+matchDetails: {
+flexDirection: 'row',
+alignItems: 'center',
+},
+userContainer: {
+alignItems: 'center',
+width: (windowWidth - 120) / 2,
+},
+plantImage: {
+width: 100,
+height: 150,
+borderRadius: 10,
+marginBottom: 10,
+},
+plantTitle: {
+fontSize: 16,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.primary,
+textAlign: 'center',
+},
+});
+export default MatchesScreen;
+// File: src\screens\main\SettingsScreen.tsx
+View,
+Text,
+StyleSheet,
+ScrollView,
+Switch,
+TouchableOpacity,
+Platform,
+} from 'react-native';
+useFonts,
+Montserrat_400Regular,
+Montserrat_700Bold,
+} from '@expo-google-fonts/montserrat';
+const COLORS = {
+primary: '#3EB489',
+secondary: '#FDCB6E',
+background: '#F2F2F2',
+accent: '#FF6F61',
+text: '#2F4F4F',
+white: '#FFFFFF',
+};
+SplashScreen.preventAutoHideAsync();
+const SettingsScreen = () => {
+const { signOut } = useContext(AuthContext);
+const [isPushNotificationsEnabled, setIsPushNotificationsEnabled] = useState(false);
+const [isLocationServicesEnabled, setIsLocationServicesEnabled] = useState(false);
+const [fontsLoaded] = useFonts({
+Montserrat_400Regular,
+Montserrat_700Bold,
+});
+React.useEffect(() => {
+if (fontsLoaded) {
+SplashScreen.hideAsync();
+}
+}, [fontsLoaded]);
+const togglePushNotifications = () =>
+setIsPushNotificationsEnabled((previousState) => !previousState);
+const toggleLocationServices = () =>
+setIsLocationServicesEnabled((previousState) => !previousState);
+if (!fontsLoaded) {
+return null;
+}
+return (
+<SafeAreaView style={styles.container}>
+<ScrollView contentContainerStyle={styles.scrollContent}>
+<Text style={styles.header}>Settings</Text>
+<View style={styles.section}>
+<Text style={styles.sectionHeader}>Account</Text>
+<TouchableOpacity style={styles.settingItem} onPress={() => {}}>
+<Text style={styles.settingText}>Change Email</Text>
+<Ionicons name="chevron-forward" size={24} color={COLORS.text} />
+</TouchableOpacity>
+<TouchableOpacity style={styles.settingItem} onPress={() => {}}>
+<Text style={styles.settingText}>Change Password</Text>
+<Ionicons name="chevron-forward" size={24} color={COLORS.text} />
+</TouchableOpacity>
+</View>
+<View style={styles.section}>
+<Text style={styles.sectionHeader}>Notifications</Text>
+<View style={styles.settingItem}>
+<Text style={styles.settingText}>Push Notifications</Text>
+<Switch
+trackColor={{ false: '#767577', true: COLORS.primary }}
+thumbColor={isPushNotificationsEnabled ? COLORS.accent : '#f4f3f4'}
+ios_backgroundColor="#3e3e3e"
+onValueChange={togglePushNotifications}
+value={isPushNotificationsEnabled}
+/>
+</View>
+</View>
+<View style={styles.section}>
+<Text style={styles.sectionHeader}>Privacy</Text>
+<View style={styles.settingItem}>
+<Text style={styles.settingText}>Location Services</Text>
+<Switch
+trackColor={{ false: '#767577', true: COLORS.primary }}
+thumbColor={isLocationServicesEnabled ? COLORS.accent : '#f4f3f4'}
+ios_backgroundColor="#3e3e3e"
+onValueChange={toggleLocationServices}
+value={isLocationServicesEnabled}
+/>
+</View>
+</View>
+<TouchableOpacity style={styles.logoutButton} onPress={signOut}>
+<Text style={styles.logoutButtonText}>Logout</Text>
+</TouchableOpacity>
+</ScrollView>
+</SafeAreaView>
+);
+};
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+},
+scrollContent: {
+paddingBottom: 20,
+},
+header: {
+fontSize: 28,
+fontFamily: 'Montserrat_700Bold',
+marginTop: 30,
+marginBottom: 20,
+marginHorizontal: 20,
+color: COLORS.text,
+},
+section: {
+marginBottom: 24,
+backgroundColor: COLORS.white,
+paddingVertical: 15,
+paddingHorizontal: 20,
+borderRadius: 15,
+marginHorizontal: 20,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+},
+android: {
+elevation: 3,
+},
+}),
+},
+sectionHeader: {
+fontSize: 20,
+fontFamily: 'Montserrat_700Bold',
+marginBottom: 12,
+color: COLORS.primary,
+},
+settingItem: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+alignItems: 'center',
+paddingVertical: 15,
+borderBottomWidth: 1,
+borderBottomColor: COLORS.background,
+},
+settingText: {
+fontSize: 16,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.text,
+},
+logoutButton: {
+marginTop: 32,
+marginHorizontal: 20,
+backgroundColor: COLORS.accent,
+paddingVertical: 15,
+borderRadius: 10,
+alignItems: 'center',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.2,
+shadowRadius: 5,
+},
+android: {
+elevation: 4,
+},
+}),
+},
+logoutButtonText: {
+fontSize: 18,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.white,
+},
+});
+export default SettingsScreen;
+// File: src\screens\main\UserProfileScreen.tsx
+ScrollView,
+View,
+Text,
+Image,
+StyleSheet,
+TextInput,
+Alert,
+TouchableOpacity,
+Platform,
+Dimensions,
+} from 'react-native';
+getCurrentUserProfile,
+patchUserProfile,
+uploadProfilePicture,
+addPlantWithImage,
+} from '../../api/profileService';
+const COLORS = {
+primary: '#3EB489',
+secondary: '#FDCB6E',
+background: '#F2F2F2',
+accent: '#FF6F61',
+text: '#2F4F4F',
+white: '#FFFFFF',
+};
+const windowWidth = Dimensions.get('window').width;
+const UserProfileScreen = () => {
+const [userData, setUserData] = useState<UserProfile | null>(null);
+const { state, signOut } = useContext(AuthContext);
+const [userName, setUserName] = useState('');
+const [description, setDescription] = useState('');
+const [quote, setQuote] = useState('');
+const [profilePhotoPath, setProfilePhotoPath] = useState('');
+const [modalVisible, setModalVisible] = useState(false);
+const [refreshToggle, setRefreshToggle] = useState(false);
+let [fontsLoaded] = useFonts({
+Montserrat_400Regular,
+Montserrat_700Bold,
+});
+useEffect(() => {
+const fetchUserData = async () => {
+try {
+const data = await getCurrentUserProfile(state.userToken);
+setUserData(data);
+setUserName(data.userName);
+setDescription(data.description);
+setQuote(data.quote);
+setProfilePhotoPath(data.profilePhotoPath);
+} catch (error) {
+console.error('Failed to fetch user data:', error);
+signOut();
+}
+};
+fetchUserData();
+}, [state.userToken, refreshToggle]);
+const updateProfile = async (field: string, value: string) => {
+try {
+const patchDocument = [{ op: 'replace', path: `/${field}`, value }];
+await patchUserProfile(state.userToken, patchDocument);
+} catch (error) {
+console.error(`Failed to update ${field}:`, error);
+}
+};
+const pickProfileImage = async () => {
+let result = await ImagePicker.launchImageLibraryAsync({
+mediaTypes: ImagePicker.MediaTypeOptions.Images,
+allowsEditing: true,
+aspect: [3, 3],
+quality: 1,
+});
+console.debug('result: ', result);
+if (!result.canceled && result.assets && result.assets.length > 0) {
+let asset = result.assets[0];
+setProfilePhotoPath(asset.uri);
+await uploadProfilePicture(state.userToken, asset);
+}
+};
+const handleAddPlant = async (
+plantinfo: { name: string; description: string; imageUrl: string },
+asset: any
+) => {
+try {
+if (userData) {
+let plantObj: Plant = {
+plantId: -1,
+name: plantinfo.name,
+description: plantinfo.description,
+imageUrl: plantinfo.imageUrl,
+userId: userData.userId,
+exchangesAsInitiating: [],
+exchangesAsResponding: [],
+};
+userData.ownedPlants.push(plantObj);
+}
+await addPlantWithImage(state.userToken, plantinfo, asset);
+setRefreshToggle(!refreshToggle);
+} catch (error) {
+console.error('Failed to add plant:', error);
+Alert.alert('Failed to add plant');
+}
+};
+if (!userData) {
+return <SplashScreen />;
+}
+return (
+<SafeAreaView style={styles.container}>
+<ScrollView contentContainerStyle={styles.scrollContent}>
+<View style={styles.profileHeader}>
+<TouchableOpacity style={styles.profilePicContainer} onPress={pickProfileImage}>
+<Image
+source={
+profilePhotoPath
+? { uri: profilePhotoPath }
+: require('../../assets/defaultprofilepic.png')
+}
+style={styles.profilePic}
+/>
+<View style={styles.editIconContainer}>
+<Ionicons name="camera" size={20} color="#fff" />
+</View>
+</TouchableOpacity>
+<TextInput
+style={styles.userName}
+value={userName}
+onChangeText={(text) => {
+setUserName(text);
+updateProfile('userName', text);
+}}
+placeholder="Your Name"
+placeholderTextColor="#fff"
+/>
+<TextInput
+style={styles.quote}
+value={quote}
+onChangeText={(text) => {
+setQuote(text);
+updateProfile('quote', text);
+}}
+placeholder="Your Favorite Quote"
+placeholderTextColor="#f0f0f0"
+/>
+</View>
+<Text style={styles.sectionTitle}>About Me</Text>
+<TextInput
+style={styles.description}
+value={description}
+onChangeText={(text) => {
+setDescription(text);
+updateProfile('description', text);
+}}
+placeholder="Tell us about yourself"
+placeholderTextColor="#888"
+multiline
+/>
+<Text style={styles.sectionTitle}>My Plants</Text>
+<View style={styles.plantList}>
+{userData.ownedPlants.map((plant, index) => (
+<View key={index} style={styles.plantCard}>
+<Image source={{ uri: plant.imageUrl }} style={styles.plantImage} />
+<View style={styles.plantInfo}>
+<Text style={styles.plantTitle}>{plant.name}</Text>
+<Text style={styles.plantDescription}>{plant.description}</Text>
+</View>
+</View>
+))}
+</View>
+<TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
+<Ionicons name="add" size={30} color="#fff" />
+</TouchableOpacity>
+<AddPlantModal
+visible={modalVisible}
+onClose={() => {
+setModalVisible(false);
+setRefreshToggle(!refreshToggle);
+}}
+onAddPlant={handleAddPlant}
+/>
+</ScrollView>
+</SafeAreaView>
+);
+};
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+},
+scrollContent: {
+paddingBottom: 80,
+},
+profileHeader: {
+backgroundColor: COLORS.primary,
+paddingBottom: 40,
+alignItems: 'center',
+borderBottomLeftRadius: 30,
+borderBottomRightRadius: 30,
+paddingTop: 80,
+},
+profilePicContainer: {
+position: 'absolute',
+top: 30,
+alignItems: 'center',
+},
+profilePic: {
+width: 120,
+height: 120,
+borderRadius: 60,
+borderWidth: 4,
+borderColor: COLORS.white,
+backgroundColor: '#ccc',
+},
+editIconContainer: {
+position: 'absolute',
+bottom: 0,
+right: 0,
+backgroundColor: COLORS.accent,
+borderRadius: 15,
+padding: 5,
+},
+userName: {
+marginTop: 80,
+fontSize: 24,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.white,
+textAlign: 'center',
+width: '80%',
+backgroundColor: 'rgba(255, 255, 255, 0.2)',
+borderRadius: 10,
+padding: 10,
+},
+quote: {
+marginTop: 10,
+fontSize: 16,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.white,
+fontStyle: 'italic',
+textAlign: 'center',
+width: '80%',
+backgroundColor: 'rgba(255, 255, 255, 0.2)',
+borderRadius: 10,
+padding: 10,
+},
+sectionTitle: {
+fontSize: 20,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.text,
+marginTop: 30,
+marginHorizontal: 20,
+},
+description: {
+backgroundColor: COLORS.white,
+borderRadius: 15,
+padding: 15,
+marginHorizontal: 20,
+marginTop: 10,
+fontSize: 16,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.text,
+textAlignVertical: 'top',
+minHeight: 80,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+},
+android: {
+elevation: 3,
+},
+}),
+},
+plantList: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+justifyContent: 'space-between',
+marginHorizontal: 20,
+marginTop: 20,
+},
+plantCard: {
+width: (windowWidth - 60) / 2,
+backgroundColor: COLORS.white,
+borderRadius: 15,
+marginBottom: 15,
+overflow: 'hidden',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+},
+android: {
+elevation: 3,
+},
+}),
+},
+plantImage: {
+width: '100%',
+height: 120,
+},
+plantInfo: {
+padding: 10,
+},
+plantTitle: {
+fontSize: 16,
+fontFamily: 'Montserrat_700Bold',
+color: COLORS.primary,
+marginBottom: 5,
+},
+plantDescription: {
+fontSize: 14,
+fontFamily: 'Montserrat_400Regular',
+color: COLORS.text,
+},
+addButton: {
+backgroundColor: COLORS.accent,
+marginTop: 20,
+width: 60,
+height: 60,
+borderRadius: 30,
+alignItems: 'center',
+justifyContent: 'center',
+alignSelf: 'center',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.3,
+shadowRadius: 5,
+},
+android: {
+elevation: 5,
+},
+}),
+},
+});
+export default UserProfileScreen;
+// File: src\types\types.ts
+export interface UserProfile {
+userId: number;
+userName: string;
+description: string;
+quote: string;
+profilePhotoPath: string;
+ownedPlants: Plant[];
+}
+export interface Plant {
+plantId: number;
+name: string;
+description: string;
+imageUrl: string;
+userId: number;
+exchangesAsInitiating: PlantExchange[];
+exchangesAsResponding: PlantExchange[];
+}
+export interface PlantExchange {
+plantExchangeResponseId: number;
+initiatingPlantId: number;
+respondingPlantId: number;
+initiatingUserApproval: boolean | null;
+respondingUserApproval: boolean | null;
+}
+export interface Match {
+matchId: number;
+user1: UserProfile;
+user2: UserProfile;
+plant1: Plant;
+plant2: Plant;
+}
