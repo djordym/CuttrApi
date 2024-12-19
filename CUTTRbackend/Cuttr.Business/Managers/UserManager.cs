@@ -65,34 +65,6 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task<UserLoginResponse> AuthenticateUserAsync(UserLoginRequest request)
-        {
-            try
-            {
-                var user = await _userRepository.GetUserByEmailAsync(request.Email);
-
-                if (user == null || !PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
-                {
-                    throw new AuthenticationException("Invalid email or password.");
-                }
-
-                // Generate JWT token
-                string token = _jwtTokenGenerator.GenerateToken(user);
-
-                // Map to UserLoginResponse
-                return BusinessToContractMapper.MapToUserLoginResponse(user, token);
-            }
-            catch (AuthenticationException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error authenticating user.");
-                throw new BusinessException("Error authenticating user.", ex);
-            }
-        }
-
         public async Task<UserResponse> GetUserByIdAsync(int userId)
         {
             try

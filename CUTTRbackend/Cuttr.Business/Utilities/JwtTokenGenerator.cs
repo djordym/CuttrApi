@@ -20,7 +20,8 @@ namespace Cuttr.Business.Utilities
             _configuration = configuration;
         }
 
-        public string GenerateToken(User user)
+        // JwtTokenGenerator.cs
+        public string GenerateToken(User user, out int expiresIn)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var secretKey = _configuration["Jwt:Secret"];
@@ -29,18 +30,19 @@ namespace Cuttr.Business.Utilities
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[] {
-                    new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Name, user.Name)
-                }),
-                Expires = DateTime.UtcNow.AddHours(1), // Token expiration time
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature)
+            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Name, user.Name)
+        }),
+                Expires = DateTime.UtcNow.AddMinutes(15), // short lived access token
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            var jwt = tokenHandler.WriteToken(token);
+            expiresIn = (int)((tokenDescriptor.Expires.Value - DateTime.UtcNow).TotalSeconds);
+            return jwt;
         }
+
     }
 }

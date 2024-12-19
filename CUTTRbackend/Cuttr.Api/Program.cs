@@ -67,6 +67,9 @@ builder.Services.AddScoped<IUserPreferencesManager, UserPreferencesManager>();
 
 // Register JwtTokenGenerator
 builder.Services.AddScoped<JwtTokenGenerator>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IAuthManager, AuthManager>();
+
 
 
 // Register Repository Services

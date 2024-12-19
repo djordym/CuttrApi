@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace Cuttr.Business.Contracts.Inputs
 {
-    internal class RefreshTokenRequest
+    public class RefreshTokenRequest
     {
+        public string RefreshToken { get; set; }
     }
 }

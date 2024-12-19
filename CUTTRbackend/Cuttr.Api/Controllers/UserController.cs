@@ -41,28 +41,6 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        // POST: api/users/login
-        [AllowAnonymous]
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
-        {
-            try
-            {
-                var response = await _userManager.AuthenticateUserAsync(request);
-                return Ok(response);
-            }
-            catch (AuthenticationException ex)
-            {
-                _logger.LogWarning(ex, "Authentication failed.");
-                return Unauthorized(ex.Message);
-            }
-            catch (BusinessException ex)
-            {
-                _logger.LogError(ex, "Error during authentication.");
-                return BadRequest(ex.Message);
-            }
-        }
-
         // GET: api/users/{userId}
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserById(int userId)

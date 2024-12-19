@@ -9,7 +9,8 @@ namespace Cuttr.Business.Contracts.Outputs
 {
     public class UserLoginResponse
     {
-        public string Token { get; set; }
-        public UserResponse User { get; set; }
+        public int UserId { get; set; }
+        public string Email { get; set; }
+        public AuthTokenResponse Tokens { get; set; }
     }
 }
