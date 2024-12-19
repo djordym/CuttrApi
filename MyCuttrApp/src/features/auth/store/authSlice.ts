@@ -1,18 +1,20 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { authService } from '../../../api/authService';
 import { storage } from '../../../utils/storage';
-
-interface User {
-  userId: number;
-  email: string;
-  name: string;
-  profilePictureUrl?: string;
-}
+import { RootState } from '../../../store';
+import { 
+  UserLoginRequest, 
+  UserLoginResponse, 
+  UserRegistrationRequest, 
+  RefreshTokenRequest, 
+  AuthTokenResponse
+} from '../../../types/apiTypes';
 
 interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
-  user: User | null;
+  userId: number | null;
+  email: string | null;
   status: 'idle' | 'loading' | 'error';
   error: string | null;
 }
@@ -20,17 +22,23 @@ interface AuthState {
 const initialState: AuthState = {
   accessToken: null,
   refreshToken: null,
-  user: null,
+  userId: null,
+  email: null,
   status: 'idle',
   error: null
 };
 
-export const loginThunk = createAsyncThunk(
+export const loginThunk = createAsyncThunk<
+  UserLoginResponse,    // On success, returns UserLoginResponse
+  UserLoginRequest,     // The argument type is UserLoginRequest
+  { rejectValue: string }
+>(
   'auth/login',
-  async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
+  async (credentials, { rejectWithValue }) => {
     try {
-      const data = await authService.login({ email, password });
-      await storage.saveTokens(data.accessToken, data.refreshToken);
+      const data = await authService.login(credentials);
+      // Store tokens securely
+      await storage.saveTokens(data.Tokens.AccessToken, data.Tokens.RefreshToken);
       return data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Login failed');
@@ -38,12 +46,16 @@ export const loginThunk = createAsyncThunk(
   }
 );
 
-export const registerThunk = createAsyncThunk(
+export const registerThunk = createAsyncThunk<
+  UserLoginResponse,
+  UserRegistrationRequest,
+  { rejectValue: string }
+>(
   'auth/register',
-  async ({ email, password, name }: { email: string; password: string; name: string }, { rejectWithValue }) => {
+  async (payload, { rejectWithValue }) => {
     try {
-      const data = await authService.register({ email, password, name });
-      await storage.saveTokens(data.accessToken, data.refreshToken);
+      const data = await authService.register(payload);
+      await storage.saveTokens(data.Tokens.AccessToken, data.Tokens.RefreshToken);
       return data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Registration failed');
@@ -51,18 +63,22 @@ export const registerThunk = createAsyncThunk(
   }
 );
 
-export const refreshTokenThunk = createAsyncThunk(
+export const refreshTokenThunk = createAsyncThunk<
+  AuthTokenResponse,
+  void,
+  { state: RootState; rejectValue: string }
+>(
   'auth/refreshToken',
   async (_, { getState, rejectWithValue }) => {
-    // @ts-ignore
-    const state: { auth: AuthState } = getState();
+    const state = getState();
     const refreshToken = state.auth.refreshToken;
     if (!refreshToken) {
-      return rejectWithValue('No refresh token');
+      return rejectWithValue('No refresh token available');
     }
+    const payload: RefreshTokenRequest = { RefreshToken: refreshToken };
     try {
-      const data = await authService.refreshToken(refreshToken);
-      await storage.saveTokens(data.accessToken, data.refreshToken);
+      const data = await authService.refreshToken(payload);
+      await storage.saveTokens(data.AccessToken, data.RefreshToken);
       return data;
     } catch (error: any) {
       return rejectWithValue('Token refresh failed');
@@ -74,59 +90,75 @@ export const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setInitialTokens(state, action: PayloadAction<{ accessToken: string | null; refreshToken: string | null; user: User | null }>) {
+    setInitialTokens(
+      state,
+      action: PayloadAction<{ accessToken: string | null; refreshToken: string | null; userId: number | null; email: string | null }>
+    ) {
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
-      state.user = action.payload.user;
+      state.userId = action.payload.userId;
+      state.email = action.payload.email;
     },
     logout(state) {
       state.accessToken = null;
       state.refreshToken = null;
-      state.user = null;
+      state.userId = null;
+      state.email = null;
       state.error = null;
       state.status = 'idle';
       storage.clearTokens();
-    },
+    }
   },
   extraReducers: (builder) => {
     builder
+      // loginThunk
       .addCase(loginThunk.pending, (state) => {
         state.status = 'loading';
         state.error = null;
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
         state.status = 'idle';
-        state.accessToken = action.payload.accessToken;
-        state.refreshToken = action.payload.refreshToken;
-        state.user = action.payload.user;
+        // action.payload: UserLoginResponse
+        state.accessToken = action.payload.Tokens.AccessToken;
+        state.refreshToken = action.payload.Tokens.RefreshToken;
+        state.userId = action.payload.UserId;
+        state.email = action.payload.Email;
       })
       .addCase(loginThunk.rejected, (state, action) => {
         state.status = 'error';
-        state.error = action.payload as string;
+        state.error = action.payload || 'Unknown error';
       })
+
+      // registerThunk
       .addCase(registerThunk.pending, (state) => {
         state.status = 'loading';
         state.error = null;
       })
       .addCase(registerThunk.fulfilled, (state, action) => {
         state.status = 'idle';
-        state.accessToken = action.payload.accessToken;
-        state.refreshToken = action.payload.refreshToken;
-        state.user = action.payload.user;
+        // action.payload: UserLoginResponse
+        state.accessToken = action.payload.Tokens.AccessToken;
+        state.refreshToken = action.payload.Tokens.RefreshToken;
+        state.userId = action.payload.UserId;
+        state.email = action.payload.Email;
       })
       .addCase(registerThunk.rejected, (state, action) => {
         state.status = 'error';
-        state.error = action.payload as string;
+        state.error = action.payload || 'Unknown error';
       })
+
+      // refreshTokenThunk
       .addCase(refreshTokenThunk.fulfilled, (state, action) => {
-        state.accessToken = action.payload.accessToken;
-        state.refreshToken = action.payload.refreshToken;
+        // action.payload: AuthTokenResponse
+        state.accessToken = action.payload.AccessToken;
+        state.refreshToken = action.payload.RefreshToken;
       })
       .addCase(refreshTokenThunk.rejected, (state) => {
-        // If token refresh fails, we could force logout here
+        // If refresh fails, clear credentials
         state.accessToken = null;
         state.refreshToken = null;
-        state.user = null;
+        state.userId = null;
+        state.email = null;
       });
   }
 });

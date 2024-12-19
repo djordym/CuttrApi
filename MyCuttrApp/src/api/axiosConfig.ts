@@ -36,7 +36,7 @@ api.interceptors.response.use(
         try {
           const { payload: newTokens } = await store.dispatch(refreshTokenThunk());
           isRefreshing = false;
-          pendingRequests.forEach(cb => cb(newTokens?.accessToken || ''));
+          pendingRequests.forEach(cb => cb(newTokens?.AccessToken || ''));
           pendingRequests = [];
           return api(originalRequest);
         } catch (refreshError) {
