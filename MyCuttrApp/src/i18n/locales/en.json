@@ -1,0 +1,12 @@
+{
+    "welcome_back": "Welcome Back",
+    "create_account": "Create Account",
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "no_account_register": "Don’t have an account? Register",
+    "have_account_login": "Already have an account? Login"
+  }
+  

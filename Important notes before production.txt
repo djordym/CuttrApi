@@ -2,7 +2,7 @@ Database connection string: do not bypass encryption/SSL for production
 
 Rate limiting on api
 
-Adress Liability Pet friendliness
+Adress Liability Pet friendliness (concerns of being sued)
 
 constraints for enums database side (in Onmodelcreating)
 
@@ -12,3 +12,8 @@ https://chatgpt.com/share/675abd72-fe10-8001-85b5-294daf82184c
 Validate your incoming requests (request contracts should have things like [required],[maxlength], …)
 
 Ensure GDPR and other privacy laws compliance by adding proper consent management and privacy policies.
+
+
+Forgot password functionality
+
+When registering, check if email already in use
