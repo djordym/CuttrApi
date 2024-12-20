@@ -11,7 +11,7 @@ export const fetchUserProfile = createAsyncThunk<
   'user/fetchUserProfile',
   async (userId, { rejectWithValue }) => {
     try {
-      const response = await api.get<UserResponse>(`/api/users/${userId}`);
+      const response = await api.get<UserResponse>(`/users/${userId}`);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch user profile');

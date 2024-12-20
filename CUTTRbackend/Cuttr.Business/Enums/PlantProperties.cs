@@ -43,29 +43,29 @@ namespace Cuttr.Business.Enums
 
     public enum Size
     {
-        Small,    
-        Medium,   
-        Large     
+        SmallSize,    
+        MediumSize,   
+        LargeSize     
     }
 
     public enum IndoorOutdoor
     {
         Indoor,
         Outdoor,
-        Both
+        IndoorAndOutdoor
     }
 
     public enum PropagationEase
     {
-        Easy,
-        Moderate,
-        Difficult
+        EasyPropagation,
+        ModeratePropagation,
+        DifficultPropagation
     }
 
     public enum PetFriendly
     {
-        Yes,
-        No
+        PetFriendly,
+        NotPetFriendly
     }
 
     public enum Extras

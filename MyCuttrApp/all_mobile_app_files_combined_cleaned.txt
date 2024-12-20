@@ -63,6 +63,7 @@ registerRootComponent(App);
 "devDependencies": {
 "@babel/core": "^7.25.2",
 "@types/react": "~18.3.12",
+"@types/react-redux": "^7.1.34",
 "typescript": "^5.3.3"
 },
 "private": true
@@ -122,7 +123,10 @@ return response.data;
 register: async (data: UserRegistrationRequest): Promise<UserLoginResponse> => {
 const response = await api.post<UserLoginResponse>('/users/register', data);
 return response.data;
-}
+},
+logout: async (): Promise<void> => {
+await api.post('/api/auth/logout');
+},
 };
 // File: src\api\axiosConfig.ts
 const api = axios.create({
@@ -155,7 +159,7 @@ originalRequest._retry = true;
 try {
 const { payload: newTokens } = await store.dispatch(refreshTokenThunk());
 isRefreshing = false;
-pendingRequests.forEach(cb => cb(newTokens?.accessToken || ''));
+pendingRequests.forEach(cb => cb(newTokens?.AccessToken || ''));
 pendingRequests = [];
 return api(originalRequest);
 } catch (refreshError) {
@@ -175,12 +179,129 @@ return Promise.reject(error);
 }
 );
 export default api;
-// File: src\api\index.ts
-
+// File: src\api\matchService.ts
+export const matchService = {
+getMyMatches: async (): Promise<MatchResponse[]> => {
+const response = await api.get<MatchResponse[]>('/matches/me');
+return response.data;
+},
+getMatchById: async (matchId: number): Promise<MatchResponse> => {
+const response = await api.get<MatchResponse>(`/matches/${matchId}`);
+return response.data;
+}
+};
+// File: src\api\messageService.ts
+export const messageService = {
+sendMessage: async (data: MessageRequest): Promise<MessageResponse> => {
+const response = await api.post<MessageResponse>('/messages/me', data);
+return response.data;
+},
+getMessagesForMatch: async (matchId: number): Promise<MessageResponse[]> => {
+const response = await api.get<MessageResponse[]>(`/matches/${matchId}/messages`);
+return response.data;
+}
+};
 // File: src\api\plantService.ts
-
+export const plantService = {
+addMyPlant: async (data: PlantCreateRequest): Promise<PlantResponse> => {
+const formData = new FormData();
+formData.append('Image', data.Image);
+formData.append('SpeciesName', data.PlantDetails.SpeciesName);
+formData.append('Description', data.PlantDetails.Description);
+formData.append('PlantStage', data.PlantDetails.PlantStage);
+formData.append('PlantCategory', data.PlantDetails.PlantCategory);
+formData.append('WateringNeed', data.PlantDetails.WateringNeed);
+formData.append('LightRequirement', data.PlantDetails.LightRequirement);
+if (data.PlantDetails.Size) formData.append('Size', data.PlantDetails.Size);
+if (data.PlantDetails.IndoorOutdoor) formData.append('IndoorOutdoor', data.PlantDetails.IndoorOutdoor);
+if (data.PlantDetails.PropagationEase) formData.append('PropagationEase', data.PlantDetails.PropagationEase);
+if (data.PlantDetails.PetFriendly) formData.append('PetFriendly', data.PlantDetails.PetFriendly);
+if (data.PlantDetails.Extras) {
+data.PlantDetails.Extras.forEach((extra) => formData.append('Extras', extra));
+}
+const response = await api.post<PlantResponse>('/plants/me', formData, {
+headers: { 'Content-Type': 'multipart/form-data' }
+});
+return response.data;
+},
+getPlantById: async (plantId: number): Promise<PlantResponse> => {
+const response = await api.get<PlantResponse>(`/plants/${plantId}`);
+return response.data;
+},
+updateMyPlant: async (plantId: number, data: PlantRequest): Promise<PlantResponse> => {
+const response = await api.put<PlantResponse>(`/plants/me/${plantId}`, data);
+return response.data;
+},
+deleteMyPlant: async (plantId: number): Promise<void> => {
+await api.delete(`/plants/me/${plantId}`);
+},
+getUserPlants: async (userId: number): Promise<PlantResponse[]> => {
+const response = await api.get<PlantResponse[]>(`/users/${userId}/plants`);
+return response.data;
+},
+getMyPlants: async (): Promise<PlantResponse[]> => {
+const response = await api.get<PlantResponse[]>('/users/me/plants');
+return response.data;
+}
+};
+// File: src\api\reportService.ts
+export const reportService = {
+createReport: async (data: ReportRequest): Promise<ReportResponse> => {
+const response = await api.post<ReportResponse>('/reports', data);
+return response.data;
+}
+};
+// File: src\api\swipeService.ts
+export const swipeService = {
+sendSwipes: async (swipes: SwipeRequest[]): Promise<SwipeResponse> => {
+const response = await api.post<SwipeResponse>('/swipes/me', swipes);
+return response.data;
+},
+getLikablePlants: async (): Promise<PlantResponse[]> => {
+const response = await api.get<PlantResponse[]>('/swipes/me/likable-plants');
+return response.data;
+}
+};
+// File: src\api\userPreferencesService.ts
+export const userPreferencesService = {
+getPreferences: async (): Promise<UserPreferencesResponse> => {
+const response = await api.get<UserPreferencesResponse>('/userpreferences');
+return response.data;
+},
+updatePreferences: async (data: UserPreferencesRequest): Promise<UserPreferencesResponse> => {
+const response = await api.post<UserPreferencesResponse>('/userpreferences', data);
+return response.data;
+}
+};
 // File: src\api\userService.ts
-
+export const userService = {
+register: async (data: { Email: string; Password: string; Name: string }): Promise<UserResponse> => {
+const response = await api.post<UserResponse>('/users/register', data);
+return response.data;
+},
+getUser: async (userId: number): Promise<UserResponse> => {
+const response = await api.get<UserResponse>(`/users/${userId}`);
+return response.data;
+},
+updateMe: async (data: UserUpdateRequest): Promise<UserResponse> => {
+const response = await api.put<UserResponse>('/users/me', data);
+return response.data;
+},
+deleteMe: async (): Promise<void> => {
+await api.delete('/users/me');
+},
+updateProfilePicture: async (data: UserProfileImageUpdateRequest): Promise<UserResponse> => {
+const formData = new FormData();
+formData.append('Image', data.Image);
+const response = await api.put<UserResponse>('/users/me/profile-picture', formData, {
+headers: { 'Content-Type': 'multipart/form-data' }
+});
+return response.data;
+},
+updateLocation: async (data: UpdateLocationRequest): Promise<void> => {
+await api.put('/users/me/location', data);
+}
+};
 // File: src\components\index.ts
 
 // File: src\components\common\BrandedButton.tsx
@@ -557,9 +678,19 @@ export const { logout, setInitialTokens } = authSlice.actions;
 // File: src\features\main\index.ts
 
 // File: src\features\main\hooks\useMatches.ts
-
+export const useMyMatches = () => {
+return useQuery('myMatches', matchService.getMyMatches, {
+staleTime: 0,
+refetchOnWindowFocus: true,
+});
+};
 // File: src\features\main\hooks\usePlants.ts
-
+export const useUserPlants = (userId: number) => {
+return useQuery(['userPlants', userId], () => plantService.getUserPlants(userId), {
+enabled: !!userId,
+staleTime: 1000 * 60 * 5,
+});
+};
 // File: src\features\main\screens\ChatScreen.tsx
 
 // File: src\features\main\screens\HomeScreen.tsx
@@ -632,6 +763,82 @@ color:'#000'
 
 // File: src\features\main\store\plantsSlice.ts
 
+// File: src\features\main\store\userPreferencesSlice.ts
+interface UserPreferencesState {
+data: UserPreferencesResponse | null;
+status: 'idle' | 'loading' | 'error';
+error: string | null;
+}
+const initialState: UserPreferencesState = {
+data: null,
+status: 'idle',
+error: null,
+};
+export const fetchUserPreferencesThunk = createAsyncThunk<UserPreferencesResponse, void, { rejectValue: string }>(
+'userPreferences/fetch',
+async (_, { rejectWithValue }) => {
+try {
+const preferences = await userPreferencesService.getPreferences();
+return preferences;
+} catch (error: any) {
+return rejectWithValue(error.response?.data?.message || 'Failed to fetch user preferences');
+}
+}
+);
+export const updateUserPreferencesThunk = createAsyncThunk<UserPreferencesResponse, UserPreferencesRequest, { rejectValue: string }>(
+'userPreferences/update',
+async (data, { rejectWithValue }) => {
+try {
+const updated = await userPreferencesService.updatePreferences(data);
+return updated;
+} catch (error: any) {
+return rejectWithValue(error.response?.data?.message || 'Failed to update user preferences');
+}
+}
+);
+export const userPreferencesSlice = createSlice({
+name: 'userPreferences',
+initialState,
+reducers: {
+clearUserPreferences(state) {
+state.data = null;
+state.status = 'idle';
+state.error = null;
+}
+},
+extraReducers: (builder) => {
+builder
+.addCase(fetchUserPreferencesThunk.pending, (state) => {
+state.status = 'loading';
+state.error = null;
+})
+.addCase(fetchUserPreferencesThunk.fulfilled, (state, action: PayloadAction<UserPreferencesResponse>) => {
+state.status = 'idle';
+state.data = action.payload;
+})
+.addCase(fetchUserPreferencesThunk.rejected, (state, action) => {
+state.status = 'error';
+state.error = action.payload as string;
+})
+.addCase(updateUserPreferencesThunk.pending, (state) => {
+state.status = 'loading';
+state.error = null;
+})
+.addCase(updateUserPreferencesThunk.fulfilled, (state, action: PayloadAction<UserPreferencesResponse>) => {
+state.status = 'idle';
+state.data = action.payload;
+})
+.addCase(updateUserPreferencesThunk.rejected, (state, action) => {
+state.status = 'error';
+state.error = action.payload as string;
+});
+}
+});
+export const { clearUserPreferences } = userPreferencesSlice.actions;
+export const selectUserPreferences = (state: RootState) => state.userPreferences.data;
+export const selectUserPreferencesStatus = (state: RootState) => state.userPreferences.status;
+export const selectUserPreferencesError = (state: RootState) => state.userPreferences.error;
+export default userPreferencesSlice.reducer;
 // File: src\features\main\store\userSlice.ts
 export const fetchUserProfile = createAsyncThunk<
 UserResponse,
@@ -641,7 +848,7 @@ number,
 'user/fetchUserProfile',
 async (userId, { rejectWithValue }) => {
 try {
-const response = await api.get<UserResponse>(`/api/users/${userId}`);
+const response = await api.get<UserResponse>(`/users/${userId}`);
 return response.data;
 } catch (error: any) {
 return rejectWithValue(error.response?.data?.message || 'Failed to fetch user profile');
@@ -808,6 +1015,7 @@ export const store = configureStore({
 reducer: {
 auth: authSlice.reducer,
 user: userSlice.reducer,
+userPreferences: userPreferencesSlice.reducer,
 },
 });
 export type RootState = ReturnType<typeof store.getState>;
@@ -825,17 +1033,77 @@ export type AppDispatch = typeof store.dispatch;
 // File: src\theme\typography.ts
 
 // File: src\types\apiTypes.ts
+export interface RefreshTokenRequest {
+RefreshToken: string;
+}
+export interface MessageRequest {
+MatchId: number;
+MessageText: string;
+}
+export interface PlantCreateRequest {
+PlantDetails: PlantRequest;
+Image: IFormFile;
+}
+export interface PlantRequest {
+SpeciesName: string;
+Description: string;
+PlantStage: PlantStage;
+PlantCategory: PlantCategory;
+WateringNeed: WateringNeed;
+LightRequirement: LightRequirement;
+Size?: Size;
+IndoorOutdoor?: IndoorOutdoor;
+PropagationEase?: PropagationEase;
+PetFriendly?: PetFriendly;
+Extras?: Extras[];
+}
+export interface PlantUpdateRequest {
+SpeciesName: string;
+CareRequirements: string;
+Description: string;
+Category: string;
+}
+export interface ReportRequest {
+ReportedUserId: number;
+Reason: string;
+Comments: string;
+}
+export interface SwipeRequest {
+SwiperPlantId: number;
+SwipedPlantId: number;
+IsLike: boolean;
+}
+export interface UpdateLocationRequest {
+Latitude: number;
+Longitude: number;
+}
 export interface UserLoginRequest {
 Email: string;
 Password: string;
+}
+export interface UserPreferencesRequest {
+SearchRadius: number;
+PreferedPlantStage: PlantStage[];
+PreferedPlantCategory: PlantCategory[];
+PreferedWateringNeed: WateringNeed[];
+PreferedLightRequirement: LightRequirement[];
+PreferedSize: Size[];
+PreferedIndoorOutdoor: IndoorOutdoor[];
+PreferedPropagationEase: PropagationEase[];
+PreferedPetFriendly: PetFriendly[];
+PreferedExtras: Extras[];
+}
+export interface UserProfileImageUpdateRequest {
+Image: IFormFile;
 }
 export interface UserRegistrationRequest {
 Email: string;
 Password: string;
 Name: string;
 }
-export interface RefreshTokenRequest {
-RefreshToken: string;
+export interface UserUpdateRequest {
+Name: string;
+Bio: string;
 }
 export interface AuthTokenResponse {
 AccessToken: string;
@@ -843,10 +1111,67 @@ RefreshToken: string;
 TokenType: string;
 ExpiresIn: number;
 }
+export interface MatchResponse {
+MatchId: number;
+Plant1: PlantResponse;
+Plant2: PlantResponse;
+User1: UserResponse;
+User2: UserResponse;
+}
+export interface MessageResponse {
+MessageId: number;
+MatchId: number;
+SenderUserId: number;
+MessageText: string;
+SentAt: Date;
+IsRead: boolean;
+}
+export interface PlantResponse {
+PlantId: number;
+UserId: number;
+SpeciesName: string;
+Description: string;
+PlantStage: PlantStage;
+PlantCategory: PlantCategory;
+WateringNeed: WateringNeed;
+LightRequirement: LightRequirement;
+Size?: Size;
+IndoorOutdoor?: IndoorOutdoor;
+PropagationEase?: PropagationEase;
+PetFriendly?: PetFriendly;
+Extras?: Extras[];
+ImageUrl: string;
+}
+export interface ReportResponse {
+ReportId: number;
+ReporterUserId: number;
+ReportedUserId: number;
+Reason: string;
+Comments: string;
+CreatedAt: Date;
+IsResolved: boolean;
+}
+export interface SwipeResponse {
+IsMatch: boolean;
+Match: MatchResponse;
+}
 export interface UserLoginResponse {
 UserId: number;
 Email: string;
 Tokens: AuthTokenResponse;
+}
+export interface UserPreferencesResponse {
+UserId: number;
+SearchRadius: number;
+PreferedPlantStage: PlantStage[];
+PreferedPlantCategory: PlantCategory[];
+PreferedWateringNeed: WateringNeed[];
+PreferedLightRequirement: LightRequirement[];
+PreferedSize: Size[];
+PreferedIndoorOutdoor: IndoorOutdoor[];
+PreferedPropagationEase: PropagationEase[];
+PreferedPetFriendly: PetFriendly[];
+PreferedExtras: Extras[];
 }
 export interface UserResponse {
 UserId: number;
@@ -858,7 +1183,74 @@ LocationLatitude?: number;
 LocationLongitude?: number;
 }
 // File: src\types\enums.ts
-
+export enum PlantStage {
+Cutting,
+GrownPlantTree
+}
+export enum PlantCategory {
+Succulent,
+Cactus,
+Fern,
+Orchid,
+Herb,
+Palm,
+LeafyHouseplant,
+FloweringHouseplant,
+Other
+}
+export enum WateringNeed {
+VeryLowWater,
+LowWater,
+ModerateWater,
+HighWater,
+VeryHighWater
+}
+export enum LightRequirement {
+FullSun,
+PartialShade,
+Shade
+}
+export enum Size {
+SmallSize,
+MediumSize,
+LargeSize
+}
+export enum IndoorOutdoor {
+Indoor,
+Outdoor,
+IndoorAndOutdoor
+}
+export enum PropagationEase {
+EasyPropagation,
+ModeratePropagation,
+DifficultPropagation
+}
+export enum PetFriendly {
+PetFriendly,
+NotPetFriendly,
+}
+export enum Extras {
+Fragrant,
+Edible,
+Medicinal,
+AirPurifying,
+Decorative,
+Flowering,
+TropicalVibe,
+FoliageHeavy,
+DroughtTolerant,
+HumidityLoving,
+LowMaintenance,
+WinterHardy,
+BeginnerFriendly,
+Fruiting,
+PollinatorFriendly,
+FastGrowing,
+VariegatedFoliage,
+Climbing,
+GroundCover,
+Rare
+}
 // File: src\types\global.ts
 
 // File: src\utils\formatting.ts

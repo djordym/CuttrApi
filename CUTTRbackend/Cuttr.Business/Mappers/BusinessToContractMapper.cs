@@ -1,4 +1,5 @@
-﻿using Cuttr.Business.Contracts.Outputs;
+﻿using Azure.Core;
+using Cuttr.Business.Contracts.Outputs;
 using Cuttr.Business.Entities;
 
 namespace Cuttr.Business.Mappers
@@ -20,16 +21,6 @@ namespace Cuttr.Business.Mappers
                 LocationLatitude = user.LocationLatitude,
                 LocationLongitude = user.LocationLongitude
                 // Exclude PasswordHash and other sensitive data
-            };
-        }
-
-        // Map User and Token to UserLoginResponse
-        public static UserLoginResponse MapToUserLoginResponse(User user, string token)
-        {
-            return new UserLoginResponse
-            {
-                Token = token,
-                User = MapToUserResponse(user)
             };
         }
 

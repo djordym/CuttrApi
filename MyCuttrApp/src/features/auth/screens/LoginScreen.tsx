@@ -23,7 +23,7 @@ const LoginScreen = () => {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior="padding">
-      <Image source={require('../../../../assets/images/logo.png')} style={styles.logo} />
+      <Image source={require('../../../../assets/logo.png')} style={styles.logo} />
       <Text style={styles.title}>{t('welcome_back')}</Text>
       <ErrorMessage message={error} />
 

@@ -1,16 +1,16 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import HomeScreen from '../features/main/screens/HomeScreen';
-import ProfileScreen from '../features/main/screens/ProfileScreen';
+import MyProfileScreen from '../features/main/screens/MyProfileScreen';
 import SettingsScreen from '../features/main/screens/SettingsScreen';
+import SwipeScreen from '../features/main/screens/SwipeScreen';
 
 const Tab = createBottomTabNavigator();
 
 const MainNavigator = () => {
   return (
     <Tab.Navigator>
-      <Tab.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+      <Tab.Screen name="Swipe" component={SwipeScreen} options={{ headerShown: false }} />
+      <Tab.Screen name="Profile" component={MyProfileScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
     </Tab.Navigator>
   );

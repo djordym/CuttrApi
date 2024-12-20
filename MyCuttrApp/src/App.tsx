@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { initI18n } from './i18n';
 import { ActivityIndicator, View } from 'react-native';
 import { I18nextProvider } from 'react-i18next';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const queryClient = new QueryClient();
 
@@ -32,7 +33,9 @@ const App = () => {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <I18nextProvider i18n={i18nInstance}>
-          <AppNavigator />
+          <GestureHandlerRootView>
+            <AppNavigator />
+          </GestureHandlerRootView>
         </I18nextProvider>
       </QueryClientProvider>
     </Provider>

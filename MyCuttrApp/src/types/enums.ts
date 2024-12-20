@@ -30,26 +30,26 @@ export enum LightRequirement {
 }
 
 export enum Size {
-	Small,
-	Medium,
-	Large
+	SmallSize,
+	MediumSize,
+	LargeSize
 }
 
 export enum IndoorOutdoor {
 	Indoor,
 	Outdoor,
-	Both
+	IndoorAndOutdoor
 }
 
 export enum PropagationEase {
-	Easy,
-	Moderate,
-	Difficult
+	EasyPropagation,
+	ModeratePropagation,
+	DifficultPropagation
 }
 
 export enum PetFriendly {
-	Yes,
-	No
+	PetFriendly,
+	NotPetFriendly,
 }
 
 export enum Extras {
