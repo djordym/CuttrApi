@@ -6,65 +6,117 @@
 "slug": "MyCuttrApp",
 "version": "1.0.0",
 "orientation": "portrait",
-"icon": "./assets/icon.png",
-"userInterfaceStyle": "light",
+"icon": "./assets/images/icon.png",
+"scheme": "myapp",
+"userInterfaceStyle": "automatic",
 "newArchEnabled": true,
-"splash": {
-"image": "./assets/splash-icon.png",
-"resizeMode": "contain",
-"backgroundColor": "#ffffff"
-},
 "ios": {
 "supportsTablet": true
 },
 "android": {
 "adaptiveIcon": {
-"foregroundImage": "./assets/adaptive-icon.png",
+"foregroundImage": "./assets/images/adaptive-icon.png",
 "backgroundColor": "#ffffff"
 }
 },
 "web": {
-"favicon": "./assets/favicon.png"
+"bundler": "metro",
+"output": "static",
+"favicon": "./assets/images/favicon.png"
+},
+"plugins": [
+"expo-router",
+[
+"expo-splash-screen",
+{
+"image": "./assets/images/splash-icon.png",
+"imageWidth": 200,
+"resizeMode": "contain",
+"backgroundColor": "#ffffff"
+}
+],
+"expo-localization"
+],
+"experiments": {
+"typedRoutes": true
 }
 }
 }
-// File: index.ts
-registerRootComponent(App);
+// File: babel.config.js
+module.exports = function(api) {
+api.cache(true);
+return {
+presets: ['babel-preset-expo'],
+plugins: ['react-native-reanimated/plugin'],
+};
+};
+// File: expo-env.d.ts
+
 // File: package.json
 {
 "name": "mycuttrapp",
-"license": "0BSD",
+"main": "expo-router/entry",
 "version": "1.0.0",
-"main": "index.ts",
 "scripts": {
 "start": "expo start",
+"reset-project": "node ./scripts/reset-project.js",
 "android": "expo start --android",
 "ios": "expo start --ios",
-"web": "expo start --web"
+"web": "expo start --web",
+"test": "jest --watchAll",
+"lint": "expo lint"
+},
+"jest": {
+"preset": "jest-expo"
 },
 "dependencies": {
+"@expo/vector-icons": "^14.0.2",
 "@react-navigation/bottom-tabs": "^7.2.0",
 "@react-navigation/native": "^7.0.14",
 "@react-navigation/native-stack": "^7.2.0",
 "@react-navigation/stack": "^7.1.1",
 "@reduxjs/toolkit": "^2.5.0",
 "axios": "^1.7.9",
-"expo": "~52.0.20",
+"expo": "^52.0.23",
+"expo-blur": "~14.0.1",
+"expo-constants": "~17.0.3",
+"expo-font": "~13.0.2",
+"expo-haptics": "~14.0.0",
+"expo-image-picker": "^16.0.3",
+"expo-linking": "~7.0.3",
+"expo-localization": "~16.0.0",
+"expo-router": "~4.0.15",
 "expo-secure-store": "^14.0.0",
-"expo-status-bar": "~2.0.0",
-"i18next": "^24.1.2",
+"expo-splash-screen": "~0.29.18",
+"expo-status-bar": "^2.0.0",
+"expo-symbols": "~0.2.0",
+"expo-system-ui": "~4.0.6",
+"expo-web-browser": "~14.0.1",
+"i18next": "^24.2.0",
 "react": "18.3.1",
+"react-dom": "18.3.1",
 "react-i18next": "^15.2.0",
-"react-native": "0.76.5",
-"react-native-localize": "^3.3.0",
+"react-native": "^0.76.5",
+"react-native-gesture-handler": "~2.20.2",
+"react-native-reanimated": "^3.16.6",
+"react-native-safe-area-context": "4.12.0",
+"react-native-screens": "^4.4.0",
+"react-native-vector-icons": "^10.2.0",
+"react-native-web": "~0.19.13",
+"react-native-webview": "13.12.5",
 "react-query": "^3.39.3",
 "react-redux": "^9.2.0"
 },
 "devDependencies": {
-"@babel/core": "^7.25.2",
+"@babel/core": "^7.26.0",
+"@types/jest": "^29.5.12",
 "@types/react": "~18.3.12",
 "@types/react-redux": "^7.1.34",
-"typescript": "^5.3.3"
+"@types/react-test-renderer": "^18.3.0",
+"jest": "^29.2.1",
+"jest-expo": "~52.0.2",
+"react-test-renderer": "18.3.1",
+"typescript": "^5.7.2"
 },
 "private": true
 }
@@ -73,11 +125,17 @@ registerRootComponent(App);
 "extends": "expo/tsconfig.base",
 "compilerOptions": {
 "strict": true
+},
+"include": [
+"***.tsx",
+".expo/types*.ts",
+"expo-env.d.ts"
+]
 }
-}
-// File: src\App.tsx
+// File: app\index.tsx
 const queryClient = new QueryClient();
-const App = () => {
+export default function App() {
+console.log('App.tsx rendering...');
 const [i18nInstance, setI18nInstance] = useState<any>(null);
 useEffect(() => {
 const setupI18n = async () => {
@@ -88,7 +146,7 @@ setupI18n();
 }, []);
 if (!i18nInstance) {
 return (
-<View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
+<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
 <ActivityIndicator size="large" />
 </View>
 );
@@ -96,15 +154,17 @@ return (
 return (
 <Provider store={store}>
 <QueryClientProvider client={queryClient}>
+{}
 <I18nextProvider i18n={i18nInstance}>
+<GestureHandlerRootView style={{ flex: 1 }}>
 <AppNavigator />
+</GestureHandlerRootView>
 </I18nextProvider>
 </QueryClientProvider>
 </Provider>
 );
-};
-export default App;
-// File: src\api\authService.ts
+}
+// File: app\api\authService.ts
 UserLoginRequest,
 UserLoginResponse,
 RefreshTokenRequest,
@@ -128,14 +188,16 @@ logout: async (): Promise<void> => {
 await api.post('/api/auth/logout');
 },
 };
-// File: src\api\axiosConfig.ts
+// File: app\api\axiosConfig.ts
+let isRefreshing = false;
+let pendingRequests: Array<(token: string) => void> = [];
 const api = axios.create({
-baseURL: 'YOUR_BASE_URL',
+baseURL: process.env.REACT_APP_API_BASE_URL || "http:
 timeout: 10000,
 });
 api.interceptors.request.use(
 async (config) => {
-const state = store.getState();
+const state: RootState = store.getState();
 const token = state.auth.accessToken;
 if (token && config.headers) {
 config.headers.Authorization = `Bearer ${token}`;
@@ -146,40 +208,65 @@ return config;
 return Promise.reject(error);
 }
 );
-let isRefreshing = false;
-let pendingRequests: Array<(token: string) => void> = [];
 api.interceptors.response.use(
-response => response,
+(response) => {
+return response;
+},
 async (error) => {
+if (!error.response) {
+store.dispatch(setGlobalError("Network Error: Unable to connect."));
+return Promise.reject(error);
+}
+const { status } = error.response;
 const originalRequest = error.config;
-if (error.response?.status === 401 && !originalRequest._retry) {
+if (status === 401 && !originalRequest._retry) {
 if (!isRefreshing) {
 isRefreshing = true;
 originalRequest._retry = true;
 try {
-const { payload: newTokens } = await store.dispatch(refreshTokenThunk());
+const result = await store.dispatch(refreshTokenThunk());
+let newTokens: AuthTokenResponse | undefined;
+if (refreshTokenThunk.fulfilled.match(result)) {
+newTokens = result.payload;
+console.log("New tokens:", newTokens);
+} else {
+console.error(
+"Token refresh failed:",
+result.payload || result.error.message
+);
+}
 isRefreshing = false;
-pendingRequests.forEach(cb => cb(newTokens?.AccessToken || ''));
+pendingRequests.forEach((cb) => cb(newTokens?.AccessToken || ""));
 pendingRequests = [];
 return api(originalRequest);
 } catch (refreshError) {
 isRefreshing = false;
 pendingRequests = [];
+store.dispatch(logout());
 return Promise.reject(refreshError);
 }
 }
 return new Promise((resolve) => {
 pendingRequests.push((token: string) => {
-originalRequest.headers.Authorization = 'Bearer ' + token;
+originalRequest.headers.Authorization = `Bearer ${token}`;
 resolve(api(originalRequest));
 });
 });
 }
+let errorMessage: string;
+if (typeof error.response.data === "string") {
+errorMessage = error.response.data;
+} else if (error.response.data?.message) {
+errorMessage = error.response.data.message;
+} else {
+errorMessage = "An error occurred. Please try again later.";
+}
+store.dispatch(setGlobalError(errorMessage));
 return Promise.reject(error);
 }
 );
 export default api;
-// File: src\api\matchService.ts
+// File: app\api\matchService.ts
 export const matchService = {
 getMyMatches: async (): Promise<MatchResponse[]> => {
 const response = await api.get<MatchResponse[]>('/matches/me');
@@ -190,7 +277,7 @@ const response = await api.get<MatchResponse>(`/matches/${matchId}`);
 return response.data;
 }
 };
-// File: src\api\messageService.ts
+// File: app\api\messageService.ts
 export const messageService = {
 sendMessage: async (data: MessageRequest): Promise<MessageResponse> => {
 const response = await api.post<MessageResponse>('/messages/me', data);
@@ -201,7 +288,7 @@ const response = await api.get<MessageResponse[]>(`/matches/${matchId}/messages`
 return response.data;
 }
 };
-// File: src\api\plantService.ts
+// File: app\api\plantService.ts
 export const plantService = {
 addMyPlant: async (data: PlantCreateRequest): Promise<PlantResponse> => {
 const formData = new FormData();
@@ -244,14 +331,14 @@ const response = await api.get<PlantResponse[]>('/users/me/plants');
 return response.data;
 }
 };
-// File: src\api\reportService.ts
+// File: app\api\reportService.ts
 export const reportService = {
 createReport: async (data: ReportRequest): Promise<ReportResponse> => {
 const response = await api.post<ReportResponse>('/reports', data);
 return response.data;
 }
 };
-// File: src\api\swipeService.ts
+// File: app\api\swipeService.ts
 export const swipeService = {
 sendSwipes: async (swipes: SwipeRequest[]): Promise<SwipeResponse> => {
 const response = await api.post<SwipeResponse>('/swipes/me', swipes);
@@ -262,7 +349,7 @@ const response = await api.get<PlantResponse[]>('/swipes/me/likable-plants');
 return response.data;
 }
 };
-// File: src\api\userPreferencesService.ts
+// File: app\api\userPreferencesService.ts
 export const userPreferencesService = {
 getPreferences: async (): Promise<UserPreferencesResponse> => {
 const response = await api.get<UserPreferencesResponse>('/userpreferences');
@@ -273,7 +360,7 @@ const response = await api.post<UserPreferencesResponse>('/userpreferences', dat
 return response.data;
 }
 };
-// File: src\api\userService.ts
+// File: app\api\userService.ts
 export const userService = {
 register: async (data: { Email: string; Password: string; Name: string }): Promise<UserResponse> => {
 const response = await api.post<UserResponse>('/users/register', data);
@@ -302,9 +389,9 @@ updateLocation: async (data: UpdateLocationRequest): Promise<void> => {
 await api.put('/users/me/location', data);
 }
 };
-// File: src\components\index.ts
+// File: app\components\index.ts
 
-// File: src\components\common\BrandedButton.tsx
+// File: app\components\common\BrandedButton.tsx
 interface Props {
 title: string;
 onPress: () => void;
@@ -332,7 +419,7 @@ fontSize:16,
 fontWeight:'600'
 }
 });
-// File: src\components\common\TextInputField.tsx
+// File: app\components\common\TextInputField.tsx
 interface Props {
 value: string;
 onChangeText: (text: string) => void;
@@ -366,7 +453,7 @@ padding:12,
 fontSize:16,
 }
 });
-// File: src\components\feedback\ErrorMessage.tsx
+// File: app\components\feedback\ErrorMessage.tsx
 interface Props {
 message: string | null;
 }
@@ -392,17 +479,15 @@ fontWeight:'500',
 textAlign:'center'
 }
 });
-// File: src\components\feedback\ErrorState.tsx
+// File: app\components\feedback\ErrorState.tsx
 
-// File: src\components\feedback\LoadingSpinner.tsx
+// File: app\components\feedback\LoadingSpinner.tsx
 
-// File: src\context\AuthContext.tsx
+// File: app\features\auth\index.ts
 
-// File: src\features\auth\index.ts
+// File: app\features\auth\hooks\useAuth.ts
 
-// File: src\features\auth\hooks\useAuth.ts
-
-// File: src\features\auth\screens\LoginScreen.tsx
+// File: app\features\auth\screens\LoginScreen.tsx
 const LoginScreen = () => {
 const { t } = useTranslation();
 const [email, setEmail] = useState('');
@@ -411,7 +496,10 @@ const { status, error } = useSelector((state: RootState) => state.auth);
 const dispatch = useDispatch();
 const navigation = useNavigation();
 const handleLogin = async () => {
-await dispatch(loginThunk({ email, password }));
+let userLoginRequest: UserLoginRequest = {
+Email: email,
+Password: password
+};
 };
 return (
 <KeyboardAvoidingView style={styles.container} behavior="padding">
@@ -462,7 +550,7 @@ textAlign:'center',
 marginTop:20
 }
 });
-// File: src\features\auth\screens\RegisterScreen.tsx
+// File: app\features\auth\screens\RegisterScreen.tsx
 const RegisterScreen = () => {
 const { t } = useTranslation();
 const [name, setName] = useState('');
@@ -472,7 +560,11 @@ const { status, error } = useSelector((state: RootState) => state.auth);
 const dispatch = useDispatch();
 const navigation = useNavigation();
 const handleRegister = async () => {
-await dispatch(registerThunk({ email, password, name }));
+const userRegistrationRequest: UserRegistrationRequest = {
+Email: email,
+Password: password,
+Name: name,
+};
 };
 return (
 <KeyboardAvoidingView style={styles.container} behavior="padding">
@@ -528,7 +620,7 @@ textAlign:'center',
 marginTop:20
 }
 });
-// File: src\features\auth\store\authSlice.ts
+// File: app\features\auth\store\authSlice.ts
 UserLoginRequest,
 UserLoginResponse,
 UserRegistrationRequest,
@@ -673,33 +765,1064 @@ state.email = null;
 }
 });
 export const { logout, setInitialTokens } = authSlice.actions;
-// File: src\features\auth\types\authTypes.ts
+// File: app\features\auth\types\authTypes.ts
 
-// File: src\features\main\index.ts
+// File: app\features\main\index.ts
 
-// File: src\features\main\hooks\useMatches.ts
+// File: app\features\main\components\ChangeLocationModal.tsx
+interface ChangeLocationModalProps {
+visible: boolean;
+initialLatitude?: number;
+initialLongitude?: number;
+onClose: () => void;
+onUpdated: () => void;
+}
+export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({ visible, initialLatitude, initialLongitude, onClose, onUpdated }) => {
+return (
+<Modal visible={visible} animationType="slide" transparent>
+</Modal>
+)
+};
+const styles = StyleSheet.create({
+overlay:{
+flex:1,
+backgroundColor:'rgba(0,0,0,0.5)',
+justifyContent:'center',
+alignItems:'center'
+},
+modalContainer:{
+width:'90%',
+height:'80%',
+backgroundColor:'#fff',
+borderRadius:16,
+padding:20
+},
+title:{
+fontSize:18,
+fontWeight:'700',
+color:'#333',
+marginBottom:10
+},
+subtitle:{
+fontSize:14,
+color:'#555',
+marginBottom:10
+},
+errorText:{
+color:'#FF6B6B',
+marginBottom:10
+},
+mapContainer:{
+flex:1,
+borderRadius:8,
+overflow:'hidden',
+marginBottom:10
+},
+actions:{
+flexDirection:'row',
+justifyContent:'flex-end'
+},
+cancelButton:{
+marginRight:10
+},
+cancelButtonText:{
+fontSize:16,
+color:'#333'
+},
+confirmButton:{
+backgroundColor:'#1EAE98',
+paddingHorizontal:15,
+paddingVertical:10,
+borderRadius:8
+},
+confirmButtonText:{
+fontSize:16,
+color:'#fff',
+fontWeight:'600'
+}
+});
+// File: app\features\main\components\EditProfileModal.tsx
+interface EditProfileModalProps {
+visible: boolean;
+initialName: string;
+initialBio: string;
+onClose: () => void;
+onUpdated: () => void;
+}
+export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, initialName, initialBio, onClose, onUpdated }) => {
+const { t } = useTranslation();
+const [name, setName] = useState(initialName);
+const [bio, setBio] = useState(initialBio);
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState<string | null>(null);
+const handleConfirm = async () => {
+setLoading(true);
+setError(null);
+const payload: UserUpdateRequest = { Name: name, Bio: bio };
+try {
+await userService.updateMe(payload);
+onUpdated();
+onClose();
+} catch {
+setError(t('edit_profile_error_message'));
+} finally {
+setLoading(false);
+}
+};
+const handleCancel = () => {
+onClose();
+};
+return (
+<Modal visible={visible} animationType="slide" transparent>
+<View style={styles.overlay}>
+<View style={styles.modalContainer}>
+<Text style={styles.title}>{t('edit_profile_title')}</Text>
+{error && <Text style={styles.errorText}>{error}</Text>}
+<Text style={styles.label}>{t('edit_profile_name_label')}:</Text>
+<TextInput
+style={styles.input}
+value={name}
+onChangeText={setName}
+accessibilityLabel={t('edit_profile_name_label')}
+/>
+<Text style={styles.label}>{t('edit_profile_bio_label')}:</Text>
+<TextInput
+style={[styles.input, { height:80 }]}
+value={bio}
+onChangeText={setBio}
+multiline
+accessibilityLabel={t('edit_profile_bio_label')}
+/>
+{loading && <ActivityIndicator size="small" color="#1EAE98" style={{marginVertical:10}}/>}
+<View style={styles.actions}>
+<TouchableOpacity onPress={handleCancel} style={styles.cancelButton} accessibilityRole="button">
+<Text style={styles.cancelButtonText}>{t('edit_profile_cancel_button')}</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={handleConfirm} style={styles.confirmButton} accessibilityRole="button">
+<Text style={styles.confirmButtonText}>{t('edit_profile_confirm_button')}</Text>
+</TouchableOpacity>
+</View>
+</View>
+</View>
+</Modal>
+);
+};
+const styles = StyleSheet.create({
+overlay:{
+flex:1,
+backgroundColor:'rgba(0,0,0,0.5)',
+justifyContent:'center',
+alignItems:'center'
+},
+modalContainer:{
+width:'90%',
+backgroundColor:'#fff',
+borderRadius:16,
+padding:20
+},
+title:{
+fontSize:18,
+fontWeight:'700',
+color:'#333',
+marginBottom:10
+},
+errorText:{
+color:'#FF6B6B',
+marginBottom:10
+},
+label:{
+fontSize:14,
+fontWeight:'600',
+color:'#333',
+marginBottom:4
+},
+input:{
+borderWidth:1,
+borderColor:'#ccc',
+borderRadius:8,
+padding:10,
+marginBottom:10,
+fontSize:14
+},
+actions:{
+flexDirection:'row',
+justifyContent:'flex-end',
+marginTop:10
+},
+cancelButton:{
+marginRight:10
+},
+cancelButtonText:{
+fontSize:16,
+color:'#333'
+},
+confirmButton:{
+backgroundColor:'#1EAE98',
+paddingHorizontal:15,
+paddingVertical:10,
+borderRadius:8
+},
+confirmButtonText:{
+fontSize:16,
+color:'#fff',
+fontWeight:'600'
+}
+});
+// File: app\features\main\components\SelectPlantsModal.tsx
+interface SelectPlantsModalProps {
+visible: boolean;
+onClose: () => void;
+onConfirm: (selectedPlantIds: number[]) => void;
+}
+export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({ visible, onClose, onConfirm }) => {
+const { data: myPlants, isLoading, isError, refetch } = useMyPlants();
+const [selectedPlantIds, setSelectedPlantIds] = useState<number[]>([]);
+const toggleSelection = (id: number) => {
+setSelectedPlantIds((prev) =>
+prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+);
+};
+const handleConfirm = () => {
+onConfirm(selectedPlantIds);
+setSelectedPlantIds([]);
+};
+const handleClose = () => {
+setSelectedPlantIds([]);
+onClose();
+};
+return (
+<Modal visible={visible} animationType="slide" transparent>
+<View style={styles.overlay}>
+<View style={styles.modalContainer}>
+<Text style={styles.title}>Select Your Plants</Text>
+<Text style={styles.subtitle}>Select the plants you want to offer for swapping.</Text>
+{isLoading && (
+<View style={styles.centerContent}>
+<ActivityIndicator size="large" color="#1EAE98" />
+</View>
+)}
+{isError && (
+<View style={styles.centerContent}>
+<Text style={styles.errorText}>Failed to load your plants.</Text>
+<TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
+<Text style={styles.retryButtonText}>Try Again</Text>
+</TouchableOpacity>
+</View>
+)}
+{myPlants && (
+<ScrollView style={styles.list}>
+{myPlants.map((plant: PlantResponse) => {
+const selected = selectedPlantIds.includes(plant.PlantId);
+return (
+<TouchableOpacity
+key={plant.PlantId}
+onPress={() => toggleSelection(plant.PlantId)}
+style={styles.listItem}
+accessibilityRole="checkbox"
+accessibilityState={{ checked: selected }}
+>
+<Ionicons
+name={selected ? "checkbox-outline" : "checkbox"}
+size={24}
+color={selected ? "#1EAE98" : "#ccc"}
+style={{marginRight:10}}
+/>
+<Text style={styles.listItemText}>{plant.SpeciesName}</Text>
+</TouchableOpacity>
+);
+})}
+</ScrollView>
+)}
+<View style={styles.actions}>
+<TouchableOpacity onPress={handleClose} style={styles.cancelButton} accessibilityRole="button" accessibilityLabel="Cancel" accessibilityHint="Close modal without changes">
+<Text style={styles.cancelButtonText}>Cancel</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={handleConfirm} style={styles.confirmButton} accessibilityRole="button" accessibilityLabel="Confirm selection" accessibilityHint="Send swipe requests for selected and non-selected plants">
+<Text style={styles.confirmButtonText}>Confirm</Text>
+</TouchableOpacity>
+</View>
+</View>
+</View>
+</Modal>
+);
+};
+const styles = StyleSheet.create({
+overlay: {
+flex:1,
+backgroundColor:'rgba(0,0,0,0.5)',
+justifyContent:'center',
+alignItems:'center'
+},
+modalContainer: {
+width:'90%',
+maxHeight:'80%',
+backgroundColor:'#fff',
+borderRadius:16,
+padding:20,
+justifyContent:'flex-start'
+},
+title:{
+fontSize:20,
+fontWeight:'700',
+color:'#333',
+marginBottom:10
+},
+subtitle:{
+fontSize:14,
+color:'#555',
+marginBottom:20
+},
+centerContent:{
+alignItems:'center',
+justifyContent:'center',
+paddingVertical:20
+},
+errorText:{
+fontSize:16,
+color:'#333',
+marginBottom:10
+},
+retryButton:{
+backgroundColor:'#1EAE98',
+paddingVertical:10,
+paddingHorizontal:20,
+borderRadius:8
+},
+retryButtonText:{
+color:'#fff',
+fontWeight:'600'
+},
+list:{
+maxHeight:300,
+marginBottom:20
+},
+listItem:{
+flexDirection:'row',
+alignItems:'center',
+paddingVertical:10,
+borderBottomWidth:1,
+borderBottomColor:'#eee'
+},
+listItemText:{
+fontSize:16,
+color:'#333'
+},
+actions:{
+flexDirection:'row',
+justifyContent:'flex-end',
+marginTop:10
+},
+cancelButton:{
+paddingHorizontal:15,
+paddingVertical:10,
+marginRight:10
+},
+cancelButtonText:{
+fontSize:16,
+color:'#333'
+},
+confirmButton:{
+backgroundColor:'#1EAE98',
+paddingHorizontal:15,
+paddingVertical:10,
+borderRadius:8
+},
+confirmButtonText:{
+fontSize:16,
+color:'#fff',
+fontWeight:'600'
+}
+});
+// File: app\features\main\components\SwipeableCard.tsx
+useSharedValue,
+useAnimatedGestureHandler,
+useAnimatedStyle,
+runOnJS,
+withSpring
+} from 'react-native-reanimated';
+const { width } = Dimensions.get('window');
+const SWIPE_THRESHOLD = 0.25 * width;
+interface SwipeableCardProps {
+plant: PlantResponse;
+onSwipeLeft: (plantId: number) => void;
+onSwipeRight: (plantId: number) => void;
+}
+export const SwipeableCard: React.FC<SwipeableCardProps> = ({ plant, onSwipeLeft, onSwipeRight }) => {
+const translateX = useSharedValue(0);
+const rotateZ = useSharedValue(0);
+const gestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent, { startX: number }>({
+onStart: (_, ctx) => {
+ctx.startX = translateX.value;
+},
+onActive: (event, ctx) => {
+translateX.value = ctx.startX + event.translationX;
+rotateZ.value = (event.translationX / width) * 0.15;
+},
+onEnd: (event) => {
+if (event.translationX > SWIPE_THRESHOLD) {
+translateX.value = withSpring(width * 1.5, {}, (finished) => {
+if (finished) runOnJS(onSwipeRight)(plant.PlantId);
+});
+} else if (event.translationX < -SWIPE_THRESHOLD) {
+translateX.value = withSpring(-width * 1.5, {}, (finished) => {
+if (finished) runOnJS(onSwipeLeft)(plant.PlantId);
+});
+} else {
+translateX.value = withSpring(0);
+rotateZ.value = withSpring(0);
+}
+},
+});
+const animatedStyle = useAnimatedStyle(() => {
+return {
+transform: [
+{ translateX: translateX.value },
+{ rotateZ: `${rotateZ.value}rad` }
+]
+};
+});
+return (
+<PanGestureHandler onGestureEvent={gestureHandler}>
+<Animated.View style={[styles.card, animatedStyle]}>
+<View style={styles.imageContainer}>
+{plant.ImageUrl ? (
+<Image source={{ uri: plant.ImageUrl }} style={styles.image} />
+) : (
+<View style={styles.imagePlaceholder}>
+<Text style={styles.placeholderText}>No Image</Text>
+</View>
+)}
+</View>
+<View style={styles.contentContainer}>
+<Text style={styles.plantName}>{plant.SpeciesName}</Text>
+<Text style={styles.plantDescription} numberOfLines={3}>
+{plant.Description}
+</Text>
+</View>
+</Animated.View>
+</PanGestureHandler>
+);
+};
+const styles = StyleSheet.create({
+card: {
+width: width * 0.9,
+backgroundColor: '#fff',
+borderRadius: 16,
+overflow: 'hidden',
+position: 'absolute',
+alignSelf: 'center',
+top: 0,
+bottom: 0,
+marginVertical: 'auto',
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 10,
+elevation: 5,
+},
+imageContainer: {
+width: '100%',
+height: 300,
+backgroundColor: '#fafafa',
+},
+image: {
+width: '100%',
+height: '100%',
+resizeMode: 'cover',
+},
+imagePlaceholder: {
+flex:1,
+justifyContent:'center',
+alignItems:'center',
+backgroundColor:'#eee',
+},
+placeholderText: {
+color:'#999'
+},
+contentContainer: {
+padding: 16,
+},
+plantName: {
+fontSize: 20,
+fontWeight: '700',
+color:'#333',
+marginBottom:8
+},
+plantDescription: {
+fontSize: 16,
+lineHeight: 22,
+color:'#555'
+},
+});
+// File: app\features\main\hooks\useMatches.ts
 export const useMyMatches = () => {
 return useQuery('myMatches', matchService.getMyMatches, {
 staleTime: 0,
 refetchOnWindowFocus: true,
 });
 };
-// File: src\features\main\hooks\usePlants.ts
+// File: app\features\main\hooks\usePlants.ts
 export const useUserPlants = (userId: number) => {
 return useQuery(['userPlants', userId], () => plantService.getUserPlants(userId), {
 enabled: !!userId,
 staleTime: 1000 * 60 * 5,
 });
 };
-// File: src\features\main\screens\ChatScreen.tsx
+export const useMyPlants = () => {
+const { userId } = useSelector((state: RootState) => state.auth);
+return useQuery<PlantResponse[], Error>(
+['myPlants', userId],
+() => {
+if (!userId) throw new Error('User not logged in');
+return plantService.getMyPlants();
+},
+{
+enabled: !!userId,
+staleTime: 1000 * 60 * 5
+}
+);
+};
+// File: app\features\main\hooks\usePreferences.ts
+export const useUserPreferences = () => {
+const queryClient = useQueryClient();
+const query = useQuery<UserPreferencesResponse, Error>(
+['userPreferences'],
+userPreferencesService.getPreferences,
+{
+staleTime: 1000 * 60 * 5
+}
+);
+const mutation = useMutation(
+(data: UserPreferencesRequest) => userPreferencesService.updatePreferences(data),
+{
+onSuccess: () => {
+queryClient.invalidateQueries(['userPreferences']);
+}
+}
+);
+return {
+...query,
+updatePreferences: mutation.mutate,
+isUpdating: mutation.isLoading
+};
+};
+// File: app\features\main\hooks\useSwipe.ts
+export const useLikablePlants = () => {
+const query = useQuery<PlantResponse[], Error>(
+['likablePlants'],
+swipeService.getLikablePlants,
+{
+staleTime: 1000 * 60 * 1,
+refetchOnWindowFocus: false,
+retry: 1,
+}
+);
+return query;
+};
+// File: app\features\main\hooks\useUser.ts
+export const useUserProfile = () => {
+const userId = useSelector((state: RootState) => state.auth.userId);
+return useQuery<UserResponse, Error>(
+['userProfile', userId],
+() => {
+if (!userId) {
+throw new Error('No userId available');
+}
+return userService.getUser(userId);
+},
+{
+enabled: !!userId,
+staleTime: 1000 * 60 * 5
+}
+);
+};
+// File: app\features\main\screens\AddPlantScreen.tsx
+const AddPlantScreen: React.FC = () => {
+const { t } = useTranslation();
+const [speciesName, setSpeciesName] = useState('');
+const [description, setDescription] = useState('');
+const [stage, setStage] = useState<PlantStage>(PlantStage.Cutting);
+const [category, setCategory] = useState<PlantCategory>(PlantCategory.Other);
+const [watering, setWatering] = useState<WateringNeed>(WateringNeed.ModerateWater);
+const [light, setLight] = useState<LightRequirement>(LightRequirement.PartialShade);
+const [image, setImage] = useState<any>(null);
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState<string | null>(null);
+const handleSelectImage = async () => {
+let result = await ImagePicker.launchImageLibraryAsync({
+mediaTypes: ImagePicker.MediaTypeOptions.Images,
+allowsEditing: true,
+quality: 0.7,
+aspect: [3, 4],
+});
+if (!result.canceled) {
+setImage(result.assets[0]);
+}
+};
+const handleSave = async () => {
+if (!speciesName || !description || !image) {
+Alert.alert("Error", "Please fill all required fields and select an image.");
+return;
+}
+setLoading(true);
+setError(null);
+const formData = new FormData();
+formData.append('Image', {
+uri: image,
+name: 'plant.jpg',
+type: 'image/jpeg'
+} as any);
+formData.append('SpeciesName', speciesName);
+formData.append('Description', description);
+formData.append('PlantStage', stage.toString());
+formData.append('PlantCategory', category.toString());
+formData.append('WateringNeed', watering.toString());
+formData.append('LightRequirement', light.toString());
+try {
+await plantService.addMyPlant({ PlantDetails: { SpeciesName: speciesName, Description: description, PlantStage: stage, PlantCategory: category, WateringNeed: watering, LightRequirement: light }, Image: formData.get('Image') as any });
+Alert.alert("Success", "Plant added successfully.");
+} catch {
+setError(t('add_plant_error_message'));
+} finally {
+setLoading(false);
+}
+};
+return (
+<ScrollView style={styles.container} contentContainerStyle={{padding:20}}>
+<Text style={styles.title}>{t('add_plant_title')}</Text>
+{error && <Text style={styles.errorText}>{error}</Text>}
+<Text style={styles.label}>{t('add_plant_species_name_label')}:</Text>
+<TextInput style={styles.input} value={speciesName} onChangeText={setSpeciesName} />
+<Text style={styles.label}>{t('add_plant_description_label')}:</Text>
+<TextInput style={[styles.input, {height:80}]} value={description} onChangeText={setDescription} multiline />
+<Text style={styles.label}>{t('add_plant_stage_label')}:</Text>
+<TextInput style={styles.input} value={PlantStage[stage]} onChangeText={(txt) => setStage(PlantStage[txt as keyof typeof PlantStage] || PlantStage.Cutting)} />
+<Text style={styles.label}>{t('add_plant_category_label')}:</Text>
+<TextInput style={styles.input} value={PlantCategory[category]} onChangeText={(txt) => setCategory(PlantCategory[txt as keyof typeof PlantCategory] || PlantCategory.Other)} />
+<Text style={styles.label}>{t('add_plant_watering_label')}:</Text>
+<TextInput style={styles.input} value={WateringNeed[watering]} onChangeText={(txt) => setWatering(WateringNeed[txt as keyof typeof WateringNeed] || WateringNeed.ModerateWater)} />
+<Text style={styles.label}>{t('add_plant_light_label')}:</Text>
+<TextInput style={styles.input} value={LightRequirement[light]} onChangeText={(txt) => setLight(LightRequirement[txt as keyof typeof LightRequirement] || LightRequirement.PartialShade)} />
+<Text style={styles.label}>{t('add_plant_select_image_button')}:</Text>
+<TouchableOpacity onPress={handleSelectImage} style={styles.imageButton}>
+<Ionicons name="image" size={24} color="#fff" />
+<Text style={styles.imageButtonText}>{t('add_plant_select_image_button')}</Text>
+</TouchableOpacity>
+{image ? (
+<Image source={{ uri: image }} style={styles.previewImage} />
+) : (
+<Text style={styles.noImageText}>{t('add_plant_no_image_selected')}</Text>
+)}
+{loading && <ActivityIndicator size="small" color="#1EAE98" style={{marginVertical:10}}/>}
+<View style={styles.actions}>
+<TouchableOpacity style={styles.cancelButton} onPress={() => Alert.alert("Canceled", "Plant addition canceled.")}>
+<Text style={styles.cancelButtonText}>{t('add_plant_cancel_button')}</Text>
+</TouchableOpacity>
+<TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+<Text style={styles.saveButtonText}>{t('add_plant_save_button')}</Text>
+</TouchableOpacity>
+</View>
+</ScrollView>
+);
+};
+export default AddPlantScreen;
+const styles = StyleSheet.create({
+container:{
+flex:1,
+backgroundColor:'#f8f8f8'
+},
+title:{
+fontSize:20,
+fontWeight:'700',
+color:'#333',
+marginBottom:20
+},
+errorText:{
+color:'#FF6B6B',
+marginBottom:10
+},
+label:{
+fontSize:14,
+fontWeight:'600',
+color:'#333',
+marginBottom:4
+},
+input:{
+borderWidth:1,
+borderColor:'#ccc',
+borderRadius:8,
+padding:10,
+marginBottom:10,
+fontSize:14,
+backgroundColor:'#fff'
+},
+imageButton:{
+flexDirection:'row',
+alignItems:'center',
+backgroundColor:'#1EAE98',
+padding:10,
+borderRadius:8,
+marginBottom:10
+},
+imageButtonText:{
+color:'#fff',
+fontSize:14,
+marginLeft:5
+},
+previewImage:{
+width:'100%',
+height:200,
+resizeMode:'cover',
+borderRadius:8,
+marginBottom:10
+},
+noImageText:{
+fontSize:14,
+color:'#555',
+marginBottom:10
+},
+actions:{
+flexDirection:'row',
+justifyContent:'flex-end',
+marginTop:10
+},
+cancelButton:{
+marginRight:10
+},
+cancelButtonText:{
+fontSize:16,
+color:'#333'
+},
+saveButton:{
+backgroundColor:'#1EAE98',
+paddingHorizontal:15,
+paddingVertical:10,
+borderRadius:8
+},
+saveButtonText:{
+fontSize:16,
+color:'#fff',
+fontWeight:'600'
+}
+});
+// File: app\features\main\screens\ChatScreen.tsx
 
-// File: src\features\main\screens\HomeScreen.tsx
+// File: app\features\main\screens\HomeScreen.tsx
 
-// File: src\features\main\screens\MatchListScreen.tsx
+// File: app\features\main\screens\MatchListScreen.tsx
 
-// File: src\features\main\screens\ProfileScreen.tsx
-
-// File: src\features\main\screens\SettingsScreen.tsx
+// File: app\features\main\screens\MyProfileScreen.tsx
+const ProfileScreen: React.FC = () => {
+const { t } = useTranslation();
+const navigation = useNavigation();
+const { data: userProfile, isLoading: loadingProfile, isError: errorProfile, refetch: refetchProfile } = useUserProfile();
+const { data: myPlants, isLoading: loadingPlants, isError: errorPlants, refetch: refetchPlants } = useMyPlants();
+const [editProfileVisible, setEditProfileVisible] = useState(false);
+const [changeLocationVisible, setChangeLocationVisible] = useState(false);
+const handleEditProfile = useCallback(() => {
+setEditProfileVisible(true);
+}, []);
+const handleProfileUpdated = useCallback(() => {
+refetchProfile();
+}, [refetchProfile]);
+const handleChangeLocation = useCallback(() => {
+setChangeLocationVisible(true);
+}, []);
+const handleLocationUpdated = useCallback(() => {
+refetchProfile();
+}, [refetchProfile]);
+const handleAddPlant = useCallback(() => {
+navigation.navigate('AddPlant' as never);
+}, [navigation]);
+const renderPlantItem = ({ item }: { item: PlantResponse }) => (
+<View style={styles.plantItem}>
+{item.ImageUrl ? (
+<Image source={{ uri: item.ImageUrl }} style={styles.plantImage} />
+) : (
+<View style={styles.plantPlaceholder}>
+<Ionicons name="leaf" size={40} color="#1EAE98" />
+</View>
+)}
+<Text style={styles.plantName} numberOfLines={1}>{item.SpeciesName}</Text>
+</View>
+);
+if (loadingProfile || loadingPlants) {
+return (
+<SafeAreaView style={styles.centerContainer}>
+<ActivityIndicator size="large" color="#1EAE98" />
+<Text style={styles.loadingText}>{t('profile_loading_message')}</Text>
+</SafeAreaView>
+);
+}
+if (errorProfile || errorPlants) {
+return (
+<SafeAreaView style={styles.centerContainer}>
+<Text style={styles.errorText}>{t('profile_error_message')}</Text>
+<TouchableOpacity onPress={() => { refetchProfile(); refetchPlants(); }} style={styles.retryButton}>
+<Text style={styles.retryButtonText}>{t('profile_retry_button')}</Text>
+</TouchableOpacity>
+</SafeAreaView>
+);
+}
+if (!userProfile) {
+return null;
+}
+const userLocation = userProfile.LocationLatitude && userProfile.LocationLongitude
+? `Lat: ${userProfile.LocationLatitude.toFixed(2)}, Lng: ${userProfile.LocationLongitude.toFixed(2)}`
+: t('profile_no_location');
+return (
+<SafeAreaView style={styles.container}>
+<View style={styles.headerContainer}>
+<Text style={styles.headerTitle}>{t('profile_title')}</Text>
+<TouchableOpacity onPress={handleEditProfile} style={styles.headerActionButton} accessibilityLabel={t('profile_edit_button')}>
+<MaterialIcons name="edit" size={24} color="#333" />
+</TouchableOpacity>
+</View>
+<View style={styles.profileContainer}>
+<View style={styles.profileInfo}>
+{userProfile.ProfilePictureUrl ? (
+<Image source={{ uri: userProfile.ProfilePictureUrl }} style={styles.profilePicture} />
+) : (
+<View style={styles.profilePlaceholder}>
+<Ionicons name="person-circle-outline" size={80} color="#ccc" />
+</View>
+)}
+<Text style={styles.profileName}>{userProfile.Name}</Text>
+<Text style={styles.profileLabel}>{t('profile_bio_label')}:</Text>
+<Text style={styles.profileValue} numberOfLines={3}>{userProfile.Bio || ''}</Text>
+<Text style={[styles.profileLabel, { marginTop:10 }]}>{t('profile_location_label')}:</Text>
+<Text style={styles.profileValue}>{userLocation}</Text>
+<TouchableOpacity onPress={handleChangeLocation} style={styles.locationButton} accessibilityRole="button" accessibilityLabel={t('profile_change_location_button')}>
+<Ionicons name="location-outline" size={20} color="#1EAE98" />
+<Text style={styles.locationButtonText}>{t('profile_change_location_button')}</Text>
+</TouchableOpacity>
+</View>
+</View>
+<View style={styles.plantsSectionHeader}>
+<Text style={styles.plantsSectionTitle}>{t('profile_my_plants_section')}</Text>
+<TouchableOpacity onPress={handleAddPlant} style={styles.addPlantButton} accessibilityRole="button" accessibilityLabel={t('profile_add_plant_button')}>
+<Ionicons name="add-circle" size={24} color="#1EAE98" />
+<Text style={styles.addPlantButtonText}>{t('profile_add_plant_button')}</Text>
+</TouchableOpacity>
+</View>
+<View style={styles.plantsContainer}>
+{myPlants && myPlants.length > 0 ? (
+<FlatList
+data={myPlants}
+keyExtractor={(item) => item.PlantId.toString()}
+renderItem={renderPlantItem}
+numColumns={2}
+columnWrapperStyle={styles.plantRow}
+contentContainerStyle={{ paddingHorizontal:20, paddingBottom:20 }}
+/>
+) : (
+<View style={styles.noPlantsContainer}>
+<Text style={styles.noPlantsText}>{t('profile_no_plants_message')}</Text>
+</View>
+)}
+</View>
+<EditProfileModal
+visible={editProfileVisible}
+initialName={userProfile.Name}
+initialBio={userProfile.Bio || ''}
+onClose={() => setEditProfileVisible(false)}
+onUpdated={handleProfileUpdated}
+/>
+<ChangeLocationModal
+visible={changeLocationVisible}
+initialLatitude={userProfile.LocationLatitude || undefined}
+initialLongitude={userProfile.LocationLongitude || undefined}
+onClose={() => setChangeLocationVisible(false)}
+onUpdated={handleLocationUpdated}
+/>
+</SafeAreaView>
+);
+};
+export default ProfileScreen;
+const styles = StyleSheet.create({
+container: {
+flex:1,
+backgroundColor:'#f8f8f8'
+},
+centerContainer: {
+flex:1,
+justifyContent:'center',
+alignItems:'center',
+padding:20
+},
+loadingText: {
+fontSize:16,
+color:'#333',
+marginTop:10
+},
+errorText: {
+fontSize:16,
+color:'#333',
+marginBottom:20,
+textAlign:'center'
+},
+retryButton: {
+backgroundColor:'#1EAE98',
+paddingVertical:10,
+paddingHorizontal:20,
+borderRadius:8
+},
+retryButtonText:{
+color:'#fff',
+fontSize:16,
+fontWeight:'600'
+},
+headerContainer:{
+flexDirection:'row',
+justifyContent:'space-between',
+alignItems:'center',
+paddingHorizontal:20,
+paddingVertical:10,
+borderBottomWidth:1,
+borderBottomColor:'#ddd',
+backgroundColor:'#fff'
+},
+headerTitle:{
+fontSize:24,
+fontWeight:'700',
+color:'#333'
+},
+headerActionButton:{
+padding:8
+},
+profileContainer:{
+padding:20,
+backgroundColor:'#fff',
+marginBottom:10
+},
+profileInfo:{
+alignItems:'center'
+},
+profilePicture:{
+width:100,
+height:100,
+borderRadius:50,
+marginBottom:10,
+backgroundColor:'#eee'
+},
+profilePlaceholder:{
+width:100,
+height:100,
+borderRadius:50,
+backgroundColor:'#eee',
+alignItems:'center',
+justifyContent:'center',
+marginBottom:10
+},
+profileName:{
+fontSize:20,
+fontWeight:'700',
+color:'#333',
+marginBottom:10,
+textAlign:'center'
+},
+profileLabel:{
+fontSize:14,
+fontWeight:'600',
+color:'#333',
+marginBottom:4,
+alignSelf:'flex-start'
+},
+profileValue:{
+fontSize:14,
+color:'#555',
+textAlign:'center'
+},
+locationButton:{
+flexDirection:'row',
+alignItems:'center',
+marginTop:8,
+paddingHorizontal:10,
+paddingVertical:6,
+borderWidth:1,
+borderColor:'#1EAE98',
+borderRadius:8
+},
+locationButtonText:{
+color:'#1EAE98',
+fontSize:14,
+marginLeft:5
+},
+plantsSectionHeader:{
+flexDirection:'row',
+justifyContent:'space-between',
+alignItems:'center',
+paddingHorizontal:20,
+paddingVertical:10,
+borderBottomWidth:1,
+borderBottomColor:'#ddd',
+backgroundColor:'#fff'
+},
+plantsSectionTitle:{
+fontSize:18,
+fontWeight:'700',
+color:'#333'
+},
+addPlantButton:{
+flexDirection:'row',
+alignItems:'center'
+},
+addPlantButtonText:{
+fontSize:14,
+color:'#1EAE98',
+marginLeft:5
+},
+plantsContainer:{
+flex:1,
+backgroundColor:'#f8f8f8',
+},
+noPlantsContainer:{
+flex:1,
+justifyContent:'center',
+alignItems:'center',
+padding:20
+},
+noPlantsText:{
+fontSize:16,
+color:'#555',
+textAlign:'center'
+},
+plantRow:{
+justifyContent:'space-between',
+marginBottom:20
+},
+plantItem:{
+width:'48%',
+backgroundColor:'#fff',
+borderRadius:8,
+overflow:'hidden',
+alignItems:'center',
+padding:10
+},
+plantImage:{
+width:'100%',
+height:100,
+marginBottom:10,
+borderRadius:8,
+backgroundColor:'#eee',
+resizeMode:'cover'
+},
+plantPlaceholder:{
+width:'100%',
+height:100,
+borderRadius:8,
+backgroundColor:'#eee',
+justifyContent:'center',
+alignItems:'center',
+marginBottom:10
+},
+plantName:{
+fontSize:14,
+fontWeight:'600',
+color:'#333',
+textAlign:'center'
+}
+});
+// File: app\features\main\screens\SettingsScreen.tsx
 const SettingsScreen = () => {
 const { t, i18n } = useTranslation();
 const [currentLang, setCurrentLang] = useState(i18n.language);
@@ -757,13 +1880,259 @@ buttonText: {
 color:'#000'
 }
 });
-// File: src\features\main\screens\SwipeScreen.tsx
+// File: app\features\main\screens\SwipeScreen.tsx
+const { width } = Dimensions.get('window');
+const SwipeScreen: React.FC = () => {
+const { data: plants, isLoading, isError, refetch } = useLikablePlants();
+const { data: myPlants, isLoading: loadingMyPlants, isError: errorMyPlants, refetch: refetchMyPlants } = useMyPlants();
+const [localPlants, setLocalPlants] = useState<PlantResponse[]>(plants || []);
+const [modalVisible, setModalVisible] = useState(false);
+const [pendingRightSwipePlant, setPendingRightSwipePlant] = useState<PlantResponse | null>(null);
+React.useEffect(() => {
+if (plants) {
+setLocalPlants(plants);
+}
+}, [plants]);
+const topCard = useMemo(() => {
+return localPlants && localPlants.length > 0 ? localPlants[0] : null;
+}, [localPlants]);
+const removeTopCard = (plantId: number) => {
+setLocalPlants((prev) => prev.filter((p) => p.PlantId !== plantId));
+};
+const handleSwipeLeft = useCallback(async (plantId: number) => {
+if (!myPlants) {
+Alert.alert("Error", "Your plants are not loaded yet. Try again.");
+return;
+}
+const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
+SwiperPlantId: userPlant.PlantId,
+SwipedPlantId: plantId,
+IsLike: false
+}));
+try {
+await swipeService.sendSwipes(swipeRequests);
+} catch {
+Alert.alert("Error", "Failed to register swipe.");
+}
+removeTopCard(plantId);
+}, [myPlants]);
+const handleRightSwipeInitiation = useCallback((plantId: number) => {
+const plantToLike = localPlants.find(p => p.PlantId === plantId);
+if (!plantToLike) return;
+setPendingRightSwipePlant(plantToLike);
+setModalVisible(true);
+}, [localPlants]);
+const handleRightSwipeConfirm = useCallback(async (selectedPlantIds: number[]) => {
+if (!pendingRightSwipePlant || !myPlants) {
+return;
+}
+const plantId = pendingRightSwipePlant.PlantId;
+const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
+SwiperPlantId: userPlant.PlantId,
+SwipedPlantId: plantId,
+IsLike: selectedPlantIds.includes(userPlant.PlantId)
+}));
+try {
+await swipeService.sendSwipes(swipeRequests);
+} catch {
+Alert.alert("Error", "Failed to send swipe requests.");
+}
+removeTopCard(plantId);
+setPendingRightSwipePlant(null);
+setModalVisible(false);
+}, [myPlants, pendingRightSwipePlant]);
+const handleModalClose = () => {
+setPendingRightSwipePlant(null);
+setModalVisible(false);
+};
+const handlePassPress = () => {
+if (topCard) {
+handleSwipeLeft(topCard.PlantId);
+}
+};
+const handleLikePress = () => {
+if (topCard) {
+handleRightSwipeInitiation(topCard.PlantId);
+}
+};
+const handleFilterPress = () => {
+Alert.alert("Filters", "Filter screen or modal would appear here.");
+};
+if (isLoading || loadingMyPlants) {
+return (
+<SafeAreaView style={styles.loadingContainer}>
+<ActivityIndicator size="large" color="#1EAE98" />
+<Text style={styles.loadingText}>Loading Plants...</Text>
+</SafeAreaView>
+);
+}
+if (isError || errorMyPlants) {
+return (
+<SafeAreaView style={styles.errorContainer}>
+<Text style={styles.errorText}>Failed to load plants or your gallery.</Text>
+<TouchableOpacity onPress={() => {refetch(); refetchMyPlants();}} style={styles.retryButton}>
+<Text style={styles.retryButtonText}>Try Again</Text>
+</TouchableOpacity>
+</SafeAreaView>
+);
+}
+return (
+<SafeAreaView style={styles.container}>
+<View style={styles.header}>
+<Text style={styles.headerTitle}>Cuttr</Text>
+<TouchableOpacity onPress={handleFilterPress} style={styles.headerFilterButton} accessible accessibilityLabel="Filter plants" accessibilityHint="Opens filter options">
+<Ionicons name="options" size={24} color="#333" />
+</TouchableOpacity>
+</View>
+<View style={styles.cardsContainer}>
+{localPlants.map((plant, index) => {
+const isTopCard = index === 0;
+return (
+<SwipeableCard
+key={plant.PlantId}
+plant={plant}
+onSwipeLeft={handleSwipeLeft}
+onSwipeRight={handleRightSwipeInitiation}
+/>
+);
+})}
+{localPlants.length === 0 && (
+<View style={styles.emptyState}>
+<Text style={styles.emptyStateText}>No more plants to show.</Text>
+<Text style={styles.emptyStateSubText}>Try adjusting your filters or come back later.</Text>
+</View>
+)}
+</View>
+{localPlants.length > 0 && (
+<View style={styles.actionsContainer}>
+<TouchableOpacity onPress={handlePassPress} style={[styles.actionButton, styles.passButton]} accessibilityRole="button" accessibilityLabel="Pass on this plant" accessibilityHint="Dislike and show next plant">
+<MaterialIcons name="close" size={32} color="#fff" />
+</TouchableOpacity>
+<TouchableOpacity onPress={handleLikePress} style={[styles.actionButton, styles.likeButton]} accessibilityRole="button" accessibilityLabel="Like this plant" accessibilityHint="Show interest and match with this plant">
+<MaterialIcons name="favorite" size={32} color="#fff" />
+</TouchableOpacity>
+</View>
+)}
+{myPlants && pendingRightSwipePlant && (
+<SelectPlantsModal
+visible={modalVisible}
+onClose={handleModalClose}
+onConfirm={handleRightSwipeConfirm}
+/>
+)}
+</SafeAreaView>
+);
+};
+export default SwipeScreen;
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor:'#f8f8f8',
+alignItems:'center'
+},
+loadingContainer: {
+flex:1,
+justifyContent:'center',
+alignItems:'center'
+},
+loadingText:{
+marginTop:10,
+fontSize:16,
+color:'#333'
+},
+errorContainer: {
+flex:1,
+justifyContent:'center',
+alignItems:'center',
+padding:20
+},
+errorText:{
+fontSize:18,
+color:'#333',
+marginBottom:20,
+textAlign:'center'
+},
+retryButton:{
+backgroundColor:'#1EAE98',
+paddingVertical:12,
+paddingHorizontal:20,
+borderRadius:8
+},
+retryButtonText:{
+color:'#fff',
+fontSize:16,
+fontWeight:'600'
+},
+header: {
+width:'100%',
+flexDirection:'row',
+justifyContent:'space-between',
+alignItems:'center',
+paddingHorizontal:20,
+paddingVertical:10,
+borderBottomColor:'#ddd',
+borderBottomWidth:1,
+backgroundColor:'#fff'
+},
+headerTitle:{
+fontSize:24,
+fontWeight:'700',
+color:'#333'
+},
+headerFilterButton:{
+padding:8
+},
+cardsContainer:{
+flex:1,
+width:'100%',
+justifyContent:'center',
+alignItems:'center',
+paddingTop:20
+},
+actionsContainer:{
+flexDirection:'row',
+justifyContent:'space-evenly',
+alignItems:'center',
+width:'100%',
+paddingVertical:20,
+backgroundColor:'#fff',
+borderTopWidth:1,
+borderTopColor:'#ddd'
+},
+actionButton:{
+width:60,
+height:60,
+borderRadius:30,
+justifyContent:'center',
+alignItems:'center'
+},
+passButton:{
+backgroundColor:'#FF6B6B'
+},
+likeButton:{
+backgroundColor:'#1EAE98'
+},
+emptyState:{
+alignItems:'center',
+padding:20
+},
+emptyStateText:{
+fontSize:20,
+fontWeight:'700',
+color:'#333',
+marginBottom:8
+},
+emptyStateSubText:{
+fontSize:16,
+color:'#555',
+textAlign:'center'
+}
+});
+// File: app\features\main\store\matchesSlice.ts
 
-// File: src\features\main\store\matchesSlice.ts
+// File: app\features\main\store\plantsSlice.ts
 
-// File: src\features\main\store\plantsSlice.ts
-
-// File: src\features\main\store\userPreferencesSlice.ts
+// File: app\features\main\store\userPreferencesSlice.ts
 interface UserPreferencesState {
 data: UserPreferencesResponse | null;
 status: 'idle' | 'loading' | 'error';
@@ -839,7 +2208,7 @@ export const selectUserPreferences = (state: RootState) => state.userPreferences
 export const selectUserPreferencesStatus = (state: RootState) => state.userPreferences.status;
 export const selectUserPreferencesError = (state: RootState) => state.userPreferences.error;
 export default userPreferencesSlice.reducer;
-// File: src\features\main\store\userSlice.ts
+// File: app\features\main\store\userSlice.ts
 export const fetchUserProfile = createAsyncThunk<
 UserResponse,
 number,
@@ -892,9 +2261,9 @@ state.error = action.payload as string;
 }
 });
 export const { clearUserProfile } = userSlice.actions;
-// File: src\features\main\types\mainTypes.ts
+// File: app\features\main\types\mainTypes.ts
 
-// File: src\hooks\useAuthToken.ts
+// File: app\hooks\useAuthToken.ts
 export const useAuthToken = () => {
 const [initializing, setInitializing] = useState(true);
 const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -911,36 +2280,28 @@ loadTokens();
 }, []);
 return { initializing, accessToken, refreshToken };
 };
-// File: src\hooks\useAxiosErrorHandler.ts
+// File: app\hooks\useAxiosErrorHandler.ts
 
-// File: src\hooks\useNetworkStatus.ts
+// File: app\hooks\useNetworkStatus.ts
 
-// File: src\i18n\index.ts
-export const initI18n = async () => {
-let chosenLanguage = await storage.getLanguage();
-if (!chosenLanguage) {
-const locales = RNLocalize.getLocales();
-const deviceLang = locales.length > 0 ? locales[0].languageCode : 'en';
-chosenLanguage = ['en', 'fr'].includes(deviceLang) ? deviceLang : 'en';
-await storage.saveLanguage(chosenLanguage);
-}
-i18n
+// File: app\i18n\index.ts
+export async function initI18n() {
+await i18n
 .use(initReactI18next)
 .init({
-compatibilityJSON: 'v3',
-lng: chosenLanguage,
 fallbackLng: 'en',
+lng: Localization.locale,
 resources: {
 en: { translation: en },
 fr: { translation: fr },
 },
 interpolation: {
-escapeValue: false
-}
+escapeValue: false,
+},
 });
 return i18n;
-};
-// File: src\i18n\locales\en.json
+}
+// File: app\i18n\locales\en.json
 {
 "welcome_back": "Welcome Back",
 "create_account": "Create Account",
@@ -950,11 +2311,103 @@ return i18n;
 "password": "Password",
 "name": "Name",
 "no_account_register": "Don’t have an account? Register",
-"have_account_login": "Already have an account? Login"
+"have_account_login": "Already have an account? Login",
+"profile_title": "My Profile",
+"profile_loading_message": "Loading your profile...",
+"profile_error_message": "Failed to load your profile.",
+"profile_retry_button": "Try Again",
+"profile_name_label": "Name",
+"profile_bio_label": "Bio",
+"profile_location_label": "Location",
+"profile_no_location": "No location set",
+"profile_edit_button": "Edit Profile",
+"profile_change_location_button": "Change Location",
+"profile_add_plant_button": "Add Plant",
+"profile_my_plants_section": "My Plants",
+"profile_no_plants_message": "You have no plants yet. Add one to get started!",
+"edit_profile_title": "Edit Profile",
+"edit_profile_name_label": "Name",
+"edit_profile_bio_label": "Bio",
+"edit_profile_confirm_button": "Confirm",
+"edit_profile_cancel_button": "Cancel",
+"edit_profile_error_message": "Failed to update profile.",
+"change_location_title": "Change Location",
+"change_location_instructions": "Tap on the map to select your location.",
+"change_location_confirm_button": "Confirm",
+"change_location_cancel_button": "Cancel",
+"change_location_error_message": "Failed to update location.",
+"add_plant_title": "Add a New Plant",
+"add_plant_species_name_label": "Species Name",
+"add_plant_description_label": "Description",
+"add_plant_stage_label": "Stage",
+"add_plant_category_label": "Category",
+"add_plant_watering_label": "Watering Need",
+"add_plant_light_label": "Light Requirement",
+"add_plant_size_label": "Size",
+"add_plant_indoor_outdoor_label": "Indoor/Outdoor",
+"add_plant_propagation_ease_label": "Propagation Ease",
+"add_plant_pet_friendly_label": "Pet Friendly",
+"add_plant_extras_label": "Extras",
+"add_plant_select_image_button": "Select Image",
+"add_plant_save_button": "Save",
+"add_plant_cancel_button": "Cancel",
+"add_plant_error_message": "Failed to add plant.",
+"add_plant_no_image_selected": "No image selected."
 }
-// File: src\i18n\locales\fr.json
-
-// File: src\navigation\AppNavigator.tsx
+// File: app\i18n\locales\fr.json
+{
+"welcome_back": "Bon Retour",
+"create_account": "Créer un Compte",
+"login": "Connexion",
+"register": "S'inscrire",
+"email": "E-mail",
+"password": "Mot de Passe",
+"name": "Nom",
+"no_account_register": "Vous n'avez pas de compte ? Inscrivez-vous",
+"have_account_login": "Vous avez déjà un compte ? Connectez-vous",
+"profile_title": "Mon Profil",
+"profile_loading_message": "Chargement de votre profil...",
+"profile_error_message": "Impossible de charger votre profil.",
+"profile_retry_button": "Réessayer",
+"profile_name_label": "Nom",
+"profile_bio_label": "Bio",
+"profile_location_label": "Localisation",
+"profile_no_location": "Aucune localisation définie",
+"profile_edit_button": "Modifier le Profil",
+"profile_change_location_button": "Changer la Localisation",
+"profile_add_plant_button": "Ajouter une Plante",
+"profile_my_plants_section": "Mes Plantes",
+"profile_no_plants_message": "Vous n'avez pas encore de plantes. Ajoutez-en une pour commencer !",
+"edit_profile_title": "Modifier le Profil",
+"edit_profile_name_label": "Nom",
+"edit_profile_bio_label": "Bio",
+"edit_profile_confirm_button": "Confirmer",
+"edit_profile_cancel_button": "Annuler",
+"edit_profile_error_message": "Impossible de mettre à jour le profil.",
+"change_location_title": "Changer de Localisation",
+"change_location_instructions": "Appuyez sur la carte pour sélectionner votre localisation.",
+"change_location_confirm_button": "Confirmer",
+"change_location_cancel_button": "Annuler",
+"change_location_error_message": "Impossible de mettre à jour la localisation.",
+"add_plant_title": "Ajouter une Nouvelle Plante",
+"add_plant_species_name_label": "Nom de l'Espèce",
+"add_plant_description_label": "Description",
+"add_plant_stage_label": "Stade",
+"add_plant_category_label": "Catégorie",
+"add_plant_watering_label": "Besoins en Arrosage",
+"add_plant_light_label": "Besoin en Lumière",
+"add_plant_size_label": "Taille",
+"add_plant_indoor_outdoor_label": "Intérieur/Extérieur",
+"add_plant_propagation_ease_label": "Facilité de Propagation",
+"add_plant_pet_friendly_label": "Adapté aux Animaux",
+"add_plant_extras_label": "Extras",
+"add_plant_select_image_button": "Sélectionner une Image",
+"add_plant_save_button": "Enregistrer",
+"add_plant_cancel_button": "Annuler",
+"add_plant_error_message": "Impossible d'ajouter la plante.",
+"add_plant_no_image_selected": "Aucune image sélectionnée."
+}
+// File: app\navigation\AppNavigator.tsx
 const AppNavigator = () => {
 const dispatch = useDispatch();
 const { accessToken, userId } = useSelector((state: RootState) => state.auth);
@@ -966,9 +2419,7 @@ dispatch(fetchUserProfile(userId) as any);
 }, [accessToken, userId, profile, userStatus, dispatch]);
 if (!accessToken) {
 return (
-<NavigationContainer>
 <AuthNavigator />
-</NavigationContainer>
 );
 }
 if (userStatus === 'loading' || (!profile && userId)) {
@@ -979,13 +2430,11 @@ return (
 );
 }
 return (
-<NavigationContainer>
 <MainNavigator />
-</NavigationContainer>
 );
 };
 export default AppNavigator;
-// File: src\navigation\AuthNavigator.tsx
+// File: app\navigation\AuthNavigator.tsx
 const Stack = createNativeStackNavigator();
 const AuthNavigator = () => {
 return (
@@ -996,43 +2445,64 @@ return (
 );
 };
 export default AuthNavigator;
-// File: src\navigation\MainNavigator.tsx
+// File: app\navigation\MainNavigator.tsx
 const Tab = createBottomTabNavigator();
 const MainNavigator = () => {
 return (
 <Tab.Navigator>
-<Tab.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-<Tab.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+<Tab.Screen name="Swipe" component={SwipeScreen} options={{ headerShown: false }} />
+<Tab.Screen name="Profile" component={MyProfileScreen} options={{ headerShown: false }} />
 <Tab.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
 </Tab.Navigator>
 );
 };
 export default MainNavigator;
-// File: src\navigation\NavigationTypes.ts
+// File: app\navigation\NavigationTypes.ts
 
-// File: src\store\index.ts
+// File: app\store\index.ts
 export const store = configureStore({
 reducer: {
 auth: authSlice.reducer,
 user: userSlice.reducer,
 userPreferences: userPreferencesSlice.reducer,
+globalError: globalErrorSlice.reducer,
 },
 });
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-// File: src\store\rootReducer.ts
+// File: app\store\rootReducer.ts
 
-// File: src\store\middlewares\tokenRefreshMiddleware.ts
+// File: app\store\middlewares\tokenRefreshMiddleware.ts
 
-// File: src\theme\colors.ts
+// File: app\store\slices\globalErrorSlice.ts
+interface GlobalErrorState {
+message: string | null;
+}
+const initialState: GlobalErrorState = {
+message: null,
+};
+export const globalErrorSlice = createSlice({
+name: 'globalError',
+initialState,
+reducers: {
+setGlobalError(state, action: PayloadAction<string>) {
+state.message = action.payload;
+},
+clearGlobalError(state) {
+state.message = null;
+},
+},
+});
+export const { setGlobalError, clearGlobalError } = globalErrorSlice.actions;
+// File: app\theme\colors.ts
 
-// File: src\theme\index.ts
+// File: app\theme\index.ts
 
-// File: src\theme\spacing.ts
+// File: app\theme\spacing.ts
 
-// File: src\theme\typography.ts
+// File: app\theme\typography.ts
 
-// File: src\types\apiTypes.ts
+// File: app\types\apiTypes.ts
 export interface RefreshTokenRequest {
 RefreshToken: string;
 }
@@ -1042,7 +2512,7 @@ MessageText: string;
 }
 export interface PlantCreateRequest {
 PlantDetails: PlantRequest;
-Image: IFormFile;
+Image: File;
 }
 export interface PlantRequest {
 SpeciesName: string;
@@ -1094,7 +2564,7 @@ PreferedPetFriendly: PetFriendly[];
 PreferedExtras: Extras[];
 }
 export interface UserProfileImageUpdateRequest {
-Image: IFormFile;
+Image: File;
 }
 export interface UserRegistrationRequest {
 Email: string;
@@ -1182,82 +2652,82 @@ Bio: string;
 LocationLatitude?: number;
 LocationLongitude?: number;
 }
-// File: src\types\enums.ts
+// File: app\types\enums.ts
 export enum PlantStage {
-Cutting,
-GrownPlantTree
+Cutting = "Cutting",
+GrownPlantTree = "GrownPlantTree"
 }
 export enum PlantCategory {
-Succulent,
-Cactus,
-Fern,
-Orchid,
-Herb,
-Palm,
-LeafyHouseplant,
-FloweringHouseplant,
-Other
+Succulent = "Succulent",
+Cactus = "Cactus",
+Fern = "Fern",
+Orchid = "Orchid",
+Herb = "Herb",
+Palm = "Palm",
+LeafyHouseplant = "LeafyHouseplant",
+FloweringHouseplant = "FloweringHouseplant",
+Other = "Other"
 }
 export enum WateringNeed {
-VeryLowWater,
-LowWater,
-ModerateWater,
-HighWater,
-VeryHighWater
+VeryLowWater = "VeryLowWater",
+LowWater = "LowWater",
+ModerateWater = "ModerateWater",
+HighWater = "HighWater",
+VeryHighWater = "VeryHighWater"
 }
 export enum LightRequirement {
-FullSun,
-PartialShade,
-Shade
+FullSun = "FullSun",
+PartialShade = "PartialShade",
+Shade = "Shade"
 }
 export enum Size {
-SmallSize,
-MediumSize,
-LargeSize
+SmallSize = "SmallSize",
+MediumSize = "MediumSize",
+LargeSize = "LargeSize"
 }
 export enum IndoorOutdoor {
-Indoor,
-Outdoor,
-IndoorAndOutdoor
+Indoor = "Indoor",
+Outdoor = "Outdoor",
+IndoorAndOutdoor = "IndoorAndOutdoor"
 }
 export enum PropagationEase {
-EasyPropagation,
-ModeratePropagation,
-DifficultPropagation
+EasyPropagation = "EasyPropagation",
+ModeratePropagation = "ModeratePropagation",
+DifficultPropagation = "DifficultPropagation"
 }
 export enum PetFriendly {
-PetFriendly,
-NotPetFriendly,
+PetFriendly = "PetFriendly",
+NotPetFriendly = "NotPetFriendly",
 }
 export enum Extras {
-Fragrant,
-Edible,
-Medicinal,
-AirPurifying,
-Decorative,
-Flowering,
-TropicalVibe,
-FoliageHeavy,
-DroughtTolerant,
-HumidityLoving,
-LowMaintenance,
-WinterHardy,
-BeginnerFriendly,
-Fruiting,
-PollinatorFriendly,
-FastGrowing,
-VariegatedFoliage,
-Climbing,
-GroundCover,
-Rare
+Fragrant = "Fragrant",
+Edible = "Edible",
+Medicinal = "Medicinal",
+AirPurifying = "AirPurifying",
+Decorative = "Decorative",
+Flowering = "Flowering",
+TropicalVibe = "TropicalVibe",
+FoliageHeavy = "FoliageHeavy",
+DroughtTolerant = "DroughtTolerant",
+HumidityLoving = "HumidityLoving",
+LowMaintenance = "LowMaintenance",
+WinterHardy = "WinterHardy",
+BeginnerFriendly = "BeginnerFriendly",
+Fruiting = "Fruiting",
+PollinatorFriendly = "PollinatorFriendly",
+FastGrowing = "FastGrowing",
+VariegatedFoliage = "VariegatedFoliage",
+Climbing = "Climbing",
+GroundCover = "GroundCover",
+Rare = "Rare"
 }
-// File: src\types\global.ts
+// File: app\types\global.ts
 
-// File: src\utils\formatting.ts
+// File: app\utils\formatting.ts
 
-// File: src\utils\index.ts
+// File: app\utils\index.ts
 
-// File: src\utils\storage.ts
+// File: app\utils\storage.ts
 const ACCESS_TOKEN_KEY = "ACCESS_TOKEN_KEY";
 const REFRESH_TOKEN_KEY = "REFRESH_TOKEN_KEY";
 const LANGUAGE_KEY = "LANGUAGE_KEY";
@@ -1277,4 +2747,66 @@ await SecureStore.setItemAsync(LANGUAGE_KEY, language);
 },
 getLanguage: async () => SecureStore.getItemAsync(LANGUAGE_KEY),
 };
-// File: src\utils\validation.ts
+// File: app\utils\validation.ts
+
+// File: scripts\reset-project.js
+#!/usr/bin/env node
+const fs = require("fs");
+const path = require("path");
+const root = process.cwd();
+const oldDirs = ["app", "components", "hooks", "constants", "scripts"];
+const newDir = "app-example";
+const newAppDir = "app";
+const newDirPath = path.join(root, newDir);
+const indexContent = `import { Text, View } from "react-native";
+export default function Index() {
+return (
+<View
+style={{
+flex: 1,
+justifyContent: "center",
+alignItems: "center",
+}}
+>
+<Text>Edit app/index.tsx to edit this screen.</Text>
+</View>
+);
+}
+`;
+const layoutContent = `import { Stack } from "expo-router";
+export default function RootLayout() {
+return <Stack />;
+}
+`;
+const moveDirectories = async () => {
+try {
+await fs.promises.mkdir(newDirPath, { recursive: true });
+console.log(`📁 /${newDir} directory created.`);
+for (const dir of oldDirs) {
+const oldDirPath = path.join(root, dir);
+const newDirPath = path.join(root, newDir, dir);
+if (fs.existsSync(oldDirPath)) {
+await fs.promises.rename(oldDirPath, newDirPath);
+console.log(`➡️ /${dir} moved to /${newDir}/${dir}.`);
+} else {
+console.log(`➡️ /${dir} does not exist, skipping.`);
+}
+}
+const newAppDirPath = path.join(root, newAppDir);
+await fs.promises.mkdir(newAppDirPath, { recursive: true });
+console.log("\n📁 New /app directory created.");
+const indexPath = path.join(newAppDirPath, "index.tsx");
+await fs.promises.writeFile(indexPath, indexContent);
+console.log("📄 app/index.tsx created.");
+const layoutPath = path.join(newAppDirPath, "_layout.tsx");
+await fs.promises.writeFile(layoutPath, layoutContent);
+console.log("📄 app/_layout.tsx created.");
+console.log("\n✅ Project reset complete. Next steps:");
+console.log(
+"1. Run `npx expo start` to start a development server.\n2. Edit app/index.tsx to edit the main screen.\n3. Delete the /app-example directory when you're done referencing it."
+);
+} catch (error) {
+console.error(`Error during script execution: ${error}`);
+}
+};
+moveDirectories();

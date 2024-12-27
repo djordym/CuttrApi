@@ -1,0 +1,2 @@
+[2024-12-26 09:02:54 INF] HTTP Request Information: GET /api/matches/me  
+[2024-12-26 09:02:54 INF] HTTP Response Information: 401 

@@ -1,0 +1,8 @@
+2024-12-26 09:02:54.414 +01:00 [INF] HTTP Request Information: GET /api/matches/me  
+2024-12-26 09:02:54.486 +01:00 [INF] HTTP Response Information: 401 
+[2024-12-26 09:04:04 INF] HTTP Request Information: GET /api/matches/me  
+[2024-12-26 09:04:04 WRN] Unauthorized access attempt.
+Cuttr.Business.Exceptions.UnauthorizedAccessException: Invalid token: User ID Claim is not valid.
+   at Cuttr.Api.Common.GetInfoFromClaims.GetUserId(ClaimsPrincipal user) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Common\GetInfoFromClaims.cs:line 16
+   at Cuttr.Api.Controllers.MatchController.GetMatches() in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\MatchController.cs:line 32
+[2024-12-26 09:04:04 INF] HTTP Response Information: 401 Invalid token: User ID Claim is not valid.

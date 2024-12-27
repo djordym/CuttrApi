@@ -17,3 +17,5 @@ Ensure GDPR and other privacy laws compliance by adding proper consent managemen
 Forgot password functionality
 
 When registering, check if email already in use
+
+make sure all logininfo/links/apiurl/ are in protected config files and not in code

@@ -1,0 +1,125 @@
+MyCuttrApp
+├── .gitignore
+├── Gather all files.py
+├── README.md
+├── all_mobile_app_files_combined_cleaned.txt
+├── app
+│   ├── api
+│   │   ├── authService.ts
+│   │   ├── axiosConfig.ts
+│   │   ├── matchService.ts
+│   │   ├── messageService.ts
+│   │   ├── plantService.ts
+│   │   ├── reportService.ts
+│   │   ├── swipeService.ts
+│   │   ├── userPreferencesService.ts
+│   │   └── userService.ts
+│   ├── components
+│   │   ├── common
+│   │   │   ├── BrandedButton.tsx
+│   │   │   └── TextInputField.tsx
+│   │   ├── feedback
+│   │   │   ├── ErrorMessage.tsx
+│   │   │   ├── ErrorState.tsx
+│   │   │   └── LoadingSpinner.tsx
+│   │   ├── index.ts
+│   │   └── layout
+│   ├── features
+│   │   ├── auth
+│   │   │   ├── hooks
+│   │   │   │   └── useAuth.ts
+│   │   │   ├── index.ts
+│   │   │   ├── screens
+│   │   │   │   ├── LoginScreen.tsx
+│   │   │   │   └── RegisterScreen.tsx
+│   │   │   ├── store
+│   │   │   │   └── authSlice.ts
+│   │   │   └── types
+│   │   │       └── authTypes.ts
+│   │   └── main
+│   │       ├── components
+│   │       │   ├── ChangeLocationModal.tsx
+│   │       │   ├── EditProfileModal.tsx
+│   │       │   ├── SelectPlantsModal.tsx
+│   │       │   └── SwipeableCard.tsx
+│   │       ├── hooks
+│   │       │   ├── useMatches.ts
+│   │       │   ├── usePlants.ts
+│   │       │   ├── usePreferences.ts
+│   │       │   ├── useSwipe.ts
+│   │       │   └── useUser.ts
+│   │       ├── index.ts
+│   │       ├── screens
+│   │       │   ├── AddPlantScreen.tsx
+│   │       │   ├── ChatScreen.tsx
+│   │       │   ├── HomeScreen.tsx
+│   │       │   ├── MatchListScreen.tsx
+│   │       │   ├── MyProfileScreen.tsx
+│   │       │   ├── SettingsScreen.tsx
+│   │       │   └── SwipeScreen.tsx
+│   │       ├── store
+│   │       │   ├── matchesSlice.ts
+│   │       │   ├── plantsSlice.ts
+│   │       │   ├── userPreferencesSlice.ts
+│   │       │   └── userSlice.ts
+│   │       └── types
+│   │           └── mainTypes.ts
+│   ├── hooks
+│   │   ├── useAuthToken.ts
+│   │   ├── useAxiosErrorHandler.ts
+│   │   └── useNetworkStatus.ts
+│   ├── i18n
+│   │   ├── index.ts
+│   │   └── locales
+│   │       ├── en.json
+│   │       └── fr.json
+│   ├── index.tsx
+│   ├── navigation
+│   │   ├── AppNavigator.tsx
+│   │   ├── AuthNavigator.tsx
+│   │   ├── MainNavigator.tsx
+│   │   └── NavigationTypes.ts
+│   ├── store
+│   │   ├── index.ts
+│   │   ├── middlewares
+│   │   │   └── tokenRefreshMiddleware.ts
+│   │   ├── rootReducer.ts
+│   │   └── slices
+│   │       └── globalErrorSlice.ts
+│   ├── theme
+│   │   ├── colors.ts
+│   │   ├── index.ts
+│   │   ├── spacing.ts
+│   │   └── typography.ts
+│   ├── types
+│   │   ├── apiTypes.ts
+│   │   ├── enums.ts
+│   │   └── global.ts
+│   └── utils
+│       ├── formatting.ts
+│       ├── index.ts
+│       ├── storage.ts
+│       └── validation.ts
+├── app.json
+├── assets
+│   ├── fonts
+│   │   └── SpaceMono-Regular.ttf
+│   └── images
+│       ├── adaptive-icon.png
+│       ├── favicon.png
+│       ├── icon.png
+│       ├── logo.png
+│       ├── partial-react-logo.png
+│       ├── react-logo.png
+│       ├── react-logo@2x.png
+│       ├── react-logo@3x.png
+│       └── splash-icon.png
+├── babel.config.js
+├── expo-env.d.ts
+├── package.json
+├── project_tree.txt
+├── scripts
+│   └── reset-project.js
+├── treestrucutre.py
+├── tsconfig.json
+└── yarn.lock

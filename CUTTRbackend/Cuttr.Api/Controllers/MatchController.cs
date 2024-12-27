@@ -2,6 +2,7 @@
 using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -49,6 +50,7 @@ namespace Cuttr.Api.Controllers
         }
 
         // GET: api/matches/{matchId}
+        [AllowAnonymous]
         [HttpGet("{matchId}")]
         public async Task<IActionResult> GetMatchById(int matchId)
         {
