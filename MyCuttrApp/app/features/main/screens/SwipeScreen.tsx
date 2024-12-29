@@ -35,7 +35,7 @@ const SwipeScreen: React.FC = () => {
 
   const handleSwipeLeft = useCallback(async (plantId: number) => {
     if (!myPlants) {
-      Alert.alert("Error", "Your plants are not loaded yet. Try again.");
+      Alert.alert("Error", "Add some plants or cuttings if you want to start trading.");
       return;
     }
     const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
@@ -53,6 +53,10 @@ const SwipeScreen: React.FC = () => {
 
   const handleRightSwipeInitiation = useCallback((plantId: number) => {
     // Open modal to select plants
+    if (!myPlants) {
+      Alert.alert("Error", "Add some plants or cuttings if you want to start trading.");
+      return;
+    }
     const plantToLike = localPlants.find(p => p.plantId === plantId);
     if (!plantToLike) return;
     setPendingRightSwipePlant(plantToLike);
@@ -74,6 +78,7 @@ const SwipeScreen: React.FC = () => {
       await swipeService.sendSwipes(swipeRequests);
     } catch {
       Alert.alert("Error", "Failed to send swipe requests.");
+      return;
     }
     removeTopCard(plantId);
     setPendingRightSwipePlant(null);

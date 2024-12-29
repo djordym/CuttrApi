@@ -65,3 +65,351 @@ Cuttr.Business.Exceptions.BusinessException: Error retrieving likable plants.
 [2024-12-29 09:00:21 INF] HTTP Request Information: GET /api/users/6  
 [2024-12-29 09:00:21 INF] HTTP GET /api/users/6 responded 200 in 28.4184 ms
 [2024-12-29 09:00:21 INF] HTTP Response Information: 200 {"userId":6,"email":"User1","name":"Jordy","profilePictureUrl":null,"bio":null,"locationLatitude":null,"locationLongitude":null}
+[2024-12-29 11:09:42 INF] HTTP Request Information: POST /api/users/register  {"email":"User1","password":"1234","name":"Jordy"}
+[2024-12-29 11:09:42 WRN] User with email User1 not found.
+[2024-12-29 11:09:43 ERR] Failed executing DbCommand (16ms) [Parameters=[@p0='?' (DbType = Int32), @p1='?' (Size = 4000), @p2='?' (Size = 4000), @p3='?' (Size = 4000), @p4='?' (Size = 4000), @p5='?' (Size = 4000), @p6='?' (Size = 4000), @p7='?' (Size = 4000), @p8='?' (Size = 4000), @p9='?' (Size = 4000), @p10='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SET IMPLICIT_TRANSACTIONS OFF;
+SET NOCOUNT ON;
+INSERT INTO [UserPreferences] ([UserId], [PreferedExtras], [PreferedIndoorOutdoor], [PreferedLightRequirement], [PreferedPetFriendly], [PreferedPlantCategory], [PreferedPlantStage], [PreferedPropagationEase], [PreferedSize], [PreferedWateringNeed], [SearchRadius])
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10);
+[2024-12-29 11:09:43 ERR] An exception occurred in the database while saving changes for context type 'Cuttr.Infrastructure.CuttrDbContext'.
+Microsoft.EntityFrameworkCore.DbUpdateException: An error occurred while saving the entity changes. See the inner exception for details.
+ ---> Microsoft.Data.SqlClient.SqlException (0x80131904): Cannot insert the value NULL into column 'PreferedExtras', table 'CuttrDb.dbo.UserPreferences'; column does not allow nulls. INSERT fails.
+The statement has been terminated.
+   at Microsoft.Data.SqlClient.SqlCommand.<>c.<ExecuteDbDataReaderAsync>b__211_0(Task`1 result)
+   at System.Threading.Tasks.ContinuationResultTaskFromResultTask`2.InnerInvoke()
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+ClientConnectionId:ace9e5c7-4704-44f7-8508-1c1a334df4b7
+Error Number:515,State:2,Class:16
+   --- End of inner exception stack trace ---
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Update.Internal.SqlServerModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalDatabase.SaveChangesAsync(IList`1 entries, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(IList`1 entriesToSave, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(StateManager stateManager, Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+Microsoft.EntityFrameworkCore.DbUpdateException: An error occurred while saving the entity changes. See the inner exception for details.
+ ---> Microsoft.Data.SqlClient.SqlException (0x80131904): Cannot insert the value NULL into column 'PreferedExtras', table 'CuttrDb.dbo.UserPreferences'; column does not allow nulls. INSERT fails.
+The statement has been terminated.
+   at Microsoft.Data.SqlClient.SqlCommand.<>c.<ExecuteDbDataReaderAsync>b__211_0(Task`1 result)
+   at System.Threading.Tasks.ContinuationResultTaskFromResultTask`2.InnerInvoke()
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+ClientConnectionId:ace9e5c7-4704-44f7-8508-1c1a334df4b7
+Error Number:515,State:2,Class:16
+   --- End of inner exception stack trace ---
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Update.Internal.SqlServerModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalDatabase.SaveChangesAsync(IList`1 entries, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(IList`1 entriesToSave, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(StateManager stateManager, Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+[2024-12-29 11:09:43 ERR] An error occurred while adding user preferences.
+Microsoft.EntityFrameworkCore.DbUpdateException: An error occurred while saving the entity changes. See the inner exception for details.
+ ---> Microsoft.Data.SqlClient.SqlException (0x80131904): Cannot insert the value NULL into column 'PreferedExtras', table 'CuttrDb.dbo.UserPreferences'; column does not allow nulls. INSERT fails.
+The statement has been terminated.
+   at Microsoft.Data.SqlClient.SqlCommand.<>c.<ExecuteDbDataReaderAsync>b__211_0(Task`1 result)
+   at System.Threading.Tasks.ContinuationResultTaskFromResultTask`2.InnerInvoke()
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+ClientConnectionId:ace9e5c7-4704-44f7-8508-1c1a334df4b7
+Error Number:515,State:2,Class:16
+   --- End of inner exception stack trace ---
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Update.Internal.SqlServerModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalDatabase.SaveChangesAsync(IList`1 entries, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(IList`1 entriesToSave, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(StateManager stateManager, Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.CuttrDbContext.SaveChangesAsync(CancellationToken cancellationToken) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\CuttrDbContext.cs:line 266
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.AddUserPreferencesAsync(UserPreferences preferences) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 58
+[2024-12-29 11:09:43 ERR] Error registering user.
+Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while adding user preferences.
+ ---> Microsoft.EntityFrameworkCore.DbUpdateException: An error occurred while saving the entity changes. See the inner exception for details.
+ ---> Microsoft.Data.SqlClient.SqlException (0x80131904): Cannot insert the value NULL into column 'PreferedExtras', table 'CuttrDb.dbo.UserPreferences'; column does not allow nulls. INSERT fails.
+The statement has been terminated.
+   at Microsoft.Data.SqlClient.SqlCommand.<>c.<ExecuteDbDataReaderAsync>b__211_0(Task`1 result)
+   at System.Threading.Tasks.ContinuationResultTaskFromResultTask`2.InnerInvoke()
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+ClientConnectionId:ace9e5c7-4704-44f7-8508-1c1a334df4b7
+Error Number:515,State:2,Class:16
+   --- End of inner exception stack trace ---
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Update.Internal.SqlServerModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalDatabase.SaveChangesAsync(IList`1 entries, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(IList`1 entriesToSave, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(StateManager stateManager, Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.CuttrDbContext.SaveChangesAsync(CancellationToken cancellationToken) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\CuttrDbContext.cs:line 266
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.AddUserPreferencesAsync(UserPreferences preferences) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 58
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.AddUserPreferencesAsync(UserPreferences preferences) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 65
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 81
+[2024-12-29 11:09:43 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while adding user preferences.
+ ---> Microsoft.EntityFrameworkCore.DbUpdateException: An error occurred while saving the entity changes. See the inner exception for details.
+ ---> Microsoft.Data.SqlClient.SqlException (0x80131904): Cannot insert the value NULL into column 'PreferedExtras', table 'CuttrDb.dbo.UserPreferences'; column does not allow nulls. INSERT fails.
+The statement has been terminated.
+   at Microsoft.Data.SqlClient.SqlCommand.<>c.<ExecuteDbDataReaderAsync>b__211_0(Task`1 result)
+   at System.Threading.Tasks.ContinuationResultTaskFromResultTask`2.InnerInvoke()
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+ClientConnectionId:ace9e5c7-4704-44f7-8508-1c1a334df4b7
+Error Number:515,State:2,Class:16
+   --- End of inner exception stack trace ---
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Update.Internal.SqlServerModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalDatabase.SaveChangesAsync(IList`1 entries, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(IList`1 entriesToSave, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(StateManager stateManager, Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.CuttrDbContext.SaveChangesAsync(CancellationToken cancellationToken) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\CuttrDbContext.cs:line 266
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.AddUserPreferencesAsync(UserPreferences preferences) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 58
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.AddUserPreferencesAsync(UserPreferences preferences) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 65
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 81
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 89
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 38
+[2024-12-29 11:09:43 INF] HTTP POST /api/users/register responded 400 in 1676.7672 ms
+[2024-12-29 11:09:43 INF] HTTP Response Information: 400 Error registering user.
+[2024-12-29 11:11:20 INF] HTTP Request Information: POST /api/users/register  {"email":"User1","password":"1234","name":"Jordy"}
+[2024-12-29 11:11:20 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+[2024-12-29 11:11:20 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 89
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 38
+[2024-12-29 11:11:20 INF] HTTP POST /api/users/register responded 400 in 142.8409 ms
+[2024-12-29 11:11:20 INF] HTTP Response Information: 400 Error registering user.
+[2024-12-29 11:13:12 INF] HTTP Request Information: POST /api/users/register  {"email":"User11","password":"1234","name":"Jordy"}
+[2024-12-29 11:13:12 WRN] User with email User11 not found.
+[2024-12-29 11:20:18 INF] HTTP Request Information: POST /api/users/register  {"email":"User111","password":"1234","name":"Jordy"}
+[2024-12-29 11:20:18 WRN] User with email User111 not found.
+[2024-12-29 11:20:25 INF] HTTP POST /api/users/register responded 201 in 6662.1205 ms
+[2024-12-29 11:20:25 INF] HTTP Response Information: 201 {"userId":13,"email":"User111","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxMyIsImVtYWlsIjoiVXNlcjExMSIsInVuaXF1ZV9uYW1lIjoiSm9yZHkiLCJuYmYiOjE3MzU0Njc2MjUsImV4cCI6MTczNTQ2ODUyNSwiaWF0IjoxNzM1NDY3NjI1fQ.Aj5mKEyvTt2BdjHLGagWSg_UqIJa2NOALgJTPu8duLE","refreshToken":"2QYTS0iV0FWX8GBL24OCiv4OoCFJb3wgPFp1GRMYLIY=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 11:20:25 INF] HTTP Request Information: GET /api/users/13  
+[2024-12-29 11:20:25 INF] HTTP GET /api/users/13 responded 200 in 111.5852 ms
+[2024-12-29 11:20:25 INF] HTTP Response Information: 200 {"userId":13,"email":"User111","name":"Jordy","profilePictureUrl":null,"bio":null,"locationLatitude":null,"locationLongitude":null}
+[2024-12-29 11:21:07 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":51.052033621715495,"longitude":3.717785105109215}
+[2024-12-29 11:21:07 INF] HTTP PUT /api/users/me/location responded 204 in 450.4647 ms
+[2024-12-29 11:21:07 INF] HTTP Response Information: 204 
+[2024-12-29 11:23:23 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":51.052033621715495,"longitude":3.717785105109215}
+[2024-12-29 11:23:23 INF] HTTP PUT /api/users/me/location responded 204 in 27.1266 ms
+[2024-12-29 11:23:23 INF] HTTP Response Information: 204 
+[2024-12-29 11:24:23 INF] HTTP Request Information: POST /api/users/register  {"email":"Fjutf","password":"1233","name":"Ghhhg"}
+[2024-12-29 11:24:23 WRN] User with email Fjutf not found.
+[2024-12-29 11:24:24 INF] HTTP POST /api/users/register responded 201 in 498.0980 ms
+[2024-12-29 11:24:24 INF] HTTP Response Information: 201 {"userId":14,"email":"Fjutf","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNCIsImVtYWlsIjoiRmp1dGYiLCJ1bmlxdWVfbmFtZSI6IkdoaGhnIiwibmJmIjoxNzM1NDY3ODY0LCJleHAiOjE3MzU0Njg3NjQsImlhdCI6MTczNTQ2Nzg2NH0.bSA8yTduoXdSfZEOF9n6ifKG9xqDIlR60yJ17hR9E3s","refreshToken":"l7qdrAMiqubzrhs+4RupKXOPC8+Say5tdCkl2fl/yPY=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 11:24:24 INF] HTTP Request Information: GET /api/users/14  
+[2024-12-29 11:24:24 INF] HTTP GET /api/users/14 responded 200 in 16.6673 ms
+[2024-12-29 11:24:24 INF] HTTP Response Information: 200 {"userId":14,"email":"Fjutf","name":"Ghhhg","profilePictureUrl":null,"bio":null,"locationLatitude":null,"locationLongitude":null}
+[2024-12-29 11:24:27 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":37.76295254073143,"longitude":-122.42894299328327}
+[2024-12-29 11:24:27 INF] HTTP PUT /api/users/me/location responded 204 in 23.9831 ms
+[2024-12-29 11:24:27 INF] HTTP Response Information: 204 
+[2024-12-29 11:43:32 INF] HTTP Request Information: POST /api/users/register  {"email":"Ryg","password":"124","name":"Rutc"}
+[2024-12-29 11:43:33 WRN] User with email Ryg not found.
+[2024-12-29 11:43:34 INF] HTTP POST /api/users/register responded 201 in 1479.5841 ms
+[2024-12-29 11:43:34 INF] HTTP Response Information: 201 {"userId":15,"email":"Ryg","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNSIsImVtYWlsIjoiUnlnIiwidW5pcXVlX25hbWUiOiJSdXRjIiwibmJmIjoxNzM1NDY5MDEzLCJleHAiOjE3MzU0Njk5MTMsImlhdCI6MTczNTQ2OTAxM30.ND1Zo_HX1J3Xm3Sm9_Rn0C7VZNtwQ616fKMl7fHPUR4","refreshToken":"AXecRCM2vLx9RKMBW2kaWpnCdMIXw0ZUG6q6ov2EO6U=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 11:43:34 INF] HTTP Request Information: GET /api/users/15  
+[2024-12-29 11:43:34 INF] HTTP GET /api/users/15 responded 200 in 105.5292 ms
+[2024-12-29 11:43:34 INF] HTTP Response Information: 200 {"userId":15,"email":"Ryg","name":"Rutc","profilePictureUrl":null,"bio":null,"locationLatitude":null,"locationLongitude":null}
+[2024-12-29 11:45:13 INF] HTTP Request Information: POST /api/users/register  {"email":"Tight","password":"1234","name":"Tight"}
+[2024-12-29 11:45:13 WRN] User with email Tight not found.
+[2024-12-29 11:45:13 INF] HTTP POST /api/users/register responded 201 in 499.8307 ms
+[2024-12-29 11:45:13 INF] HTTP Response Information: 201 {"userId":16,"email":"Tight","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNiIsImVtYWlsIjoiVGlnaHQiLCJ1bmlxdWVfbmFtZSI6IlRpZ2h0IiwibmJmIjoxNzM1NDY5MTEzLCJleHAiOjE3MzU0NzAwMTMsImlhdCI6MTczNTQ2OTExM30.juodQSREU4oyICOXHDhq-t0exIB61obGZf4Xm0mIxmA","refreshToken":"4uONSPUqc9fl7wTHqndWfgN8lTUyKN3WYDCk7GoRV/o=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 11:45:13 INF] HTTP Request Information: GET /api/users/16  
+[2024-12-29 11:45:13 INF] HTTP GET /api/users/16 responded 200 in 16.7404 ms
+[2024-12-29 11:45:13 INF] HTTP Response Information: 200 {"userId":16,"email":"Tight","name":"Tight","profilePictureUrl":null,"bio":null,"locationLatitude":null,"locationLongitude":null}
+[2024-12-29 11:45:19 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":37.75748668234745,"longitude":-122.43240002542733}
+[2024-12-29 11:45:19 INF] HTTP PUT /api/users/me/location responded 204 in 57.2925 ms
+[2024-12-29 11:45:19 INF] HTTP Response Information: 204 
+[2024-12-29 11:45:19 INF] HTTP Request Information: GET /api/users/16  
+[2024-12-29 11:45:19 INF] HTTP GET /api/users/16 responded 200 in 27.0904 ms
+[2024-12-29 11:45:19 INF] HTTP Response Information: 200 {"userId":16,"email":"Tight","name":"Tight","profilePictureUrl":null,"bio":null,"locationLatitude":37.75748668234745,"locationLongitude":-122.43240002542733}
+[2024-12-29 11:45:19 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 11:45:19 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 11:45:19 INF] HTTP GET /api/users/me/plants responded 200 in 52.6282 ms
+[2024-12-29 11:45:19 INF] HTTP Response Information: 200 []
+[2024-12-29 11:45:19 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 72.2552 ms
+[2024-12-29 11:45:19 INF] HTTP Response Information: 200 []
+[2024-12-29 11:47:36 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 11:47:36 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 35.0660 ms
+[2024-12-29 11:47:36 INF] HTTP Response Information: 200 []
+[2024-12-29 11:49:12 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 11:49:12 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 34.2355 ms
+[2024-12-29 11:49:12 INF] HTTP Response Information: 200 []
+[2024-12-29 11:50:14 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 11:50:14 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 32.9597 ms
+[2024-12-29 11:50:14 INF] HTTP Response Information: 200 []
+[2024-12-29 11:50:20 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 11:50:20 INF] HTTP GET /api/users/me/plants responded 200 in 20.9557 ms
+[2024-12-29 11:50:20 INF] HTTP Response Information: 200 []
+[2024-12-29 11:51:35 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 11:51:35 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 30.9217 ms
+[2024-12-29 11:51:35 INF] HTTP Response Information: 200 []
+[2024-12-29 12:30:31 INF] HTTP Request Information: POST /api/users/register  {"email":"User1","password":"1234","name":"User"}
+[2024-12-29 12:30:32 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+[2024-12-29 12:30:32 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 89
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 38
+[2024-12-29 12:30:32 INF] HTTP POST /api/users/register responded 400 in 316.5629 ms
+[2024-12-29 12:30:32 INF] HTTP Response Information: 400 Error registering user.
+[2024-12-29 12:33:58 INF] HTTP Request Information: POST /api/users/register  {"email":"User1","password":"1234","name":"User"}
+[2024-12-29 12:33:59 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+[2024-12-29 12:33:59 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 89
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 38
+[2024-12-29 12:33:59 INF] HTTP POST /api/users/register responded 400 in 650.8960 ms
+[2024-12-29 12:33:59 INF] HTTP Response Information: 400 Email already registered.
+[2024-12-29 12:35:19 INF] HTTP Request Information: POST /api/users/register  {"email":"User1","password":"1234","name":"User"}
+[2024-12-29 12:35:19 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+[2024-12-29 12:35:19 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 89
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 38
+[2024-12-29 12:35:19 INF] HTTP POST /api/users/register responded 400 in 123.6464 ms
+[2024-12-29 12:35:19 INF] HTTP Response Information: 400 Email already registered.
+[2024-12-29 12:36:30 INF] HTTP Request Information: POST /api/users/register  {"email":"User1","password":"1234","name":"User "}
+[2024-12-29 12:36:30 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+[2024-12-29 12:36:30 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 89
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 38
+[2024-12-29 12:36:30 INF] HTTP POST /api/users/register responded 400 in 87.8799 ms
+[2024-12-29 12:36:30 INF] HTTP Response Information: 400 Email already registered.
+[2024-12-29 12:38:34 INF] HTTP Request Information: POST /api/users/register  {"email":"User1","password":"1234","name":"User"}
+[2024-12-29 12:38:34 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+[2024-12-29 12:38:34 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 51
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 89
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 38
+[2024-12-29 12:38:34 INF] HTTP POST /api/users/register responded 400 in 88.7197 ms
+[2024-12-29 12:38:34 INF] HTTP Response Information: 400 Email already registered.
+[2024-12-29 12:38:38 INF] HTTP Request Information: POST /api/users/register  {"email":"User13","password":"1234","name":"User"}
+[2024-12-29 12:38:38 WRN] User with email User13 not found.
+[2024-12-29 12:38:38 INF] HTTP POST /api/users/register responded 201 in 835.1652 ms
+[2024-12-29 12:38:38 INF] HTTP Response Information: 201 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM1NDcyMzE4LCJleHAiOjE3MzU0NzMyMTgsImlhdCI6MTczNTQ3MjMxOH0.NyLGr1hkWdILZDm1N3juyJ-bTEg_2n2TsaeDqd97RzQ","refreshToken":"0Pg9tWzp4kjC/Fx9lfN/SoXE0uY143ObDZ8q4ZNFtVk=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 12:38:39 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 12:38:39 INF] HTTP GET /api/users/17 responded 200 in 74.7052 ms
+[2024-12-29 12:38:39 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":null,"locationLongitude":null}
+[2024-12-29 12:38:43 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":37.7847356224394,"longitude":-122.4520844221115}
+[2024-12-29 12:38:43 INF] HTTP PUT /api/users/me/location responded 204 in 63.3227 ms
+[2024-12-29 12:38:43 INF] HTTP Response Information: 204 
+[2024-12-29 12:38:43 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 12:38:43 INF] HTTP GET /api/users/17 responded 200 in 21.9578 ms
+[2024-12-29 12:38:43 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 12:38:43 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 12:38:43 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 12:38:43 INF] HTTP GET /api/users/me/plants responded 200 in 85.1464 ms
+[2024-12-29 12:38:43 INF] HTTP Response Information: 200 []
+[2024-12-29 12:38:43 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 109.3121 ms
+[2024-12-29 12:38:43 INF] HTTP Response Information: 200 []
+[2024-12-29 12:44:00 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 12:44:00 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 12:44:00 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 12:44:00 INF] HTTP GET /api/users/17 responded 200 in 168.8806 ms
+[2024-12-29 12:44:00 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 12:44:00 INF] HTTP GET /api/users/me/plants responded 200 in 158.8306 ms
+[2024-12-29 12:44:00 INF] HTTP Response Information: 200 []
+[2024-12-29 12:44:00 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 181.9258 ms
+[2024-12-29 12:44:00 INF] HTTP Response Information: 200 []
+[2024-12-29 12:46:37 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13","password":"1234"}
+[2024-12-29 12:46:38 INF] HTTP POST /api/auth/login responded 200 in 277.3290 ms
+[2024-12-29 12:46:38 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM1NDcyNzk4LCJleHAiOjE3MzU0NzM2OTgsImlhdCI6MTczNTQ3Mjc5OH0.eFem8fajOpv0Ms5LezA6b5vIsuTJyytZyfdBdtUj9uA","refreshToken":"QI1QILl//KQ4sPElR7GjaYvpKQ7ghcqgmUKiAE0nsJc=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 12:46:38 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 12:46:38 INF] HTTP GET /api/users/17 responded 200 in 15.5539 ms
+[2024-12-29 12:46:38 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 12:46:38 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 12:46:38 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 12:46:38 INF] HTTP GET /api/users/me/plants responded 200 in 37.0551 ms
+[2024-12-29 12:46:38 INF] HTTP Response Information: 200 []
+[2024-12-29 12:46:38 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 31.8817 ms
+[2024-12-29 12:46:38 INF] HTTP Response Information: 200 []

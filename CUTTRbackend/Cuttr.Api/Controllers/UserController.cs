@@ -43,7 +43,7 @@ namespace Cuttr.Api.Controllers
             catch (BusinessException ex)
             {
                 _logger.LogError(ex, "Error registering user.");
-                return BadRequest(ex.Message);
+                return BadRequest(ex.InnerException.Message);
             }
         }
 

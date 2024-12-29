@@ -194,26 +194,87 @@ namespace Cuttr.Infrastructure.Mappers
             {
                 UserId = preferences.UserId,
                 SearchRadius = preferences.SearchRadius,
-                
+                PreferedPlantStage = SerializePreferedPlantStages(preferences.PreferedPlantStage),
+                PreferedPlantCategory = SerializePreferedPlantCategories(preferences.PreferedPlantCategory),
+                PreferedWateringNeed = SerializePreferedWateringNeeds(preferences.PreferedWateringNeed),
+                PreferedLightRequirement = SerializePreferedLightRequirements(preferences.PreferedLightRequirement),
+                PreferedSize = SerializePreferedSizes(preferences.PreferedSize),
+                PreferedIndoorOutdoor = SerializePreferedIndoorOutdoors(preferences.PreferedIndoorOutdoor),
+                PreferedPropagationEase = SerializePreferedPropagationEases(preferences.PreferedPropagationEase),
+                PreferedPetFriendly = SerializePreferedPetFriendlies(preferences.PreferedPetFriendly),
+                PreferedExtras = SerializeExtras(preferences.PreferedExtras),       
                 // User is not mapped to prevent circular reference
             };
         }
 
-        // Helper method to serialize PreferredCategories
-        public static string SerializeCategories(List<string> categories)
+        public static string SerializePreferedPlantStages(List<PlantStage> plantStages)
         {
-            if (categories == null || !categories.Any())
-                return null;
+            if (plantStages == null || !plantStages.Any())
+                return "";
 
-            // Assuming JSON serialization
-            return System.Text.Json.JsonSerializer.Serialize(categories);
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(plantStages);
         }
+        public static string SerializePreferedPlantCategories(List<PlantCategory> plantCategories)
+        {
+            if (plantCategories == null || !plantCategories.Any())
+                return "";
 
-        // Helper method to serialize List of Enums
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(plantCategories);
+        }
+        public static string SerializePreferedWateringNeeds(List<WateringNeed> wateringNeeds)
+        {
+            if (wateringNeeds == null || !wateringNeeds.Any())
+                return "";
+
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(wateringNeeds);
+        }
+        public static string SerializePreferedLightRequirements(List<LightRequirement> lightRequirements)
+        {
+            if (lightRequirements == null || !lightRequirements.Any())
+                return "";
+
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(lightRequirements);
+        }
+        public static string SerializePreferedSizes(List<Size> sizes)
+        {
+            if (sizes == null || !sizes.Any())
+                return "";
+
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(sizes);
+        }
+        public static string SerializePreferedIndoorOutdoors(List<IndoorOutdoor> indoorOutdoors)
+        {
+            if (indoorOutdoors == null || !indoorOutdoors.Any())
+                return "";
+
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(indoorOutdoors);
+        }
+        public static string SerializePreferedPropagationEases(List<PropagationEase> propagationEases)
+        {
+            if (propagationEases == null || !propagationEases.Any())
+                return "";
+
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(propagationEases);
+        }
+        public static string SerializePreferedPetFriendlies(List<PetFriendly> petFriendlies)
+        {
+            if (petFriendlies == null || !petFriendlies.Any())
+                return "";
+
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(petFriendlies);
+        }
         public static string SerializeExtras(List<Extras> extras)
         {
             if (extras == null || !extras.Any())
-                return null;
+                return "";
 
             // JSON serialization
             return System.Text.Json.JsonSerializer.Serialize(extras);

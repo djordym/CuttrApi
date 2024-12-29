@@ -207,7 +207,7 @@ const response = await api.post<AuthTokenResponse>('/auth/refresh', data);
 return response.data;
 },
 register: async (data: UserRegistrationRequest): Promise<UserLoginResponse> => {
-const response = await api.post<UserLoginResponse>('/user/register', data);
+const response = await api.post<UserLoginResponse>('/users/register', data);
 log.debug('response', response);
 return response.data;
 },
@@ -224,13 +224,6 @@ timeout: 10000,
 });
 api.interceptors.request.use(
 async (config) => {
-log.debug("API Request", {
-baseUrl : api.defaults.baseURL,
-url: config.url,
-method: config.method,
-data: config.data,
-headers: config.headers,
-});
 const state: RootState = store.getState();
 const token = state.auth.accessToken;
 log.debug("Token", token);
@@ -238,6 +231,13 @@ if (token && config.headers) {
 log.debug("configuring headers for token");
 config.headers.Authorization = `Bearer ${token}`;
 }
+log.debug("API Request", {
+baseUrl : api.defaults.baseURL,
+url: config.url,
+method: config.method,
+data: config.data,
+headers: config.headers,
+});
 return config;
 },
 (error) => {
@@ -429,7 +429,7 @@ await api.delete('/users/me');
 },
 updateProfilePicture: async (data: UserProfileImageUpdateRequest): Promise<UserResponse> => {
 const formData = new FormData();
-formData.append('Image', data.Image);
+formData.append('Image', data.image);
 const response = await api.put<UserResponse>('/users/me/profile-picture', formData, {
 headers: { 'Content-Type': 'multipart/form-data' }
 });
@@ -2473,31 +2473,20 @@ return i18n;
 }
 // File: app\navigation\AppNavigator.tsx
 const AppNavigator = () => {
-const dispatch = useDispatch();
-const { accessToken, userId } = useSelector((state: RootState) => state.auth);
-const { profile, status: userStatus } = useSelector((state: RootState) => state.user);
-useEffect(() => {
-if (accessToken && userId && !profile && userStatus === 'idle') {
-dispatch(fetchUserProfile(userId) as any);
-}
-}, [accessToken, userId, profile, userStatus, dispatch]);
+const accessToken = useSelector((state: RootState) => state.auth.accessToken);
 if (!accessToken) {
-return (
-<AuthNavigator />
-);
+return <AuthNavigator />;
 }
-if (userStatus === 'loading' || (!profile && userId)) {
-return (
-<View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
-<ActivityIndicator size="large" />
-</View>
-);
-}
-return (
-<MainNavigator />
-);
+return <MainNavigator />;
 };
 export default AppNavigator;
+const styles = StyleSheet.create({
+loadingContainer: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+},
+});
 // File: app\navigation\AuthNavigator.tsx
 const Stack = createNativeStackNavigator();
 const AuthNavigator = () => {

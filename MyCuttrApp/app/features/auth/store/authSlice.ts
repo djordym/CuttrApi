@@ -75,7 +75,7 @@ export const registerThunk = createAsyncThunk<
       } else {
         log.error("Registration error: no response object", error.message);
       }
-      return rejectWithValue(error.response?.data?.message || 'Registration failed');
+      return rejectWithValue(error.response?.data || 'Registration failed');
     }
   }
 );
