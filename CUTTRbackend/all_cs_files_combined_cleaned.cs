@@ -12,7 +12,13 @@ Log.Logger = new LoggerConfiguration()
 .WriteTo.Console()
 .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
 .CreateLogger();
-builder.Host.UseSerilog();
+builder.Logging.ClearProviders();
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+configuration
+.ReadFrom.Configuration(context.Configuration)
+.ReadFrom.Services(services);
+});
 builder.Services.AddControllers(options =>
 {
 var policy = new AuthorizationPolicyBuilder()
@@ -59,9 +65,43 @@ builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IUserPreferencesRepository, UserPreferencesRepository>();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+{
+Title = "Cuttr API",
+Version = "v1"
+});
+options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+{
+In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+Description = "Please enter JWT with Bearer into field. Example: \"Bearer {token}\"",
+Name = "Authorization",
+Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+Scheme = "Bearer",
+BearerFormat = "JWT"
+});
+options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+{
+{
+new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+{
+Reference = new Microsoft.OpenApi.Models.OpenApiReference
+{
+Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+Id = "Bearer"
+}
+},
+new string[] {}
+}
+});
+});
 var secretKey = builder.Configuration["Jwt:Secret"];
-var key = Encoding.ASCII.GetBytes(secretKey);
+var testforconfig = builder.Configuration["ConnectionStrings:CuttrDb"];
+Console.WriteLine(testforconfig);
+Console.WriteLine("secretkey on next line");
+Console.WriteLine(secretKey);
+var key = Encoding.UTF8.GetBytes(secretKey);
 builder.Services
 .AddAuthentication(options =>
 {
@@ -76,7 +116,7 @@ ValidateIssuer = false,
 ValidateAudience = false,
 ValidateLifetime = true,
 ValidateIssuerSigningKey = true,
-IssuerSigningKey = new SymmetricSecurityKey(key)
+IssuerSigningKey = new SymmetricSecurityKey(key),
 };
 });
 var app = builder.Build();
@@ -92,6 +132,7 @@ app.UseSwaggerUI();
 app.UseCors();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<LoggingMiddleware>();
+app.UseSerilogRequestLogging();
 app.Urls.Add("http:
 app.UseAuthentication();
 app.UseAuthorization();
@@ -624,10 +665,12 @@ public class UserController : ControllerBase
 {
 private readonly IUserManager _userManager;
 private readonly ILogger<UserController> _logger;
-public UserController(IUserManager userManager, ILogger<UserController> logger)
+private readonly IAuthManager _authManager;
+public UserController(IUserManager userManager, ILogger<UserController> logger, IAuthManager authManager)
 {
 _userManager = userManager;
 _logger = logger;
+_authManager = authManager;
 }
 [AllowAnonymous]
 [HttpPost("register")]
@@ -635,8 +678,10 @@ public async Task<IActionResult> Register([FromBody] UserRegistrationRequest req
 {
 try
 {
+Console.WriteLine("Registering user...");
 var userResponse = await _userManager.RegisterUserAsync(request);
-return CreatedAtAction(nameof(GetUserById), new { userId = userResponse.UserId }, userResponse);
+var loginresponse = await _authManager.AuthenticateUserAsync(new UserLoginRequest { Email = request.Email, Password = request.Password });
+return CreatedAtAction(nameof(GetUserById), new { userId = userResponse.UserId }, loginresponse);
 }
 catch (BusinessException ex)
 {
@@ -884,12 +929,13 @@ return context.Response.WriteAsync(errorJson);
 }
 }
 //LoggingMiddleware
-﻿namespace Cuttr.Api.Middleware
+namespace Cuttr.Api.Middleware
 {
 public class LoggingMiddleware
 {
 private readonly RequestDelegate _next;
 private readonly ILogger<LoggingMiddleware> _logger;
+private const string LoggingMiddlewareInvoked = "LoggingMiddlewareInvoked";
 public LoggingMiddleware(
 RequestDelegate next,
 ILogger<LoggingMiddleware> logger)
@@ -899,20 +945,49 @@ _logger = logger;
 }
 public async Task Invoke(HttpContext context)
 {
+if (!context.Items.ContainsKey(LoggingMiddlewareInvoked))
+{
+context.Items[LoggingMiddlewareInvoked] = true;
 await LogRequest(context);
 var originalBodyStream = context.Response.Body;
 {
 context.Response.Body = responseBody;
+try
+{
 await _next(context);
+}
+finally
+{
 await LogResponse(context);
+context.Response.Body.Seek(0, SeekOrigin.Begin);
 await responseBody.CopyToAsync(originalBodyStream);
+context.Response.Body = originalBodyStream;
+}
+}
+}
+else
+{
+await _next(context);
 }
 }
 private async Task LogRequest(HttpContext context)
 {
 context.Request.EnableBuffering();
-var bodyAsText = await new StreamReader(context.Request.Body).ReadToEndAsync();
-context.Request.Body.Position = 0;
+var bodyAsText = string.Empty;
+if (context.Request.ContentLength > 0 &&
+context.Request.Body.CanSeek)
+{
+context.Request.Body.Seek(0, SeekOrigin.Begin);
+context.Request.Body,
+encoding: System.Text.Encoding.UTF8,
+detectEncodingFromByteOrderMarks: false,
+bufferSize: 8192,
+leaveOpen: true))
+{
+bodyAsText = await reader.ReadToEndAsync();
+}
+context.Request.Body.Seek(0, SeekOrigin.Begin);
+}
 _logger.LogInformation("HTTP Request Information: {Method} {Path} {QueryString} {Body}",
 context.Request.Method,
 context.Request.Path,
@@ -2657,7 +2732,7 @@ PreferedExtras = request.PreferedExtras
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+daa8dc885faa3ab9717599e85152139d55b82eb6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1aaf48c3d95c8b9070fc3f50519506f5ca80c9ea")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -2743,7 +2818,9 @@ public string GenerateToken(User user, out int expiresIn)
 {
 var tokenHandler = new JwtSecurityTokenHandler();
 var secretKey = _configuration["Jwt:Secret"];
-var key = Encoding.ASCII.GetBytes(secretKey);
+Console.WriteLine("secretkey on next line generateor");
+Console.WriteLine(secretKey);
+var key = Encoding.UTF8.GetBytes(secretKey);
 var tokenDescriptor = new SecurityTokenDescriptor
 {
 Subject = new ClaimsIdentity(new[] {
@@ -6810,7 +6887,7 @@ b.Navigation("SentMessages");
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+daa8dc885faa3ab9717599e85152139d55b82eb6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1aaf48c3d95c8b9070fc3f50519506f5ca80c9ea")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

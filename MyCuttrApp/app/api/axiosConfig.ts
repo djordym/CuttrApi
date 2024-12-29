@@ -19,13 +19,6 @@ const api = axios.create({
 // ────────────────────────────────────────────────────────────────────────────────
 api.interceptors.request.use(
   async (config) => {
-    log.debug("API Request", {
-      baseUrl : api.defaults.baseURL,
-      url: config.url,
-      method: config.method,
-      data: config.data,
-      headers: config.headers,
-    });
     const state: RootState = store.getState();
     const token = state.auth.accessToken; // adapt to your actual auth slice
     log.debug("Token", token);
@@ -33,7 +26,14 @@ api.interceptors.request.use(
       log.debug("configuring headers for token");
       config.headers.Authorization = `Bearer ${token}`;
     }
-
+    
+    log.debug("API Request", {
+      baseUrl : api.defaults.baseURL,
+      url: config.url,
+      method: config.method,
+      data: config.data,
+      headers: config.headers,
+    });
     return config;
   },
   (error) => {

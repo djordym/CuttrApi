@@ -109,46 +109,99 @@ namespace Cuttr.Business.Managers
         {
             try
             {
-                // Retrieve the user to get their location
+                // 1. Retrieve the user to get location & preferences
                 var user = await _userRepository.GetUserByIdAsync(userId);
                 if (user == null)
                     throw new BusinessException("User not found.");
 
-                // Ensure user location is set, if not, fallback or throw
                 if (user.Preferences == null)
                     throw new BusinessException("User preferences not found.");
-                int radius;
-                if (user.Preferences.SearchRadius == null)
-                {
-                    radius = 9999;
-                } else
-                {
-                    radius = user.Preferences.SearchRadius;
-                }
 
-                // Default location if not set, or throw if you require a set location
                 if (user.LocationLatitude == null || user.LocationLongitude == null)
                     throw new BusinessException("User location not set.");
 
-                double userLat = user.LocationLatitude.Value;
-                double userLon = user.LocationLongitude.Value;
+                // 2. Determine radius or fallback
+                int radius = user.Preferences.SearchRadius > 0
+                             ? user.Preferences.SearchRadius
+                             : 10000; // or 9999, etc.
 
-                // Get only plants within the user's search radius
-                var candidatePlants = await _plantRepository.GetPlantsWithinRadiusAsync(userLat, userLon, radius);
+                // 3. Retrieve the candidate plants in radius
+                var candidatePlants = await _plantRepository.GetPlantsWithinRadiusAsync(
+                                          user.LocationLatitude.Value,
+                                          user.LocationLongitude.Value,
+                                          radius);
 
-                // Exclude user’s own plants
+                // 4. Exclude user’s own plants
                 candidatePlants = candidatePlants.Where(p => p.UserId != userId);
 
-                // Retrieve user's own plants
+                // 5. Apply preference filters if lists are non-empty
+                if (user.Preferences.PreferedPlantStage != null && user.Preferences.PreferedPlantStage.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => user.Preferences.PreferedPlantStage.Contains(p.PlantStage));
+                }
+
+                if (user.Preferences.PreferedPlantCategory != null && user.Preferences.PreferedPlantCategory.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => user.Preferences.PreferedPlantCategory.Contains(p.PlantCategory));
+                }
+
+                if (user.Preferences.PreferedWateringNeed != null && user.Preferences.PreferedWateringNeed.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => user.Preferences.PreferedWateringNeed.Contains(p.WateringNeed));
+                }
+
+                if (user.Preferences.PreferedLightRequirement != null && user.Preferences.PreferedLightRequirement.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => user.Preferences.PreferedLightRequirement.Contains(p.LightRequirement));
+                }
+
+                if (user.Preferences.PreferedSize != null && user.Preferences.PreferedSize.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => user.Preferences.PreferedSize.Contains(p.Size));
+                }
+
+                if (user.Preferences.PreferedIndoorOutdoor != null && user.Preferences.PreferedIndoorOutdoor.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => user.Preferences.PreferedIndoorOutdoor.Contains(p.IndoorOutdoor));
+                }
+
+                if (user.Preferences.PreferedPropagationEase != null && user.Preferences.PreferedPropagationEase.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => user.Preferences.PreferedPropagationEase.Contains(p.PropagationEase));
+                }
+
+                if (user.Preferences.PreferedPetFriendly != null && user.Preferences.PreferedPetFriendly.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => user.Preferences.PreferedPetFriendly.Contains(p.PetFriendly));
+                }
+
+                if (user.Preferences.PreferedExtras != null && user.Preferences.PreferedExtras.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => p.Extras != null && p.Extras.Any(e => user.Preferences.PreferedExtras.Contains(e)));
+                }
+
+                // 6. Retrieve user's own plants (to check if already swiped)
                 var userPlants = await _plantRepository.GetPlantsByUserIdAsync(userId);
 
                 var likablePlants = new List<PlantResponse>();
 
+                // 7. Exclude plants that have already been swiped
                 foreach (var plant in candidatePlants)
                 {
-                    bool hasUninteractedPlant = (await Task.WhenAll(userPlants.Select(async up =>
-                        !await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId)
-                    ))).Any(result => result);
+                    bool hasUninteractedPlant = (await Task.WhenAll(
+                        userPlants.Select(async up =>
+                            !await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId)
+                        ))
+                    ).Any(result => result);
 
                     if (hasUninteractedPlant)
                     {
@@ -164,6 +217,7 @@ namespace Cuttr.Business.Managers
                 throw new BusinessException("Error retrieving likable plants.", ex);
             }
         }
+
 
     }
 }

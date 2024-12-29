@@ -1,6 +1,7 @@
 ﻿using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Contracts.Outputs;
 using Cuttr.Business.Entities;
+using Cuttr.Business.Enums;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Cuttr.Business.Interfaces.RepositoryInterfaces;
@@ -17,6 +18,7 @@ using System.Security.Authentication;
 using System.Text;
 using System.Threading.Tasks;
 using AuthenticationException = Cuttr.Business.Exceptions.AuthenticationException;
+using Size = Cuttr.Business.Enums.Size;
 
 namespace Cuttr.Business.Managers
 {
@@ -26,36 +28,59 @@ namespace Cuttr.Business.Managers
         private readonly ILogger<UserManager> _logger;
         private readonly JwtTokenGenerator _jwtTokenGenerator;
         private readonly IBlobStorageService _blobStorageService;
+        private readonly IUserPreferencesRepository _userPreferencesRepository;
 
         private const string ProfileImagesContainer = "profile-images";
 
-        public UserManager(IUserRepository userRepository, ILogger<UserManager> logger, JwtTokenGenerator jwtTokenGenerator, IBlobStorageService blobStorageService)
+        public UserManager(IUserRepository userRepository, ILogger<UserManager> logger, JwtTokenGenerator jwtTokenGenerator, IBlobStorageService blobStorageService, IUserPreferencesRepository userPreferencesRepository)
         {
             _userRepository = userRepository;
             _logger = logger;
             _jwtTokenGenerator = jwtTokenGenerator;
             _blobStorageService = blobStorageService;
+            _userPreferencesRepository = userPreferencesRepository;
         }
 
         public async Task<UserResponse> RegisterUserAsync(UserRegistrationRequest request)
         {
             try
             {
-                // Check if user already exists
+                // 1. Check if user already exists
                 if (await _userRepository.GetUserByEmailAsync(request.Email) != null)
                 {
                     throw new BusinessException("Email already registered.");
                 }
 
-                // Map to User entity
+                // 2. Map to User entity
                 var user = ContractToBusinessMapper.MapToUser(request);
 
-                // Hash the password
+                // 3. Hash the password
                 user.PasswordHash = PasswordHasher.HashPassword(user.PasswordHash);
 
+                // 4. Create the user in the DB
                 var createdUser = await _userRepository.CreateUserAsync(user);
 
-                // Map to UserResponse
+                // 5. Create default user preferences
+                var defaultPreferences = new UserPreferences
+                {
+                    UserId = createdUser.UserId,
+                    SearchRadius = 10000, // Default value requested
+                                          // The other preference lists can be empty or null, up to you:
+                    PreferedPlantStage = new List<PlantStage>(),
+                    PreferedPlantCategory = new List<PlantCategory>(),
+                    PreferedWateringNeed = new List<WateringNeed>(),
+                    PreferedLightRequirement = new List<LightRequirement>(),
+                    PreferedSize = new List<Size>(),
+                    PreferedIndoorOutdoor = new List<IndoorOutdoor>(),
+                    PreferedPropagationEase = new List<PropagationEase>(),
+                    PreferedPetFriendly = new List<PetFriendly>(),
+                    PreferedExtras = new List<Extras>()
+                };
+
+                // 6. Add them to the DB via UserPreferencesRepository
+                await _userPreferencesRepository.AddUserPreferencesAsync(defaultPreferences);
+
+                // 7. Map to UserResponse
                 return BusinessToContractMapper.MapToUserResponse(createdUser);
             }
             catch (Exception ex)
@@ -64,6 +89,7 @@ namespace Cuttr.Business.Managers
                 throw new BusinessException("Error registering user.", ex);
             }
         }
+
 
         public async Task<UserResponse> GetUserByIdAsync(int userId)
         {

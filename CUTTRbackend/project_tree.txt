@@ -13,10 +13,28 @@ CUTTRbackend
 │   │   └── UserPreferencesController.cs
 │   ├── Cuttr.Api.csproj
 │   ├── Cuttr.Api.csproj.user
-│   ├── Cuttr.Api.http
 │   ├── Logs
 │   │   ├── log-20241206.txt
-│   │   └── log-20241206_001.txt
+│   │   ├── log-20241206_001.txt
+│   │   ├── log-20241226.txt
+│   │   ├── log-20241226_001.txt
+│   │   ├── log-20241226_002.txt
+│   │   ├── log-20241226_003.txt
+│   │   ├── log-20241226_004.txt
+│   │   ├── log-20241228.txt
+│   │   ├── log-20241228_001.txt
+│   │   ├── log-20241228_002.txt
+│   │   ├── log-20241228_003.txt
+│   │   ├── log-20241228_004.txt
+│   │   ├── log-20241228_005.txt
+│   │   ├── log-20241228_006.txt
+│   │   ├── log-20241228_007.txt
+│   │   ├── log-20241228_008.txt
+│   │   ├── log-20241228_009.txt
+│   │   ├── log-20241228_010.txt
+│   │   ├── log-20241228_011.txt
+│   │   ├── log-20241228_012.txt
+│   │   └── log-20241229.txt
 │   ├── Middleware
 │   │   ├── ExceptionHandlingMiddleware.cs
 │   │   └── LoggingMiddleware.cs
@@ -135,6 +153,10 @@ CUTTRbackend
 │   │   ├── 20241213060227_AddFilters.cs
 │   │   ├── 20241218113032_AddRefreshTooken.Designer.cs
 │   │   ├── 20241218113032_AddRefreshTooken.cs
+│   │   ├── 20241228121555_updateUserEF.Designer.cs
+│   │   ├── 20241228121555_updateUserEF.cs
+│   │   ├── 20241228121717_updateUserEF2.Designer.cs
+│   │   ├── 20241228121717_updateUserEF2.cs
 │   │   └── CuttrDbContextModelSnapshot.cs
 │   ├── Repositories
 │   │   ├── MatchRepository.cs

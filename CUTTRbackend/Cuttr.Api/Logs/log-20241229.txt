@@ -1,0 +1,67 @@
+[2024-12-29 08:56:29 INF] HTTP Request Information: POST /api/auth/login  {"email":"User1","password":"1234"}
+[2024-12-29 08:56:30 INF] HTTP POST /api/auth/login responded 200 in 1375.4996 ms
+[2024-12-29 08:56:30 INF] HTTP Response Information: 200 {"userId":6,"email":"User1","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiI2IiwiZW1haWwiOiJVc2VyMSIsInVuaXF1ZV9uYW1lIjoiSm9yZHkiLCJuYmYiOjE3MzU0NTg5OTAsImV4cCI6MTczNTQ1OTg5MCwiaWF0IjoxNzM1NDU4OTkwfQ.dEhEBoP_AJtPVXihYISZc0pHNGkJDihwT9m8vrA6mh4","refreshToken":"Qjt3Dx0pmQL886Kqnp9zxWJNCCM0hUCvd4q8c5hRMJ0=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 08:56:30 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 08:56:30 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 08:56:30 ERR] Error retrieving likable plants.
+Cuttr.Business.Exceptions.BusinessException: User preferences not found.
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 119
+[2024-12-29 08:56:31 ERR] Error retrieving likable plants.
+Cuttr.Business.Exceptions.BusinessException: Error retrieving likable plants.
+ ---> Cuttr.Business.Exceptions.BusinessException: User preferences not found.
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 119
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 164
+   at Cuttr.Api.Controllers.SwipeController.GetLikablePlants() in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\SwipeController.cs:line 55
+[2024-12-29 08:56:31 INF] HTTP GET /api/swipes/me/likable-plants responded 400 in 258.6482 ms
+[2024-12-29 08:56:31 INF] HTTP GET /api/users/me/plants responded 200 in 242.8334 ms
+[2024-12-29 08:56:31 INF] HTTP Response Information: 400 Error retrieving likable plants.
+[2024-12-29 08:56:31 INF] HTTP Response Information: 200 []
+[2024-12-29 08:56:32 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 08:56:32 ERR] Error retrieving likable plants.
+Cuttr.Business.Exceptions.BusinessException: User preferences not found.
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 119
+[2024-12-29 08:56:32 ERR] Error retrieving likable plants.
+Cuttr.Business.Exceptions.BusinessException: Error retrieving likable plants.
+ ---> Cuttr.Business.Exceptions.BusinessException: User preferences not found.
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 119
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 164
+   at Cuttr.Api.Controllers.SwipeController.GetLikablePlants() in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\SwipeController.cs:line 55
+[2024-12-29 08:56:32 INF] HTTP GET /api/swipes/me/likable-plants responded 400 in 86.9628 ms
+[2024-12-29 08:56:32 INF] HTTP Response Information: 400 Error retrieving likable plants.
+[2024-12-29 09:00:18 INF] HTTP Request Information: POST /api/auth/login  {"email":"User1","password":"1234"}
+[2024-12-29 09:00:18 INF] HTTP POST /api/auth/login responded 200 in 259.1230 ms
+[2024-12-29 09:00:18 INF] HTTP Response Information: 200 {"userId":6,"email":"User1","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiI2IiwiZW1haWwiOiJVc2VyMSIsInVuaXF1ZV9uYW1lIjoiSm9yZHkiLCJuYmYiOjE3MzU0NTkyMTgsImV4cCI6MTczNTQ2MDExOCwiaWF0IjoxNzM1NDU5MjE4fQ.8cyFloxir9Me4bgLgZ-v1nDUStiwsFU99kQQJsLZROU","refreshToken":"b3uUCYERofLg9SidVxsU3NnAbcgyjO+hG+qLuRoK2gw=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 09:00:19 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 09:00:19 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 09:00:19 ERR] Error retrieving likable plants.
+Cuttr.Business.Exceptions.BusinessException: User preferences not found.
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 119
+[2024-12-29 09:00:19 INF] HTTP GET /api/users/me/plants responded 200 in 49.0435 ms
+[2024-12-29 09:00:19 ERR] Error retrieving likable plants.
+Cuttr.Business.Exceptions.BusinessException: Error retrieving likable plants.
+ ---> Cuttr.Business.Exceptions.BusinessException: User preferences not found.
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 119
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 164
+   at Cuttr.Api.Controllers.SwipeController.GetLikablePlants() in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\SwipeController.cs:line 55
+[2024-12-29 09:00:19 INF] HTTP Response Information: 200 []
+[2024-12-29 09:00:19 INF] HTTP GET /api/swipes/me/likable-plants responded 400 in 92.9652 ms
+[2024-12-29 09:00:19 INF] HTTP Response Information: 400 Error retrieving likable plants.
+[2024-12-29 09:00:20 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 09:00:20 ERR] Error retrieving likable plants.
+Cuttr.Business.Exceptions.BusinessException: User preferences not found.
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 119
+[2024-12-29 09:00:20 ERR] Error retrieving likable plants.
+Cuttr.Business.Exceptions.BusinessException: Error retrieving likable plants.
+ ---> Cuttr.Business.Exceptions.BusinessException: User preferences not found.
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 119
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.SwipeManager.GetLikablePlantsAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\SwipeManager.cs:line 164
+   at Cuttr.Api.Controllers.SwipeController.GetLikablePlants() in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\SwipeController.cs:line 55
+[2024-12-29 09:00:20 INF] HTTP GET /api/swipes/me/likable-plants responded 400 in 80.6190 ms
+[2024-12-29 09:00:20 INF] HTTP Response Information: 400 Error retrieving likable plants.
+[2024-12-29 09:00:21 INF] HTTP Request Information: GET /api/users/6  
+[2024-12-29 09:00:21 INF] HTTP GET /api/users/6 responded 200 in 28.4184 ms
+[2024-12-29 09:00:21 INF] HTTP Response Information: 200 {"userId":6,"email":"User1","name":"Jordy","profilePictureUrl":null,"bio":null,"locationLatitude":null,"locationLongitude":null}
