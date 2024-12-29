@@ -10,6 +10,8 @@ import {
   AuthTokenResponse
 } from '../../../types/apiTypes';
 
+import { log } from '../../../utils/logger';
+
 interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
@@ -38,9 +40,13 @@ export const loginThunk = createAsyncThunk<
     try {
       const data = await authService.login(credentials);
       // Store tokens securely
-      await storage.saveTokens(data.Tokens.AccessToken, data.Tokens.RefreshToken);
+      log.debug('loginThunk data:', data);
+      await storage.saveTokens(data.tokens.accessToken, data.tokens.refreshToken);
       return data;
     } catch (error: any) {
+      // 1) Log everything about the error before rejecting
+      log.error("Login error details:", error);
+
       return rejectWithValue(error.response?.data?.message || 'Login failed');
     }
   }
@@ -55,9 +61,20 @@ export const registerThunk = createAsyncThunk<
   async (payload, { rejectWithValue }) => {
     try {
       const data = await authService.register(payload);
-      await storage.saveTokens(data.Tokens.AccessToken, data.Tokens.RefreshToken);
+      await storage.saveTokens(data.tokens.accessToken, data.tokens.refreshToken);
       return data;
     } catch (error: any) {
+      // 1) Log everything about the error before rejecting
+      log.error("Registration error details:", error);
+
+      // 2) If we have an error.response, log its data
+      if (error.response) {
+        log.error("Registration error response data:", error.response.data);
+        log.error("Registration error response status:", error.response.status);
+        log.error("Registration error response headers:", error.response.headers);
+      } else {
+        log.error("Registration error: no response object", error.message);
+      }
       return rejectWithValue(error.response?.data?.message || 'Registration failed');
     }
   }
@@ -75,10 +92,10 @@ export const refreshTokenThunk = createAsyncThunk<
     if (!refreshToken) {
       return rejectWithValue('No refresh token available');
     }
-    const payload: RefreshTokenRequest = { RefreshToken: refreshToken };
+    const payload: RefreshTokenRequest = { refreshToken: refreshToken };
     try {
       const data = await authService.refreshToken(payload);
-      await storage.saveTokens(data.AccessToken, data.RefreshToken);
+      await storage.saveTokens(data.accessToken, data.refreshToken);
       return data;
     } catch (error: any) {
       return rejectWithValue('Token refresh failed');
@@ -119,10 +136,10 @@ export const authSlice = createSlice({
       .addCase(loginThunk.fulfilled, (state, action) => {
         state.status = 'idle';
         // action.payload: UserLoginResponse
-        state.accessToken = action.payload.Tokens.AccessToken;
-        state.refreshToken = action.payload.Tokens.RefreshToken;
-        state.userId = action.payload.UserId;
-        state.email = action.payload.Email;
+        state.accessToken = action.payload.tokens.accessToken;
+        state.refreshToken = action.payload.tokens.refreshToken;
+        state.userId = action.payload.userId;
+        state.email = action.payload.email;
       })
       .addCase(loginThunk.rejected, (state, action) => {
         state.status = 'error';
@@ -137,10 +154,10 @@ export const authSlice = createSlice({
       .addCase(registerThunk.fulfilled, (state, action) => {
         state.status = 'idle';
         // action.payload: UserLoginResponse
-        state.accessToken = action.payload.Tokens.AccessToken;
-        state.refreshToken = action.payload.Tokens.RefreshToken;
-        state.userId = action.payload.UserId;
-        state.email = action.payload.Email;
+        state.accessToken = action.payload.tokens.accessToken;
+        state.refreshToken = action.payload.tokens.refreshToken;
+        state.userId = action.payload.userId;
+        state.email = action.payload.email;
       })
       .addCase(registerThunk.rejected, (state, action) => {
         state.status = 'error';
@@ -150,8 +167,8 @@ export const authSlice = createSlice({
       // refreshTokenThunk
       .addCase(refreshTokenThunk.fulfilled, (state, action) => {
         // action.payload: AuthTokenResponse
-        state.accessToken = action.payload.AccessToken;
-        state.refreshToken = action.payload.RefreshToken;
+        state.accessToken = action.payload.accessToken;
+        state.refreshToken = action.payload.refreshToken;
       })
       .addCase(refreshTokenThunk.rejected, (state) => {
         // If refresh fails, clear credentials

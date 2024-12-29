@@ -98,6 +98,7 @@ plugins: ['react-native-reanimated/plugin'],
 "react-i18next": "^15.2.0",
 "react-native": "^0.76.5",
 "react-native-gesture-handler": "~2.20.2",
+"react-native-logs": "^5.3.0",
 "react-native-reanimated": "^3.16.6",
 "react-native-safe-area-context": "4.12.0",
 "react-native-screens": "^4.4.0",
@@ -132,10 +133,33 @@ plugins: ['react-native-reanimated/plugin'],
 "expo-env.d.ts"
 ]
 }
+// File: app\ErrorBoundary.tsx
+interface ErrorBoundaryProps {
+children: React.ReactNode;
+}
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps> {
+state = { hasError: false };
+static getDerivedStateFromError(error: Error) {
+return { hasError: true };
+}
+componentDidCatch(error: Error, info: any) {
+log.error("Uncaught error in component tree", { error, info });
+}
+render() {
+if (this.state.hasError) {
+return (
+<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+<Text>An unexpected error occurred.</Text>
+</View>
+);
+}
+return this.props.children;
+}
+}
 // File: app\index.tsx
 const queryClient = new QueryClient();
 export default function App() {
-console.log('App.tsx rendering...');
+log.debug('App.tsx rendering...');
 const [i18nInstance, setI18nInstance] = useState<any>(null);
 useEffect(() => {
 const setupI18n = async () => {
@@ -152,6 +176,7 @@ return (
 );
 }
 return (
+<ErrorBoundary>
 <Provider store={store}>
 <QueryClientProvider client={queryClient}>
 {}
@@ -162,6 +187,7 @@ return (
 </I18nextProvider>
 </QueryClientProvider>
 </Provider>
+</ErrorBoundary>
 );
 }
 // File: app\api\authService.ts
@@ -181,7 +207,8 @@ const response = await api.post<AuthTokenResponse>('/auth/refresh', data);
 return response.data;
 },
 register: async (data: UserRegistrationRequest): Promise<UserLoginResponse> => {
-const response = await api.post<UserLoginResponse>('/users/register', data);
+const response = await api.post<UserLoginResponse>('/user/register', data);
+log.debug('response', response);
 return response.data;
 },
 logout: async (): Promise<void> => {
@@ -192,27 +219,50 @@ await api.post('/api/auth/logout');
 let isRefreshing = false;
 let pendingRequests: Array<(token: string) => void> = [];
 const api = axios.create({
-baseURL: process.env.REACT_APP_API_BASE_URL || "http:
+baseURL: "http:
 timeout: 10000,
 });
 api.interceptors.request.use(
 async (config) => {
+log.debug("API Request", {
+baseUrl : api.defaults.baseURL,
+url: config.url,
+method: config.method,
+data: config.data,
+headers: config.headers,
+});
 const state: RootState = store.getState();
 const token = state.auth.accessToken;
+log.debug("Token", token);
 if (token && config.headers) {
+log.debug("configuring headers for token");
 config.headers.Authorization = `Bearer ${token}`;
 }
 return config;
 },
 (error) => {
+log.error("API Request Error", error);
 return Promise.reject(error);
 }
 );
 api.interceptors.response.use(
 (response) => {
+log.debug("API Response", {
+url: response.config.url,
+status: response.status,
+data: response.data,
+header: response.headers,
+});
 return response;
 },
 async (error) => {
+log.error("API Response Error", {
+url: error.config.url,
+message: error.message,
+status: error.response.status,
+data: error.response.data,
+headers: error.response.headers,
+});
 if (!error.response) {
 store.dispatch(setGlobalError("Network Error: Unable to connect."));
 return Promise.reject(error);
@@ -236,7 +286,7 @@ result.payload || result.error.message
 );
 }
 isRefreshing = false;
-pendingRequests.forEach((cb) => cb(newTokens?.AccessToken || ""));
+pendingRequests.forEach((cb) => cb(newTokens?.accessToken || ""));
 pendingRequests = [];
 return api(originalRequest);
 } catch (refreshError) {
@@ -492,14 +542,16 @@ const LoginScreen = () => {
 const { t } = useTranslation();
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
-const { status, error } = useSelector((state: RootState) => state.auth);
-const dispatch = useDispatch();
+const { status, error } = useAppSelector((state: RootState) => state.auth);
+const dispatch = useAppDispatch();
 const navigation = useNavigation();
 const handleLogin = async () => {
 let userLoginRequest: UserLoginRequest = {
-Email: email,
-Password: password
+email: email,
+password: password
 };
+log.debug('Pressed login button, userLoginRequest:', userLoginRequest);
+await dispatch(loginThunk(userLoginRequest));
 };
 return (
 <KeyboardAvoidingView style={styles.container} behavior="padding">
@@ -556,15 +608,17 @@ const { t } = useTranslation();
 const [name, setName] = useState('');
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
-const { status, error } = useSelector((state: RootState) => state.auth);
-const dispatch = useDispatch();
+const { status, error } = useAppSelector((state: RootState) => state.auth);
+const dispatch = useAppDispatch();
 const navigation = useNavigation();
 const handleRegister = async () => {
 const userRegistrationRequest: UserRegistrationRequest = {
-Email: email,
-Password: password,
-Name: name,
+email: email,
+password: password,
+name: name,
 };
+log.debug('Pressed register button, userRegistrationRequest:', userRegistrationRequest);
+await dispatch(registerThunk(userRegistrationRequest));
 };
 return (
 <KeyboardAvoidingView style={styles.container} behavior="padding">
@@ -652,9 +706,11 @@ UserLoginRequest,
 async (credentials, { rejectWithValue }) => {
 try {
 const data = await authService.login(credentials);
-await storage.saveTokens(data.Tokens.AccessToken, data.Tokens.RefreshToken);
+log.debug('loginThunk data:', data);
+await storage.saveTokens(data.tokens.accessToken, data.tokens.refreshToken);
 return data;
 } catch (error: any) {
+log.error("Login error details:", error);
 return rejectWithValue(error.response?.data?.message || 'Login failed');
 }
 }
@@ -668,9 +724,17 @@ UserRegistrationRequest,
 async (payload, { rejectWithValue }) => {
 try {
 const data = await authService.register(payload);
-await storage.saveTokens(data.Tokens.AccessToken, data.Tokens.RefreshToken);
+await storage.saveTokens(data.tokens.accessToken, data.tokens.refreshToken);
 return data;
 } catch (error: any) {
+log.error("Registration error details:", error);
+if (error.response) {
+log.error("Registration error response data:", error.response.data);
+log.error("Registration error response status:", error.response.status);
+log.error("Registration error response headers:", error.response.headers);
+} else {
+log.error("Registration error: no response object", error.message);
+}
 return rejectWithValue(error.response?.data?.message || 'Registration failed');
 }
 }
@@ -687,10 +751,10 @@ const refreshToken = state.auth.refreshToken;
 if (!refreshToken) {
 return rejectWithValue('No refresh token available');
 }
-const payload: RefreshTokenRequest = { RefreshToken: refreshToken };
+const payload: RefreshTokenRequest = { refreshToken: refreshToken };
 try {
 const data = await authService.refreshToken(payload);
-await storage.saveTokens(data.AccessToken, data.RefreshToken);
+await storage.saveTokens(data.accessToken, data.refreshToken);
 return data;
 } catch (error: any) {
 return rejectWithValue('Token refresh failed');
@@ -728,10 +792,10 @@ state.error = null;
 })
 .addCase(loginThunk.fulfilled, (state, action) => {
 state.status = 'idle';
-state.accessToken = action.payload.Tokens.AccessToken;
-state.refreshToken = action.payload.Tokens.RefreshToken;
-state.userId = action.payload.UserId;
-state.email = action.payload.Email;
+state.accessToken = action.payload.tokens.accessToken;
+state.refreshToken = action.payload.tokens.refreshToken;
+state.userId = action.payload.userId;
+state.email = action.payload.email;
 })
 .addCase(loginThunk.rejected, (state, action) => {
 state.status = 'error';
@@ -743,18 +807,18 @@ state.error = null;
 })
 .addCase(registerThunk.fulfilled, (state, action) => {
 state.status = 'idle';
-state.accessToken = action.payload.Tokens.AccessToken;
-state.refreshToken = action.payload.Tokens.RefreshToken;
-state.userId = action.payload.UserId;
-state.email = action.payload.Email;
+state.accessToken = action.payload.tokens.accessToken;
+state.refreshToken = action.payload.tokens.refreshToken;
+state.userId = action.payload.userId;
+state.email = action.payload.email;
 })
 .addCase(registerThunk.rejected, (state, action) => {
 state.status = 'error';
 state.error = action.payload || 'Unknown error';
 })
 .addCase(refreshTokenThunk.fulfilled, (state, action) => {
-state.accessToken = action.payload.AccessToken;
-state.refreshToken = action.payload.RefreshToken;
+state.accessToken = action.payload.accessToken;
+state.refreshToken = action.payload.refreshToken;
 })
 .addCase(refreshTokenThunk.rejected, (state) => {
 state.accessToken = null;
@@ -858,7 +922,7 @@ const [error, setError] = useState<string | null>(null);
 const handleConfirm = async () => {
 setLoading(true);
 setError(null);
-const payload: UserUpdateRequest = { Name: name, Bio: bio };
+const payload: UserUpdateRequest = { name: name, bio: bio };
 try {
 await userService.updateMe(payload);
 onUpdated();
@@ -1012,11 +1076,11 @@ return (
 {myPlants && (
 <ScrollView style={styles.list}>
 {myPlants.map((plant: PlantResponse) => {
-const selected = selectedPlantIds.includes(plant.PlantId);
+const selected = selectedPlantIds.includes(plant.plantId);
 return (
 <TouchableOpacity
-key={plant.PlantId}
-onPress={() => toggleSelection(plant.PlantId)}
+key={plant.plantId}
+onPress={() => toggleSelection(plant.plantId)}
 style={styles.listItem}
 accessibilityRole="checkbox"
 accessibilityState={{ checked: selected }}
@@ -1027,7 +1091,7 @@ size={24}
 color={selected ? "#1EAE98" : "#ccc"}
 style={{marginRight:10}}
 />
-<Text style={styles.listItemText}>{plant.SpeciesName}</Text>
+<Text style={styles.listItemText}>{plant.speciesName}</Text>
 </TouchableOpacity>
 );
 })}
@@ -1161,11 +1225,11 @@ rotateZ.value = (event.translationX / width) * 0.15;
 onEnd: (event) => {
 if (event.translationX > SWIPE_THRESHOLD) {
 translateX.value = withSpring(width * 1.5, {}, (finished) => {
-if (finished) runOnJS(onSwipeRight)(plant.PlantId);
+if (finished) runOnJS(onSwipeRight)(plant.plantId);
 });
 } else if (event.translationX < -SWIPE_THRESHOLD) {
 translateX.value = withSpring(-width * 1.5, {}, (finished) => {
-if (finished) runOnJS(onSwipeLeft)(plant.PlantId);
+if (finished) runOnJS(onSwipeLeft)(plant.plantId);
 });
 } else {
 translateX.value = withSpring(0);
@@ -1185,8 +1249,8 @@ return (
 <PanGestureHandler onGestureEvent={gestureHandler}>
 <Animated.View style={[styles.card, animatedStyle]}>
 <View style={styles.imageContainer}>
-{plant.ImageUrl ? (
-<Image source={{ uri: plant.ImageUrl }} style={styles.image} />
+{plant.imageUrl ? (
+<Image source={{ uri: plant.imageUrl }} style={styles.image} />
 ) : (
 <View style={styles.imagePlaceholder}>
 <Text style={styles.placeholderText}>No Image</Text>
@@ -1194,9 +1258,9 @@ return (
 )}
 </View>
 <View style={styles.contentContainer}>
-<Text style={styles.plantName}>{plant.SpeciesName}</Text>
+<Text style={styles.plantName}>{plant.speciesName}</Text>
 <Text style={styles.plantDescription} numberOfLines={3}>
-{plant.Description}
+{plant.description}
 </Text>
 </View>
 </Animated.View>
@@ -1366,19 +1430,19 @@ return;
 setLoading(true);
 setError(null);
 const formData = new FormData();
-formData.append('Image', {
+formData.append('image', {
 uri: image,
 name: 'plant.jpg',
 type: 'image/jpeg'
 } as any);
-formData.append('SpeciesName', speciesName);
-formData.append('Description', description);
-formData.append('PlantStage', stage.toString());
-formData.append('PlantCategory', category.toString());
-formData.append('WateringNeed', watering.toString());
-formData.append('LightRequirement', light.toString());
+formData.append('speciesName', speciesName);
+formData.append('description', description);
+formData.append('plantStage', stage.toString());
+formData.append('plantCategory', category.toString());
+formData.append('wateringNeed', watering.toString());
+formData.append('lightRequirement', light.toString());
 try {
-await plantService.addMyPlant({ PlantDetails: { SpeciesName: speciesName, Description: description, PlantStage: stage, PlantCategory: category, WateringNeed: watering, LightRequirement: light }, Image: formData.get('Image') as any });
+await plantService.addMyPlant({ plantDetails: { speciesName: speciesName, description: description, plantStage: stage, plantCategory: category, wateringNeed: watering, lightRequirement: light }, image: formData.get('image') as any });
 Alert.alert("Success", "Plant added successfully.");
 } catch {
 setError(t('add_plant_error_message'));
@@ -1535,14 +1599,14 @@ navigation.navigate('AddPlant' as never);
 }, [navigation]);
 const renderPlantItem = ({ item }: { item: PlantResponse }) => (
 <View style={styles.plantItem}>
-{item.ImageUrl ? (
-<Image source={{ uri: item.ImageUrl }} style={styles.plantImage} />
+{item.imageUrl ? (
+<Image source={{ uri: item.imageUrl }} style={styles.plantImage} />
 ) : (
 <View style={styles.plantPlaceholder}>
 <Ionicons name="leaf" size={40} color="#1EAE98" />
 </View>
 )}
-<Text style={styles.plantName} numberOfLines={1}>{item.SpeciesName}</Text>
+<Text style={styles.plantName} numberOfLines={1}>{item.speciesName}</Text>
 </View>
 );
 if (loadingProfile || loadingPlants) {
@@ -1566,8 +1630,8 @@ return (
 if (!userProfile) {
 return null;
 }
-const userLocation = userProfile.LocationLatitude && userProfile.LocationLongitude
-? `Lat: ${userProfile.LocationLatitude.toFixed(2)}, Lng: ${userProfile.LocationLongitude.toFixed(2)}`
+const userLocation = userProfile.locationLatitude && userProfile.locationLongitude
+? `Lat: ${userProfile.locationLatitude.toFixed(2)}, Lng: ${userProfile.locationLongitude.toFixed(2)}`
 : t('profile_no_location');
 return (
 <SafeAreaView style={styles.container}>
@@ -1579,16 +1643,16 @@ return (
 </View>
 <View style={styles.profileContainer}>
 <View style={styles.profileInfo}>
-{userProfile.ProfilePictureUrl ? (
-<Image source={{ uri: userProfile.ProfilePictureUrl }} style={styles.profilePicture} />
+{userProfile.profilePictureUrl ? (
+<Image source={{ uri: userProfile.profilePictureUrl }} style={styles.profilePicture} />
 ) : (
 <View style={styles.profilePlaceholder}>
 <Ionicons name="person-circle-outline" size={80} color="#ccc" />
 </View>
 )}
-<Text style={styles.profileName}>{userProfile.Name}</Text>
+<Text style={styles.profileName}>{userProfile.name}</Text>
 <Text style={styles.profileLabel}>{t('profile_bio_label')}:</Text>
-<Text style={styles.profileValue} numberOfLines={3}>{userProfile.Bio || ''}</Text>
+<Text style={styles.profileValue} numberOfLines={3}>{userProfile.bio || ''}</Text>
 <Text style={[styles.profileLabel, { marginTop:10 }]}>{t('profile_location_label')}:</Text>
 <Text style={styles.profileValue}>{userLocation}</Text>
 <TouchableOpacity onPress={handleChangeLocation} style={styles.locationButton} accessibilityRole="button" accessibilityLabel={t('profile_change_location_button')}>
@@ -1608,7 +1672,7 @@ return (
 {myPlants && myPlants.length > 0 ? (
 <FlatList
 data={myPlants}
-keyExtractor={(item) => item.PlantId.toString()}
+keyExtractor={(item) => item.plantId.toString()}
 renderItem={renderPlantItem}
 numColumns={2}
 columnWrapperStyle={styles.plantRow}
@@ -1622,15 +1686,15 @@ contentContainerStyle={{ paddingHorizontal:20, paddingBottom:20 }}
 </View>
 <EditProfileModal
 visible={editProfileVisible}
-initialName={userProfile.Name}
-initialBio={userProfile.Bio || ''}
+initialName={userProfile.name}
+initialBio={userProfile.bio || ''}
 onClose={() => setEditProfileVisible(false)}
 onUpdated={handleProfileUpdated}
 />
 <ChangeLocationModal
 visible={changeLocationVisible}
-initialLatitude={userProfile.LocationLatitude || undefined}
-initialLongitude={userProfile.LocationLongitude || undefined}
+initialLatitude={userProfile.locationLatitude || undefined}
+initialLongitude={userProfile.locationLongitude || undefined}
 onClose={() => setChangeLocationVisible(false)}
 onUpdated={handleLocationUpdated}
 />
@@ -1897,7 +1961,7 @@ const topCard = useMemo(() => {
 return localPlants && localPlants.length > 0 ? localPlants[0] : null;
 }, [localPlants]);
 const removeTopCard = (plantId: number) => {
-setLocalPlants((prev) => prev.filter((p) => p.PlantId !== plantId));
+setLocalPlants((prev) => prev.filter((p) => p.plantId !== plantId));
 };
 const handleSwipeLeft = useCallback(async (plantId: number) => {
 if (!myPlants) {
@@ -1905,9 +1969,9 @@ Alert.alert("Error", "Your plants are not loaded yet. Try again.");
 return;
 }
 const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
-SwiperPlantId: userPlant.PlantId,
-SwipedPlantId: plantId,
-IsLike: false
+swiperPlantId: userPlant.plantId,
+swipedPlantId: plantId,
+isLike: false
 }));
 try {
 await swipeService.sendSwipes(swipeRequests);
@@ -1917,7 +1981,7 @@ Alert.alert("Error", "Failed to register swipe.");
 removeTopCard(plantId);
 }, [myPlants]);
 const handleRightSwipeInitiation = useCallback((plantId: number) => {
-const plantToLike = localPlants.find(p => p.PlantId === plantId);
+const plantToLike = localPlants.find(p => p.plantId === plantId);
 if (!plantToLike) return;
 setPendingRightSwipePlant(plantToLike);
 setModalVisible(true);
@@ -1926,11 +1990,11 @@ const handleRightSwipeConfirm = useCallback(async (selectedPlantIds: number[]) =
 if (!pendingRightSwipePlant || !myPlants) {
 return;
 }
-const plantId = pendingRightSwipePlant.PlantId;
+const plantId = pendingRightSwipePlant.plantId;
 const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
-SwiperPlantId: userPlant.PlantId,
-SwipedPlantId: plantId,
-IsLike: selectedPlantIds.includes(userPlant.PlantId)
+swiperPlantId: userPlant.plantId,
+swipedPlantId: plantId,
+isLike: selectedPlantIds.includes(userPlant.plantId)
 }));
 try {
 await swipeService.sendSwipes(swipeRequests);
@@ -1947,12 +2011,12 @@ setModalVisible(false);
 };
 const handlePassPress = () => {
 if (topCard) {
-handleSwipeLeft(topCard.PlantId);
+handleSwipeLeft(topCard.plantId);
 }
 };
 const handleLikePress = () => {
 if (topCard) {
-handleRightSwipeInitiation(topCard.PlantId);
+handleRightSwipeInitiation(topCard.plantId);
 }
 };
 const handleFilterPress = () => {
@@ -1989,7 +2053,7 @@ return (
 const isTopCard = index === 0;
 return (
 <SwipeableCard
-key={plant.PlantId}
+key={plant.plantId}
 plant={plant}
 onSwipeLeft={handleSwipeLeft}
 onSwipeRight={handleRightSwipeInitiation}
@@ -2459,6 +2523,9 @@ return (
 export default MainNavigator;
 // File: app\navigation\NavigationTypes.ts
 
+// File: app\store\hooks.ts
+export const useAppDispatch: () => AppDispatch = useDispatch;
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 // File: app\store\index.ts
 export const store = configureStore({
 reducer: {
@@ -2467,13 +2534,20 @@ user: userSlice.reducer,
 userPreferences: userPreferencesSlice.reducer,
 globalError: globalErrorSlice.reducer,
 },
+middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(loggingMiddleware),
 });
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 // File: app\store\rootReducer.ts
 
-// File: app\store\middlewares\tokenRefreshMiddleware.ts
-
+// File: app\store\middlewares\loggingMiddleware.ts
+export const loggingMiddleware: Middleware = (storeAPI) => (next) => (action: any) => {
+if (__DEV__) {
+log.debug("Redux Action Dispatched", { type: action.type, payload: action.payload });
+}
+const result = next(action);
+return result;
+};
 // File: app\store\slices\globalErrorSlice.ts
 interface GlobalErrorState {
 message: string | null;
@@ -2504,153 +2578,153 @@ export const { setGlobalError, clearGlobalError } = globalErrorSlice.actions;
 
 // File: app\types\apiTypes.ts
 export interface RefreshTokenRequest {
-RefreshToken: string;
+refreshToken: string;
 }
 export interface MessageRequest {
-MatchId: number;
-MessageText: string;
+matchId: number;
+messageText: string;
 }
 export interface PlantCreateRequest {
-PlantDetails: PlantRequest;
-Image: File;
+plantDetails: PlantRequest;
+image: File;
 }
 export interface PlantRequest {
-SpeciesName: string;
-Description: string;
-PlantStage: PlantStage;
-PlantCategory: PlantCategory;
-WateringNeed: WateringNeed;
-LightRequirement: LightRequirement;
-Size?: Size;
-IndoorOutdoor?: IndoorOutdoor;
-PropagationEase?: PropagationEase;
-PetFriendly?: PetFriendly;
-Extras?: Extras[];
+speciesName: string;
+description: string;
+plantStage: PlantStage;
+plantCategory: PlantCategory;
+wateringNeed: WateringNeed;
+lightRequirement: LightRequirement;
+size?: Size;
+indoorOutdoor?: IndoorOutdoor;
+propagationEase?: PropagationEase;
+petFriendly?: PetFriendly;
+extras?: Extras[];
 }
 export interface PlantUpdateRequest {
-SpeciesName: string;
-CareRequirements: string;
-Description: string;
-Category: string;
+speciesName: string;
+careRequirements: string;
+description: string;
+category: string;
 }
 export interface ReportRequest {
-ReportedUserId: number;
-Reason: string;
-Comments: string;
+reportedUserId: number;
+reason: string;
+comments: string;
 }
 export interface SwipeRequest {
-SwiperPlantId: number;
-SwipedPlantId: number;
-IsLike: boolean;
+swiperPlantId: number;
+swipedPlantId: number;
+isLike: boolean;
 }
 export interface UpdateLocationRequest {
-Latitude: number;
-Longitude: number;
+latitude: number;
+longitude: number;
 }
 export interface UserLoginRequest {
-Email: string;
-Password: string;
+email: string;
+password: string;
 }
 export interface UserPreferencesRequest {
-SearchRadius: number;
-PreferedPlantStage: PlantStage[];
-PreferedPlantCategory: PlantCategory[];
-PreferedWateringNeed: WateringNeed[];
-PreferedLightRequirement: LightRequirement[];
-PreferedSize: Size[];
-PreferedIndoorOutdoor: IndoorOutdoor[];
-PreferedPropagationEase: PropagationEase[];
-PreferedPetFriendly: PetFriendly[];
-PreferedExtras: Extras[];
+searchRadius: number;
+preferedPlantStage: PlantStage[];
+preferedPlantCategory: PlantCategory[];
+preferedWateringNeed: WateringNeed[];
+preferedLightRequirement: LightRequirement[];
+preferedSize: Size[];
+preferedIndoorOutdoor: IndoorOutdoor[];
+preferedPropagationEase: PropagationEase[];
+preferedPetFriendly: PetFriendly[];
+preferedExtras: Extras[];
 }
 export interface UserProfileImageUpdateRequest {
-Image: File;
+image: File;
 }
 export interface UserRegistrationRequest {
-Email: string;
-Password: string;
-Name: string;
+email: string;
+password: string;
+name: string;
 }
 export interface UserUpdateRequest {
-Name: string;
-Bio: string;
+name: string;
+bio: string;
 }
 export interface AuthTokenResponse {
-AccessToken: string;
-RefreshToken: string;
-TokenType: string;
-ExpiresIn: number;
+accessToken: string;
+refreshToken: string;
+tokenType: string;
+expiresIn: number;
 }
 export interface MatchResponse {
-MatchId: number;
-Plant1: PlantResponse;
-Plant2: PlantResponse;
-User1: UserResponse;
-User2: UserResponse;
+matchId: number;
+plant1: PlantResponse;
+plant2: PlantResponse;
+user1: UserResponse;
+user2: UserResponse;
 }
 export interface MessageResponse {
-MessageId: number;
-MatchId: number;
-SenderUserId: number;
-MessageText: string;
-SentAt: Date;
-IsRead: boolean;
+messageId: number;
+matchId: number;
+senderUserId: number;
+messageText: string;
+sentAt: Date;
+isRead: boolean;
 }
 export interface PlantResponse {
-PlantId: number;
-UserId: number;
-SpeciesName: string;
-Description: string;
-PlantStage: PlantStage;
-PlantCategory: PlantCategory;
-WateringNeed: WateringNeed;
-LightRequirement: LightRequirement;
-Size?: Size;
-IndoorOutdoor?: IndoorOutdoor;
-PropagationEase?: PropagationEase;
-PetFriendly?: PetFriendly;
-Extras?: Extras[];
-ImageUrl: string;
+plantId: number;
+userId: number;
+speciesName: string;
+description: string;
+plantStage: PlantStage;
+plantCategory: PlantCategory;
+wateringNeed: WateringNeed;
+lightRequirement: LightRequirement;
+size?: Size;
+indoorOutdoor?: IndoorOutdoor;
+propagationEase?: PropagationEase;
+petFriendly?: PetFriendly;
+extras?: Extras[];
+imageUrl: string;
 }
 export interface ReportResponse {
-ReportId: number;
-ReporterUserId: number;
-ReportedUserId: number;
-Reason: string;
-Comments: string;
-CreatedAt: Date;
-IsResolved: boolean;
+reportId: number;
+reporterUserId: number;
+reportedUserId: number;
+reason: string;
+comments: string;
+createdAt: Date;
+isResolved: boolean;
 }
 export interface SwipeResponse {
-IsMatch: boolean;
-Match: MatchResponse;
+isMatch: boolean;
+match: MatchResponse;
 }
 export interface UserLoginResponse {
-UserId: number;
-Email: string;
-Tokens: AuthTokenResponse;
+userId: number;
+email: string;
+tokens: AuthTokenResponse;
 }
 export interface UserPreferencesResponse {
-UserId: number;
-SearchRadius: number;
-PreferedPlantStage: PlantStage[];
-PreferedPlantCategory: PlantCategory[];
-PreferedWateringNeed: WateringNeed[];
-PreferedLightRequirement: LightRequirement[];
-PreferedSize: Size[];
-PreferedIndoorOutdoor: IndoorOutdoor[];
-PreferedPropagationEase: PropagationEase[];
-PreferedPetFriendly: PetFriendly[];
-PreferedExtras: Extras[];
+userId: number;
+searchRadius: number;
+preferedPlantStage: PlantStage[];
+preferedPlantCategory: PlantCategory[];
+preferedWateringNeed: WateringNeed[];
+preferedLightRequirement: LightRequirement[];
+preferedSize: Size[];
+preferedIndoorOutdoor: IndoorOutdoor[];
+preferedPropagationEase: PropagationEase[];
+preferedPetFriendly: PetFriendly[];
+preferedExtras: Extras[];
 }
 export interface UserResponse {
-UserId: number;
-Email: string;
-Name: string;
-ProfilePictureUrl: string;
-Bio: string;
-LocationLatitude?: number;
-LocationLongitude?: number;
+userId: number;
+email: string;
+name: string;
+profilePictureUrl: string;
+bio: string;
+locationLatitude?: number;
+locationLongitude?: number;
 }
 // File: app\types\enums.ts
 export enum PlantStage {
@@ -2727,6 +2801,11 @@ Rare = "Rare"
 
 // File: app\utils\index.ts
 
+// File: app\utils\logger.ts
+const defaultConfig = {
+severity: __DEV__ ? 'debug' : 'warn',
+};
+export const log = logger.createLogger(defaultConfig);
 // File: app\utils\storage.ts
 const ACCESS_TOKEN_KEY = "ACCESS_TOKEN_KEY";
 const REFRESH_TOKEN_KEY = "REFRESH_TOKEN_KEY";

@@ -1,0 +1,17 @@
+2024-12-28 13:42:59.671 +01:00 [INF] HTTP Request Information: POST /api/users/register  {
+  "email": "string",
+  "password": "string",
+  "name": "string"
+}
+2024-12-28 13:43:00.650 +01:00 [WRN] User with email string not found.
+2024-12-28 13:43:01.357 +01:00 [INF] HTTP Response Information: 201 {"userId":9,"email":"string","name":"string","profilePictureUrl":null,"bio":null,"locationLatitude":null,"locationLongitude":null}
+[2024-12-28 13:48:10 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 47
+[2024-12-28 13:48:10 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 47
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 64
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 34

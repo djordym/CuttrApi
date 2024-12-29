@@ -10,7 +10,7 @@ let isRefreshing = false;
 let pendingRequests: Array<(token: string) => void> = [];
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || "http://192.168.137.1:5020/api",
+  baseURL: "http://192.168.137.1:5020/api",
   timeout: 10000,
 });
 
@@ -20,6 +20,7 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     log.debug("API Request", {
+      baseUrl : api.defaults.baseURL,
       url: config.url,
       method: config.method,
       data: config.data,
@@ -27,8 +28,9 @@ api.interceptors.request.use(
     });
     const state: RootState = store.getState();
     const token = state.auth.accessToken; // adapt to your actual auth slice
-
+    log.debug("Token", token);
     if (token && config.headers) {
+      log.debug("configuring headers for token");
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -103,7 +105,7 @@ api.interceptors.response.use(
           // Reset refresh state
           isRefreshing = false;
 
-          pendingRequests.forEach((cb) => cb(newTokens?.AccessToken || ""));
+          pendingRequests.forEach((cb) => cb(newTokens?.accessToken || ""));
           pendingRequests = [];
 
           // Retry the original request with the new token

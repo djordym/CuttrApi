@@ -35,12 +35,12 @@ export const SwipeableCard: React.FC<SwipeableCardProps> = ({ plant, onSwipeLeft
       if (event.translationX > SWIPE_THRESHOLD) {
         // Swipe Right
         translateX.value = withSpring(width * 1.5, {}, (finished) => {
-          if (finished) runOnJS(onSwipeRight)(plant.PlantId);
+          if (finished) runOnJS(onSwipeRight)(plant.plantId);
         });
       } else if (event.translationX < -SWIPE_THRESHOLD) {
         // Swipe Left
         translateX.value = withSpring(-width * 1.5, {}, (finished) => {
-          if (finished) runOnJS(onSwipeLeft)(plant.PlantId);
+          if (finished) runOnJS(onSwipeLeft)(plant.plantId);
         });
       } else {
         // Reset
@@ -63,8 +63,8 @@ export const SwipeableCard: React.FC<SwipeableCardProps> = ({ plant, onSwipeLeft
     <PanGestureHandler onGestureEvent={gestureHandler}>
       <Animated.View style={[styles.card, animatedStyle]}>
         <View style={styles.imageContainer}>
-          {plant.ImageUrl ? (
-            <Image source={{ uri: plant.ImageUrl }} style={styles.image} />
+          {plant.imageUrl ? (
+            <Image source={{ uri: plant.imageUrl }} style={styles.image} />
           ) : (
             <View style={styles.imagePlaceholder}>
               <Text style={styles.placeholderText}>No Image</Text>
@@ -72,9 +72,9 @@ export const SwipeableCard: React.FC<SwipeableCardProps> = ({ plant, onSwipeLeft
           )}
         </View>
         <View style={styles.contentContainer}>
-          <Text style={styles.plantName}>{plant.SpeciesName}</Text>
+          <Text style={styles.plantName}>{plant.speciesName}</Text>
           <Text style={styles.plantDescription} numberOfLines={3}>
-            {plant.Description}
+            {plant.description}
           </Text>
         </View>
       </Animated.View>

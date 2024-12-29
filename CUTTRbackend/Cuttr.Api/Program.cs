@@ -29,8 +29,14 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
+builder.Logging.ClearProviders();
 // Replace default logging with Serilog
-builder.Host.UseSerilog();
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services);
+});
 
 // Add services to the container.
 // Add services to the container.
@@ -45,6 +51,17 @@ builder.Services.AddControllers(options =>
 .AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+//setup cors
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(
+               builder =>
+               {
+                   builder.AllowAnyOrigin()
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
+               });
 });
 
 // Register DbContext with DI
@@ -85,11 +102,48 @@ builder.Services.AddScoped<IUserPreferencesRepository, UserPreferencesRepository
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Cuttr API",
+        Version = "v1"
+    });
 
+    // Define the BearerAuth scheme
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Please enter JWT with Bearer into field. Example: \"Bearer {token}\"",
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT"
+    });
+
+    // Require Bearer token for all operations
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 // Configure JWT Authentication
 var secretKey = builder.Configuration["Jwt:Secret"];
-var key = Encoding.ASCII.GetBytes(secretKey);
+var testforconfig = builder.Configuration["ConnectionStrings:CuttrDb"];
+Console.WriteLine(testforconfig);
+Console.WriteLine("secretkey on next line");
+Console.WriteLine(secretKey);
+var key = Encoding.UTF8.GetBytes(secretKey);
 
 builder.Services
     .AddAuthentication(options =>
@@ -105,7 +159,7 @@ builder.Services
             ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key)
+            IssuerSigningKey = new SymmetricSecurityKey(key),
         };
     });
 
@@ -124,12 +178,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors();
 // Configure Middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<LoggingMiddleware>();
+app.UseSerilogRequestLogging();
+// In your Program.cs or launchSettings.json:
+app.Urls.Add("http://0.0.0.0:5020");
 
-app.UseHttpsRedirection();
 
+//app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

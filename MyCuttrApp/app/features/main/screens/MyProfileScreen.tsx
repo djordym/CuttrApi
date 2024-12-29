@@ -1,4 +1,3 @@
-// ProfileScreen.tsx (updated)
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, FlatList, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -42,14 +41,14 @@ const ProfileScreen: React.FC = () => {
 
   const renderPlantItem = ({ item }: { item: PlantResponse }) => (
     <View style={styles.plantItem}>
-      {item.ImageUrl ? (
-        <Image source={{ uri: item.ImageUrl }} style={styles.plantImage} />
+      {item.imageUrl ? (
+        <Image source={{ uri: item.imageUrl }} style={styles.plantImage} />
       ) : (
         <View style={styles.plantPlaceholder}>
           <Ionicons name="leaf" size={40} color="#1EAE98" />
         </View>
       )}
-      <Text style={styles.plantName} numberOfLines={1}>{item.SpeciesName}</Text>
+      <Text style={styles.plantName} numberOfLines={1}>{item.speciesName}</Text>
     </View>
   );
 
@@ -77,8 +76,8 @@ const ProfileScreen: React.FC = () => {
     return null;
   }
 
-  const userLocation = userProfile.LocationLatitude && userProfile.LocationLongitude
-    ? `Lat: ${userProfile.LocationLatitude.toFixed(2)}, Lng: ${userProfile.LocationLongitude.toFixed(2)}`
+  const userLocation = userProfile.locationLatitude && userProfile.locationLongitude
+    ? `Lat: ${userProfile.locationLatitude.toFixed(2)}, Lng: ${userProfile.locationLongitude.toFixed(2)}`
     : t('profile_no_location');
 
   return (
@@ -92,16 +91,16 @@ const ProfileScreen: React.FC = () => {
 
       <View style={styles.profileContainer}>
         <View style={styles.profileInfo}>
-          {userProfile.ProfilePictureUrl ? (
-            <Image source={{ uri: userProfile.ProfilePictureUrl }} style={styles.profilePicture} />
+          {userProfile.profilePictureUrl ? (
+            <Image source={{ uri: userProfile.profilePictureUrl }} style={styles.profilePicture} />
           ) : (
             <View style={styles.profilePlaceholder}>
               <Ionicons name="person-circle-outline" size={80} color="#ccc" />
             </View>
           )}
-          <Text style={styles.profileName}>{userProfile.Name}</Text>
+          <Text style={styles.profileName}>{userProfile.name}</Text>
           <Text style={styles.profileLabel}>{t('profile_bio_label')}:</Text>
-          <Text style={styles.profileValue} numberOfLines={3}>{userProfile.Bio || ''}</Text>
+          <Text style={styles.profileValue} numberOfLines={3}>{userProfile.bio || ''}</Text>
 
           <Text style={[styles.profileLabel, { marginTop:10 }]}>{t('profile_location_label')}:</Text>
           <Text style={styles.profileValue}>{userLocation}</Text>
@@ -124,7 +123,7 @@ const ProfileScreen: React.FC = () => {
         {myPlants && myPlants.length > 0 ? (
           <FlatList 
             data={myPlants}
-            keyExtractor={(item) => item.PlantId.toString()}
+            keyExtractor={(item) => item.plantId.toString()}
             renderItem={renderPlantItem}
             numColumns={2}
             columnWrapperStyle={styles.plantRow}
@@ -139,16 +138,16 @@ const ProfileScreen: React.FC = () => {
 
       <EditProfileModal
         visible={editProfileVisible}
-        initialName={userProfile.Name}
-        initialBio={userProfile.Bio || ''}
+        initialName={userProfile.name}
+        initialBio={userProfile.bio || ''}
         onClose={() => setEditProfileVisible(false)}
         onUpdated={handleProfileUpdated}
       />
 
       <ChangeLocationModal
         visible={changeLocationVisible}
-        initialLatitude={userProfile.LocationLatitude || undefined}
-        initialLongitude={userProfile.LocationLongitude || undefined}
+        initialLatitude={userProfile.locationLatitude || undefined}
+        initialLongitude={userProfile.locationLongitude || undefined}
         onClose={() => setChangeLocationVisible(false)}
         onUpdated={handleLocationUpdated}
       />

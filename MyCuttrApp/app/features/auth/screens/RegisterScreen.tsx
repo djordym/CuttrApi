@@ -9,24 +9,28 @@ import { RootState } from '../../../store';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { UserRegistrationRequest } from '../../../types/apiTypes';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { log } from '../../../utils/logger';
+
 
 const RegisterScreen = () => {
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { status, error } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch();
+  const { status, error } = useAppSelector((state: RootState) => state.auth);
+  const dispatch = useAppDispatch();
   const navigation = useNavigation();
 
   const handleRegister = async () => {
     //create user registration request
     const userRegistrationRequest: UserRegistrationRequest = {
-      Email: email,
-      Password: password,
-      Name: name,
+      email: email,
+      password: password,
+      name: name,
     };
-    //await dispatch(registerThunk(userRegistrationRequest));
+    log.debug('Pressed register button, userRegistrationRequest:', userRegistrationRequest);
+    await dispatch(registerThunk(userRegistrationRequest));
   };
 
   return (

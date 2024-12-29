@@ -1,45 +1,44 @@
-import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+// File: app/navigation/AppNavigator.tsx
+
+import React from 'react';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { RootState } from '../store';
-import { ActivityIndicator, View } from 'react-native';
-import { fetchUserProfile } from '../features/main/store/userSlice';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 const AppNavigator = () => {
-  const dispatch = useDispatch();
-  const { accessToken, userId } = useSelector((state: RootState) => state.auth);
-  const { profile, status: userStatus } = useSelector((state: RootState) => state.user);
-
-  useEffect(() => {
-    // If we have tokens and a userId but no profile yet, fetch the user profile
-    if (accessToken && userId && !profile && userStatus === 'idle') {
-      dispatch(fetchUserProfile(userId) as any);
-    }
-  }, [accessToken, userId, profile, userStatus, dispatch]);
-
-  // Determine what to show:
-  // 1. If no accessToken => show AuthNavigator
-  if (!accessToken) {
+  const accessToken = useSelector((state: RootState) => state.auth.accessToken);
+  
+  // Optional: If you have an initialization/loading state (e.g., loading tokens from storage)
+  // const isInitializing = useSelector((state: RootState) => state.auth.isInitializing);
+  
+  // Uncomment the following block if you implement an initialization state
+  /*
+  if (isInitializing) {
     return (
-        <AuthNavigator />
-    );
-  }
-
-  // 2. If we have tokens but are still fetching user profile => show a loading indicator
-  if (userStatus === 'loading' || (!profile && userId)) {
-    return (
-      <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1EAE98" />
       </View>
     );
   }
+  */
 
-  // 3. If we have tokens and profile is loaded => show MainNavigator
-  return (
-      <MainNavigator />
-  );
+  // Show AuthNavigator if not authenticated
+  if (!accessToken) {
+    return <AuthNavigator />;
+  }
+
+  // Show MainNavigator if authenticated
+  return <MainNavigator />;
 };
 
 export default AppNavigator;
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

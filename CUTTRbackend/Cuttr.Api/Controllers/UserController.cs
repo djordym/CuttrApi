@@ -1,5 +1,6 @@
 ﻿using Cuttr.Api.Common;
 using Cuttr.Business.Contracts.Inputs;
+using Cuttr.Business.Contracts.Outputs;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -17,11 +18,13 @@ namespace Cuttr.Api.Controllers
     {
         private readonly IUserManager _userManager;
         private readonly ILogger<UserController> _logger;
+        private readonly IAuthManager _authManager;
 
-        public UserController(IUserManager userManager, ILogger<UserController> logger)
+        public UserController(IUserManager userManager, ILogger<UserController> logger, IAuthManager authManager)
         {
             _userManager = userManager;
             _logger = logger;
+            _authManager = authManager;
         }
 
         // POST: api/users/register
@@ -31,8 +34,11 @@ namespace Cuttr.Api.Controllers
         {
             try
             {
+                Console.WriteLine("Registering user...");
                 var userResponse = await _userManager.RegisterUserAsync(request);
-                return CreatedAtAction(nameof(GetUserById), new { userId = userResponse.UserId }, userResponse);
+                //create loginresponse
+                var loginresponse = await _authManager.AuthenticateUserAsync(new UserLoginRequest { Email = request.Email, Password = request.Password });
+                return CreatedAtAction(nameof(GetUserById), new { userId = userResponse.UserId }, loginresponse);
             }
             catch (BusinessException ex)
             {

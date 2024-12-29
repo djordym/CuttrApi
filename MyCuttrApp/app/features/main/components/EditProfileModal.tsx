@@ -23,7 +23,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, ini
     setLoading(true);
     setError(null);
 
-    const payload: UserUpdateRequest = { Name: name, Bio: bio };
+    const payload: UserUpdateRequest = { name: name, bio: bio };
     try {
       await userService.updateMe(payload);
       onUpdated();

@@ -1,173 +1,172 @@
 import { PlantStage, PlantCategory, WateringNeed, LightRequirement, Size, IndoorOutdoor, PropagationEase, PetFriendly, Extras } from './enums';
 
-
 export interface RefreshTokenRequest {
-    RefreshToken: string;
+    refreshToken: string;
 }
 
 export interface MessageRequest {
-    MatchId: number;
-    MessageText: string;
+    matchId: number;
+    messageText: string;
 }
 
 export interface PlantCreateRequest {
-    PlantDetails: PlantRequest;
-    Image: File;
+    plantDetails: PlantRequest;
+    image: File;
 }
 
 export interface PlantRequest {
-    SpeciesName: string;
-    Description: string;
-    PlantStage: PlantStage;
-    PlantCategory: PlantCategory;
-    WateringNeed: WateringNeed;
-    LightRequirement: LightRequirement;
-    Size?: Size;
-    IndoorOutdoor?: IndoorOutdoor;
-    PropagationEase?: PropagationEase;
-    PetFriendly?: PetFriendly;
-    Extras?: Extras[];
+    speciesName: string;
+    description: string;
+    plantStage: PlantStage;
+    plantCategory: PlantCategory;
+    wateringNeed: WateringNeed;
+    lightRequirement: LightRequirement;
+    size?: Size;
+    indoorOutdoor?: IndoorOutdoor;
+    propagationEase?: PropagationEase;
+    petFriendly?: PetFriendly;
+    extras?: Extras[];
 }
 
 export interface PlantUpdateRequest {
-    SpeciesName: string;
-    CareRequirements: string;
-    Description: string;
-    Category: string;
+    speciesName: string;
+    careRequirements: string;
+    description: string;
+    category: string;
 }
 
 export interface ReportRequest {
-    ReportedUserId: number;
-    Reason: string;
-    Comments: string;
+    reportedUserId: number;
+    reason: string;
+    comments: string;
 }
 
 export interface SwipeRequest {
-    SwiperPlantId: number;
-    SwipedPlantId: number;
-    IsLike: boolean;
+    swiperPlantId: number;
+    swipedPlantId: number;
+    isLike: boolean;
 }
 
 export interface UpdateLocationRequest {
-    Latitude: number;
-    Longitude: number;
+    latitude: number;
+    longitude: number;
 }
 
 export interface UserLoginRequest {
-    Email: string;
-    Password: string;
+    email: string;
+    password: string;
 }
 
 export interface UserPreferencesRequest {
-    SearchRadius: number;
-    PreferedPlantStage: PlantStage[];
-    PreferedPlantCategory: PlantCategory[];
-    PreferedWateringNeed: WateringNeed[];
-    PreferedLightRequirement: LightRequirement[];
-    PreferedSize: Size[];
-    PreferedIndoorOutdoor: IndoorOutdoor[];
-    PreferedPropagationEase: PropagationEase[];
-    PreferedPetFriendly: PetFriendly[];
-    PreferedExtras: Extras[];
+    searchRadius: number;
+    preferedPlantStage: PlantStage[];
+    preferedPlantCategory: PlantCategory[];
+    preferedWateringNeed: WateringNeed[];
+    preferedLightRequirement: LightRequirement[];
+    preferedSize: Size[];
+    preferedIndoorOutdoor: IndoorOutdoor[];
+    preferedPropagationEase: PropagationEase[];
+    preferedPetFriendly: PetFriendly[];
+    preferedExtras: Extras[];
 }
 
 export interface UserProfileImageUpdateRequest {
-    Image: File;
+    image: File;
 }
 
 export interface UserRegistrationRequest {
-    Email: string;
-    Password: string;
-    Name: string;
+    email: string;
+    password: string;
+    name: string;
 }
 
 export interface UserUpdateRequest {
-    Name: string;
-    Bio: string;
+    name: string;
+    bio: string;
 }
 
 export interface AuthTokenResponse {
-    AccessToken: string;
-    RefreshToken: string;
-    TokenType: string;
-    ExpiresIn: number;
+    accessToken: string;
+    refreshToken: string;
+    tokenType: string;
+    expiresIn: number;
 }
 
 export interface MatchResponse {
-    MatchId: number;
-    Plant1: PlantResponse;
-    Plant2: PlantResponse;
-    User1: UserResponse;
-    User2: UserResponse;
+    matchId: number;
+    plant1: PlantResponse;
+    plant2: PlantResponse;
+    user1: UserResponse;
+    user2: UserResponse;
 }
 
 export interface MessageResponse {
-    MessageId: number;
-    MatchId: number;
-    SenderUserId: number;
-    MessageText: string;
-    SentAt: Date;
-    IsRead: boolean;
+    messageId: number;
+    matchId: number;
+    senderUserId: number;
+    messageText: string;
+    sentAt: Date;
+    isRead: boolean;
 }
 
 export interface PlantResponse {
-    PlantId: number;
-    UserId: number;
-    SpeciesName: string;
-    Description: string;
-    PlantStage: PlantStage;
-    PlantCategory: PlantCategory;
-    WateringNeed: WateringNeed;
-    LightRequirement: LightRequirement;
-    Size?: Size;
-    IndoorOutdoor?: IndoorOutdoor;
-    PropagationEase?: PropagationEase;
-    PetFriendly?: PetFriendly;
-    Extras?: Extras[];
-    ImageUrl: string;
+    plantId: number;
+    userId: number;
+    speciesName: string;
+    description: string;
+    plantStage: PlantStage;
+    plantCategory: PlantCategory;
+    wateringNeed: WateringNeed;
+    lightRequirement: LightRequirement;
+    size?: Size;
+    indoorOutdoor?: IndoorOutdoor;
+    propagationEase?: PropagationEase;
+    petFriendly?: PetFriendly;
+    extras?: Extras[];
+    imageUrl: string;
 }
 
 export interface ReportResponse {
-    ReportId: number;
-    ReporterUserId: number;
-    ReportedUserId: number;
-    Reason: string;
-    Comments: string;
-    CreatedAt: Date;
-    IsResolved: boolean;
+    reportId: number;
+    reporterUserId: number;
+    reportedUserId: number;
+    reason: string;
+    comments: string;
+    createdAt: Date;
+    isResolved: boolean;
 }
 
 export interface SwipeResponse {
-    IsMatch: boolean;
-    Match: MatchResponse;
+    isMatch: boolean;
+    match: MatchResponse;
 }
 
 export interface UserLoginResponse {
-    UserId: number;
-    Email: string;
-    Tokens: AuthTokenResponse;
+    userId: number;
+    email: string;
+    tokens: AuthTokenResponse;
 }
 
 export interface UserPreferencesResponse {
-    UserId: number;
-    SearchRadius: number;
-    PreferedPlantStage: PlantStage[];
-    PreferedPlantCategory: PlantCategory[];
-    PreferedWateringNeed: WateringNeed[];
-    PreferedLightRequirement: LightRequirement[];
-    PreferedSize: Size[];
-    PreferedIndoorOutdoor: IndoorOutdoor[];
-    PreferedPropagationEase: PropagationEase[];
-    PreferedPetFriendly: PetFriendly[];
-    PreferedExtras: Extras[];
+    userId: number;
+    searchRadius: number;
+    preferedPlantStage: PlantStage[];
+    preferedPlantCategory: PlantCategory[];
+    preferedWateringNeed: WateringNeed[];
+    preferedLightRequirement: LightRequirement[];
+    preferedSize: Size[];
+    preferedIndoorOutdoor: IndoorOutdoor[];
+    preferedPropagationEase: PropagationEase[];
+    preferedPetFriendly: PetFriendly[];
+    preferedExtras: Extras[];
 }
 
 export interface UserResponse {
-    UserId: number;
-    Email: string;
-    Name: string;
-    ProfilePictureUrl: string;
-    Bio: string;
-    LocationLatitude?: number;
-    LocationLongitude?: number;
+    userId: number;
+    email: string;
+    name: string;
+    profilePictureUrl: string;
+    bio: string;
+    locationLatitude?: number;
+    locationLongitude?: number;
 }

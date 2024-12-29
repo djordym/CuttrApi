@@ -9,21 +9,24 @@ import { RootState } from '../../../store';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { UserLoginRequest } from '../../../../app/types/apiTypes';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { log } from '../../../utils/logger';
 
 const LoginScreen = () => {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { status, error } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch();
+  const { status, error } = useAppSelector((state: RootState) => state.auth);
+  const dispatch = useAppDispatch();
   const navigation = useNavigation();
 
   const handleLogin = async () => {
     let userLoginRequest: UserLoginRequest = {
-      Email: email,
-      Password: password
+      email: email,
+      password: password
     };
-    //await dispatch(loginThunk(userLoginRequest));
+    log.debug('Pressed login button, userLoginRequest:', userLoginRequest);
+    await dispatch(loginThunk(userLoginRequest));
   };
 
   return (

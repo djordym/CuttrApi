@@ -1,0 +1,32 @@
+2024-12-28 14:07:02.750 +01:00 [INF] HTTP Request Information: POST /api/users/register  {
+  "email": "string",
+  "password": "string",
+  "name": "string"
+}
+2024-12-28 14:07:53.713 +01:00 [ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 47
+2024-12-28 14:07:53.773 +01:00 [ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 47
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 64
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 35
+2024-12-28 14:08:13.548 +01:00 [INF] HTTP Response Information: 400 Error registering user.
+[2024-12-28 14:13:21 INF] HTTP Request Information: POST /api/users/register  {
+  "email": "string",
+  "password": "string",
+  "name": "string"
+}
+[2024-12-28 14:13:22 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 47
+[2024-12-28 14:13:22 ERR] Error registering user.
+Cuttr.Business.Exceptions.BusinessException: Error registering user.
+ ---> Cuttr.Business.Exceptions.BusinessException: Email already registered.
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 47
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.RegisterUserAsync(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 64
+   at Cuttr.Api.Controllers.UserController.Register(UserRegistrationRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 35
+[2024-12-28 14:13:22 INF] HTTP Response Information: 400 Error registering user.

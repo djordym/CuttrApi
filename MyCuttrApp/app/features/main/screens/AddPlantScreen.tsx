@@ -45,21 +45,21 @@ const AddPlantScreen: React.FC = () => {
     setError(null);
 
     const formData = new FormData();
-    formData.append('Image', {
+    formData.append('image', {
       uri: image,
       name: 'plant.jpg',
       type: 'image/jpeg'
     } as any);
 
-    formData.append('SpeciesName', speciesName);
-    formData.append('Description', description);
-    formData.append('PlantStage', stage.toString());
-    formData.append('PlantCategory', category.toString());
-    formData.append('WateringNeed', watering.toString());
-    formData.append('LightRequirement', light.toString());
+    formData.append('speciesName', speciesName);
+    formData.append('description', description);
+    formData.append('plantStage', stage.toString());
+    formData.append('plantCategory', category.toString());
+    formData.append('wateringNeed', watering.toString());
+    formData.append('lightRequirement', light.toString());
 
     try {
-      await plantService.addMyPlant({ PlantDetails: { SpeciesName: speciesName, Description: description, PlantStage: stage, PlantCategory: category, WateringNeed: watering, LightRequirement: light }, Image: formData.get('Image') as any });
+      await plantService.addMyPlant({ plantDetails: { speciesName: speciesName, description: description, plantStage: stage, plantCategory: category, wateringNeed: watering, lightRequirement: light }, image: formData.get('image') as any });
       Alert.alert("Success", "Plant added successfully.");
     } catch {
       setError(t('add_plant_error_message'));

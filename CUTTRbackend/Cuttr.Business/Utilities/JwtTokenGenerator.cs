@@ -25,7 +25,9 @@ namespace Cuttr.Business.Utilities
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var secretKey = _configuration["Jwt:Secret"];
-            var key = Encoding.ASCII.GetBytes(secretKey);
+            Console.WriteLine("secretkey on next line generateor");
+            Console.WriteLine(secretKey);
+            var key = Encoding.UTF8.GetBytes(secretKey);
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {

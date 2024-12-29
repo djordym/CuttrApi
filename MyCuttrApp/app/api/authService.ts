@@ -6,6 +6,7 @@ import {
   AuthTokenResponse,
   UserRegistrationRequest
 } from '../types/apiTypes';
+import { log } from '../utils/logger';
 
 export const authService = {
   login: async (data: UserLoginRequest): Promise<UserLoginResponse> => {
@@ -18,6 +19,7 @@ export const authService = {
   },
   register: async (data: UserRegistrationRequest): Promise<UserLoginResponse> => {
     const response = await api.post<UserLoginResponse>('/users/register', data);
+    log.debug('response', response);
     return response.data;
   },
   logout: async (): Promise<void> => {

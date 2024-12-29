@@ -53,11 +53,11 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({ visible, o
           {myPlants && (
             <ScrollView style={styles.list}>
               {myPlants.map((plant: PlantResponse) => {
-                const selected = selectedPlantIds.includes(plant.PlantId);
+                const selected = selectedPlantIds.includes(plant.plantId);
                 return (
                   <TouchableOpacity 
-                    key={plant.PlantId} 
-                    onPress={() => toggleSelection(plant.PlantId)} 
+                    key={plant.plantId} 
+                    onPress={() => toggleSelection(plant.plantId)} 
                     style={styles.listItem}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: selected }}
@@ -68,7 +68,7 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({ visible, o
                       color={selected ? "#1EAE98" : "#ccc"} 
                       style={{marginRight:10}} 
                     />
-                    <Text style={styles.listItemText}>{plant.SpeciesName}</Text>
+                    <Text style={styles.listItemText}>{plant.speciesName}</Text>
                   </TouchableOpacity>
                 );
               })}

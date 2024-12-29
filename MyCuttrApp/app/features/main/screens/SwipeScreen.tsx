@@ -30,7 +30,7 @@ const SwipeScreen: React.FC = () => {
   }, [localPlants]);
 
   const removeTopCard = (plantId: number) => {
-    setLocalPlants((prev) => prev.filter((p) => p.PlantId !== plantId));
+    setLocalPlants((prev) => prev.filter((p) => p.plantId !== plantId));
   };
 
   const handleSwipeLeft = useCallback(async (plantId: number) => {
@@ -39,9 +39,9 @@ const SwipeScreen: React.FC = () => {
       return;
     }
     const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
-      SwiperPlantId: userPlant.PlantId,
-      SwipedPlantId: plantId,
-      IsLike: false
+      swiperPlantId: userPlant.plantId,
+      swipedPlantId: plantId,
+      isLike: false
     }));
     try {
       await swipeService.sendSwipes(swipeRequests);
@@ -53,7 +53,7 @@ const SwipeScreen: React.FC = () => {
 
   const handleRightSwipeInitiation = useCallback((plantId: number) => {
     // Open modal to select plants
-    const plantToLike = localPlants.find(p => p.PlantId === plantId);
+    const plantToLike = localPlants.find(p => p.plantId === plantId);
     if (!plantToLike) return;
     setPendingRightSwipePlant(plantToLike);
     setModalVisible(true);
@@ -63,11 +63,11 @@ const SwipeScreen: React.FC = () => {
     if (!pendingRightSwipePlant || !myPlants) {
       return;
     }
-    const plantId = pendingRightSwipePlant.PlantId;
+    const plantId = pendingRightSwipePlant.plantId;
     const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
-      SwiperPlantId: userPlant.PlantId,
-      SwipedPlantId: plantId,
-      IsLike: selectedPlantIds.includes(userPlant.PlantId)
+      swiperPlantId: userPlant.plantId,
+      swipedPlantId: plantId,
+      isLike: selectedPlantIds.includes(userPlant.plantId)
     }));
 
     try {
@@ -88,13 +88,13 @@ const SwipeScreen: React.FC = () => {
 
   const handlePassPress = () => {
     if (topCard) {
-      handleSwipeLeft(topCard.PlantId);
+      handleSwipeLeft(topCard.plantId);
     }
   };
 
   const handleLikePress = () => {
     if (topCard) {
-      handleRightSwipeInitiation(topCard.PlantId);
+      handleRightSwipeInitiation(topCard.plantId);
     }
   };
 
@@ -136,7 +136,7 @@ const SwipeScreen: React.FC = () => {
           const isTopCard = index === 0;
           return (
             <SwipeableCard
-              key={plant.PlantId}
+              key={plant.plantId}
               plant={plant}
               onSwipeLeft={handleSwipeLeft}
               onSwipeRight={handleRightSwipeInitiation}

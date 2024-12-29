@@ -28,15 +28,15 @@ namespace Cuttr.Infrastructure.Entities
         [MaxLength(100)]
         public string Name { get; set; }
 
-        public string ProfilePictureUrl { get; set; }
+        public string? ProfilePictureUrl { get; set; }
 
         [MaxLength(500)]
-        public string Bio { get; set; }
+        public string? Bio { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
-        public Point Location { get; set; }
+        public Point? Location { get; set; }
 
         // Navigation properties
         public virtual ICollection<PlantEF> Plants { get; set; }

@@ -1,0 +1,3 @@
+dotnet ef migrations add updateUserEF --project Cuttr.Infrastructure --startup-project Cuttr.API
+
+dotnet ef database update --project Cuttr.Infrastructure --startup-project Cuttr.API

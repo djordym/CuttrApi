@@ -24,6 +24,16 @@ options.Filters.Add(new AuthorizeFilter(policy));
 {
 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
+builder.Services.AddCors(options =>
+{
+options.AddDefaultPolicy(
+builder =>
+{
+builder.AllowAnyOrigin()
+.AllowAnyMethod()
+.AllowAnyHeader();
+});
+});
 builder.Services.AddDbContext<CuttrDbContext>(options =>
 {
 options.UseSqlServer(
@@ -39,6 +49,8 @@ builder.Services.AddScoped<IMessageManager, MessageManager>();
 builder.Services.AddScoped<IReportManager, ReportManager>();
 builder.Services.AddScoped<IUserPreferencesManager, UserPreferencesManager>();
 builder.Services.AddScoped<JwtTokenGenerator>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IAuthManager, AuthManager>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPlantRepository, PlantRepository>();
 builder.Services.AddScoped<ISwipeRepository, SwipeRepository>();
@@ -77,9 +89,11 @@ dbContext.Database.Migrate();
 app.UseSwagger();
 app.UseSwaggerUI();
 }
+app.UseCors();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<LoggingMiddleware>();
-app.UseHttpsRedirection();
+app.Urls.Add("http:
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
@@ -96,6 +110,98 @@ if (int.TryParse(userIdClaim, out int userId))
 return userId;
 }
 throw new Business.Exceptions.UnauthorizedAccessException("Invalid token: User ID Claim is not valid.");
+}
+}
+}
+//AuthController
+namespace Cuttr.Api.Controllers
+{
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+private readonly IAuthManager _authManager;
+private readonly ILogger<AuthController> _logger;
+public AuthController(IAuthManager authManager, ILogger<AuthController> logger)
+{
+_authManager = authManager;
+_logger = logger;
+}
+[AllowAnonymous]
+[HttpPost("login")]
+public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
+{
+try
+{
+var response = await _authManager.AuthenticateUserAsync(request);
+return Ok(response);
+}
+catch (AuthenticationException ex)
+{
+_logger.LogWarning(ex, "Authentication failed for email: {Email}", request.Email);
+return Unauthorized(ex.Message);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Business error occurred while logging in user with email: {Email}", request.Email);
+return BadRequest(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while logging in user with email: {Email}", request.Email);
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
+}
+[HttpPost("logout")]
+public async Task<IActionResult> Logout()
+{
+int userId = 0;
+try
+{
+userId = User.GetUserId();
+await _authManager.LogoutUserAsync(userId);
+return NoContent();
+}
+catch (NotFoundException ex)
+{
+_logger.LogWarning(ex, "User with ID {UserId} not found when attempting to log out.", userId);
+return NotFound(ex.Message);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Business error occurred while logging out user with ID {UserId}.", userId);
+return BadRequest(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while logging out user with ID {UserId}.", userId);
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
+}
+[AllowAnonymous]
+[HttpPost("refresh")]
+public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+{
+try
+{
+var response = await _authManager.RefreshTokenAsync(request.RefreshToken);
+return Ok(response);
+}
+catch (AuthenticationException ex)
+{
+_logger.LogWarning(ex, "Invalid or expired refresh token used.");
+return Unauthorized(ex.Message);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Business error occurred while refreshing the token.");
+return BadRequest(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while refreshing the token.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
 }
 }
 }
@@ -139,6 +245,7 @@ _logger.LogError(ex, "An unexpected error occurred while retrieving matches.");
 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
+[AllowAnonymous]
 [HttpGet("{matchId}")]
 public async Task<IActionResult> GetMatchById(int matchId)
 {
@@ -537,26 +644,6 @@ _logger.LogError(ex, "Error registering user.");
 return BadRequest(ex.Message);
 }
 }
-[AllowAnonymous]
-[HttpPost("login")]
-public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
-{
-try
-{
-var response = await _userManager.AuthenticateUserAsync(request);
-return Ok(response);
-}
-catch (AuthenticationException ex)
-{
-_logger.LogWarning(ex, "Authentication failed.");
-return Unauthorized(ex.Message);
-}
-catch (BusinessException ex)
-{
-_logger.LogError(ex, "Error during authentication.");
-return BadRequest(ex.Message);
-}
-}
 [HttpGet("{userId}")]
 public async Task<IActionResult> GetUserById(int userId)
 {
@@ -849,7 +936,7 @@ text);
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00deee3ac11edd4e1e5a820ae41e986873ca2de8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -903,6 +990,14 @@ public string SpeciesName { get; set; }
 public string CareRequirements { get; set; }
 public string Description { get; set; }
 public string Category { get; set; }
+}
+}
+//RefreshTokenRequest
+namespace Cuttr.Business.Contracts.Inputs
+{
+public class RefreshTokenRequest
+{
+public string RefreshToken { get; set; }
 }
 }
 //ReportRequest
@@ -987,6 +1082,17 @@ public string Name { get; set; }
 public string Bio { get; set; }
 }
 }
+//AuthTokenResponse
+namespace Cuttr.Business.Contracts.Outputs
+{
+public class AuthTokenResponse
+{
+public string AccessToken { get; set; }
+public string RefreshToken { get; set; }
+public string TokenType { get; set; } = "Bearer";
+public int ExpiresIn { get; set; }
+}
+}
 //MatchResponse
 namespace Cuttr.Business.Contracts.Outputs
 {
@@ -1061,8 +1167,9 @@ namespace Cuttr.Business.Contracts.Outputs
 {
 public class UserLoginResponse
 {
-public string Token { get; set; }
-public UserResponse User { get; set; }
+public int UserId { get; set; }
+public string Email { get; set; }
+public AuthTokenResponse Tokens { get; set; }
 }
 }
 //UserPreferencesResponse
@@ -1150,6 +1257,20 @@ public PetFriendly? PetFriendly { get; set; }
 public List<Extras>? Extras { get; set; }
 public string? ImageUrl { get; set; }
 public User User { get; set; }
+}
+}
+//RefreshToken
+namespace Cuttr.Business.Entities
+{
+public class RefreshToken
+{
+public int RefreshTokenId { get; set; }
+public int UserId { get; set; }
+public string TokenHash { get; set; }
+public DateTime ExpiresAt { get; set; }
+public bool IsRevoked { get; set; }
+public DateTime CreatedAt { get; set; }
+public DateTime? RevokedAt { get; set; }
 }
 }
 //Report
@@ -1253,26 +1374,26 @@ Shade
 }
 public enum Size
 {
-Small,
-Medium,
-Large
+SmallSize,
+MediumSize,
+LargeSize
 }
 public enum IndoorOutdoor
 {
 Indoor,
 Outdoor,
-Both
+IndoorAndOutdoor
 }
 public enum PropagationEase
 {
-Easy,
-Moderate,
-Difficult
+EasyPropagation,
+ModeratePropagation,
+DifficultPropagation
 }
 public enum PetFriendly
 {
-Yes,
-No
+PetFriendly,
+NotPetFriendly
 }
 public enum Extras
 {
@@ -1346,6 +1467,16 @@ public UnauthorizedAccessException(string message, Exception innerException)
 : base(message, innerException) { }
 }
 }
+//IAuthManager
+namespace Cuttr.Business.Interfaces.ManagerInterfaces
+{
+public interface IAuthManager
+{
+Task<UserLoginResponse> AuthenticateUserAsync(UserLoginRequest request);
+Task<AuthTokenResponse> RefreshTokenAsync(string refreshToken);
+Task LogoutUserAsync(int userId);
+}
+}
 //IMatchManager
 namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
@@ -1399,7 +1530,6 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 public interface IUserManager
 {
 Task<UserResponse> RegisterUserAsync(UserRegistrationRequest request);
-Task<UserLoginResponse> AuthenticateUserAsync(UserLoginRequest request);
 Task<UserResponse> GetUserByIdAsync(int userId);
 Task<UserResponse> UpdateUserAsync(int userId, UserUpdateRequest request);
 Task DeleteUserAsync(int userId);
@@ -1447,6 +1577,17 @@ Task DeletePlantAsync(int plantId);
 Task<IEnumerable<Plant>> GetPlantsByUserIdAsync(int userId);
 Task<IEnumerable<Plant>> GetAllPlantsAsync();
 Task<IEnumerable<Plant>> GetPlantsWithinRadiusAsync(double originLat, double originLon, double radiusKm);
+}
+}
+//IRefreshTokenRepository
+namespace Cuttr.Business.Interfaces.RepositoryInterfaces
+{
+public interface IRefreshTokenRepository
+{
+Task<RefreshToken> CreateRefreshTokenAsync(RefreshToken token);
+Task<RefreshToken> GetRefreshTokenAsync(string tokenHash);
+Task RevokeRefreshTokenAsync(string tokenHash);
+Task DeleteRefreshTokensForUserAsync(int userId);
 }
 }
 //IReportRepository
@@ -1497,6 +1638,145 @@ public interface IBlobStorageService
 {
 Task<string> UploadFileAsync(IFormFile file, string containerName);
 Task DeleteFileAsync(string fileUrl, string containerName);
+}
+}
+//AuthManager
+namespace Cuttr.Business.Managers
+{
+public class AuthManager : IAuthManager
+{
+private readonly IUserRepository _userRepository;
+private readonly IRefreshTokenRepository _refreshTokenRepository;
+private readonly JwtTokenGenerator _jwtTokenGenerator;
+private readonly ILogger<AuthManager> _logger;
+public AuthManager(
+IUserRepository userRepository,
+IRefreshTokenRepository refreshTokenRepository,
+JwtTokenGenerator jwtTokenGenerator,
+ILogger<AuthManager> logger)
+{
+_userRepository = userRepository;
+_refreshTokenRepository = refreshTokenRepository;
+_jwtTokenGenerator = jwtTokenGenerator;
+_logger = logger;
+}
+public async Task<UserLoginResponse> AuthenticateUserAsync(UserLoginRequest request)
+{
+try
+{
+var user = await _userRepository.GetUserByEmailAsync(request.Email);
+if (user == null || !PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
+{
+_logger.LogWarning("Invalid login attempt for email: {Email}", request.Email);
+throw new AuthenticationException("Invalid email or password.");
+}
+var accessToken = _jwtTokenGenerator.GenerateToken(user, out int expiresIn);
+var refreshToken = GenerateRefreshToken();
+var tokenHash = HashToken(refreshToken);
+var refreshTokenEntity = new RefreshToken
+{
+UserId = user.UserId,
+TokenHash = tokenHash,
+ExpiresAt = DateTime.UtcNow.AddDays(30),
+IsRevoked = false,
+CreatedAt = DateTime.UtcNow
+};
+await _refreshTokenRepository.CreateRefreshTokenAsync(refreshTokenEntity);
+return new UserLoginResponse
+{
+UserId = user.UserId,
+Email = user.Email,
+Tokens = new AuthTokenResponse
+{
+AccessToken = accessToken,
+RefreshToken = refreshToken,
+ExpiresIn = expiresIn
+}
+};
+}
+catch (AuthenticationException)
+{
+throw;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while authenticating user with email: {Email}", request.Email);
+throw new BusinessException("An error occurred while authenticating the user.", ex);
+}
+}
+public async Task<AuthTokenResponse> RefreshTokenAsync(string refreshToken)
+{
+try
+{
+var tokenHash = HashToken(refreshToken);
+var existingToken = await _refreshTokenRepository.GetRefreshTokenAsync(tokenHash);
+if (existingToken == null)
+{
+_logger.LogWarning("Invalid or expired refresh token encountered.");
+throw new AuthenticationException("Invalid or expired refresh token.");
+}
+await _refreshTokenRepository.RevokeRefreshTokenAsync(tokenHash);
+var user = await _userRepository.GetUserByIdAsync(existingToken.UserId);
+if (user == null)
+{
+_logger.LogWarning("User with ID {UserId} not found when refreshing token.", existingToken.UserId);
+throw new NotFoundException("User not found.");
+}
+var accessToken = _jwtTokenGenerator.GenerateToken(user, out int expiresIn);
+var newRefreshToken = GenerateRefreshToken();
+var newTokenHash = HashToken(newRefreshToken);
+await _refreshTokenRepository.CreateRefreshTokenAsync(new RefreshToken
+{
+UserId = user.UserId,
+TokenHash = newTokenHash,
+ExpiresAt = DateTime.UtcNow.AddDays(30),
+IsRevoked = false,
+CreatedAt = DateTime.UtcNow
+});
+return new AuthTokenResponse
+{
+AccessToken = accessToken,
+RefreshToken = newRefreshToken,
+ExpiresIn = expiresIn
+};
+}
+catch (AuthenticationException)
+{
+throw;
+}
+catch (NotFoundException)
+{
+throw;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while refreshing the token.");
+throw new BusinessException("An error occurred while refreshing the token.", ex);
+}
+}
+public async Task LogoutUserAsync(int userId)
+{
+try
+{
+await _refreshTokenRepository.DeleteRefreshTokensForUserAsync(userId);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while logging out user with ID {UserId}.", userId);
+throw new BusinessException("An error occurred while logging out.", ex);
+}
+}
+private string GenerateRefreshToken()
+{
+var randomNumber = new byte[32];
+rng.GetBytes(randomNumber);
+return Convert.ToBase64String(randomNumber);
+}
+private string HashToken(string token)
+{
+var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(token));
+return Convert.ToBase64String(hashBytes);
+}
 }
 }
 //MatchManager
@@ -1963,28 +2243,6 @@ _logger.LogError(ex, "Error registering user.");
 throw new BusinessException("Error registering user.", ex);
 }
 }
-public async Task<UserLoginResponse> AuthenticateUserAsync(UserLoginRequest request)
-{
-try
-{
-var user = await _userRepository.GetUserByEmailAsync(request.Email);
-if (user == null || !PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
-{
-throw new AuthenticationException("Invalid email or password.");
-}
-string token = _jwtTokenGenerator.GenerateToken(user);
-return BusinessToContractMapper.MapToUserLoginResponse(user, token);
-}
-catch (AuthenticationException)
-{
-throw;
-}
-catch (Exception ex)
-{
-_logger.LogError(ex, "Error authenticating user.");
-throw new BusinessException("Error authenticating user.", ex);
-}
-}
 public async Task<UserResponse> GetUserByIdAsync(int userId)
 {
 try
@@ -2194,14 +2452,6 @@ LocationLatitude = user.LocationLatitude,
 LocationLongitude = user.LocationLongitude
 };
 }
-public static UserLoginResponse MapToUserLoginResponse(User user, string token)
-{
-return new UserLoginResponse
-{
-Token = token,
-User = MapToUserResponse(user)
-};
-}
 public static PlantResponse MapToPlantResponse(Plant plant)
 {
 if (plant == null)
@@ -2407,7 +2657,7 @@ PreferedExtras = request.PreferedExtras
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00deee3ac11edd4e1e5a820ae41e986873ca2de8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+daa8dc885faa3ab9717599e85152139d55b82eb6")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -2489,7 +2739,7 @@ public JwtTokenGenerator(IConfiguration configuration)
 {
 _configuration = configuration;
 }
-public string GenerateToken(User user)
+public string GenerateToken(User user, out int expiresIn)
 {
 var tokenHandler = new JwtSecurityTokenHandler();
 var secretKey = _configuration["Jwt:Secret"];
@@ -2501,13 +2751,13 @@ new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
 new Claim(ClaimTypes.Email, user.Email),
 new Claim(ClaimTypes.Name, user.Name)
 }),
-Expires = DateTime.UtcNow.AddHours(1),
-SigningCredentials = new SigningCredentials(
-new SymmetricSecurityKey(key),
-SecurityAlgorithms.HmacSha256Signature)
+Expires = DateTime.UtcNow.AddMinutes(15),
+SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
 };
 var token = tokenHandler.CreateToken(tokenDescriptor);
-return tokenHandler.WriteToken(token);
+var jwt = tokenHandler.WriteToken(token);
+expiresIn = (int)((tokenDescriptor.Expires.Value - DateTime.UtcNow).TotalSeconds);
+return jwt;
 }
 }
 }
@@ -2543,6 +2793,7 @@ public DbSet<MatchEF> Matches { get; set; }
 public DbSet<MessageEF> Messages { get; set; }
 public DbSet<ReportEF> Reports { get; set; }
 public DbSet<UserPreferencesEF> UserPreferences { get; set; }
+public DbSet<RefreshTokenEF> RefreshTokens { get; set; }
 protected override void OnModelCreating(ModelBuilder modelBuilder)
 {
 base.OnModelCreating(modelBuilder);
@@ -2811,6 +3062,22 @@ public DateTime UpdatedAt { get; set; }
 public virtual UserEF User { get; set; }
 }
 }
+//RefreshTokenEF
+namespace Cuttr.Infrastructure.Entities
+{
+public class RefreshTokenEF
+{
+[Key]
+public int RefreshTokenId { get; set; }
+public int UserId { get; set; }
+public string TokenHash { get; set; }
+public DateTime ExpiresAt { get; set; }
+public bool IsRevoked { get; set; }
+public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+public DateTime? RevokedAt { get; set; }
+public UserEF User { get; set; }
+}
+}
 //ReportEF
 namespace Cuttr.Infrastructure.Entities
 {
@@ -2869,12 +3136,12 @@ public string PasswordHash { get; set; }
 [Required]
 [MaxLength(100)]
 public string Name { get; set; }
-public string ProfilePictureUrl { get; set; }
+public string? ProfilePictureUrl { get; set; }
 [MaxLength(500)]
-public string Bio { get; set; }
+public string? Bio { get; set; }
 public DateTime CreatedAt { get; set; }
 public DateTime UpdatedAt { get; set; }
-public Point Location { get; set; }
+public Point? Location { get; set; }
 public virtual ICollection<PlantEF> Plants { get; set; }
 public virtual UserPreferencesEF Preferences { get; set; }
 public virtual ICollection<MessageEF> SentMessages { get; set; }
@@ -4830,15 +5097,59 @@ b.Navigation("SentMessages");
 }
 }
 }
-//CuttrDbContextModelSnapshot
+//20241218113032_AddRefreshTooken
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+public partial class AddRefreshTooken : Migration
+{
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.CreateTable(
+name: "RefreshTokens",
+columns: table => new
+{
+RefreshTokenId = table.Column<int>(type: "int", nullable: false)
+.Annotation("SqlServer:Identity", "1, 1"),
+UserId = table.Column<int>(type: "int", nullable: false),
+TokenHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
+ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+IsRevoked = table.Column<bool>(type: "bit", nullable: false),
+CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+RevokedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+},
+constraints: table =>
+{
+table.PrimaryKey("PK_RefreshTokens", x => x.RefreshTokenId);
+table.ForeignKey(
+name: "FK_RefreshTokens_Users_UserId",
+column: x => x.UserId,
+principalTable: "Users",
+principalColumn: "UserId",
+onDelete: ReferentialAction.Cascade);
+});
+migrationBuilder.CreateIndex(
+name: "IX_RefreshTokens_UserId",
+table: "RefreshTokens",
+column: "UserId");
+}
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.DropTable(
+name: "RefreshTokens");
+}
+}
+}
+//20241218113032_AddRefreshTooken.Designer
 ﻿
 #nullable disable
 namespace Cuttr.Infrastructure.Migrations
 {
 [DbContext(typeof(CuttrDbContext))]
-partial class CuttrDbContextModelSnapshot : ModelSnapshot
+[Migration("20241218113032_AddRefreshTooken")]
+partial class AddRefreshTooken
 {
-protected override void BuildModel(ModelBuilder modelBuilder)
+protected override void BuildTargetModel(ModelBuilder modelBuilder)
 {
 #pragma warning disable 612, 618
 modelBuilder
@@ -4962,6 +5273,29 @@ b.Property<string>("WateringNeed")
 b.HasKey("PlantId");
 b.HasIndex("UserId");
 b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.Property<int>("RefreshTokenId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefreshTokenId"));
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime>("ExpiresAt")
+.HasColumnType("datetime2");
+b.Property<bool>("IsRevoked")
+.HasColumnType("bit");
+b.Property<DateTime?>("RevokedAt")
+.HasColumnType("datetime2");
+b.Property<string>("TokenHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.HasKey("RefreshTokenId");
+b.HasIndex("UserId");
+b.ToTable("RefreshTokens");
 });
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
 {
@@ -5139,6 +5473,1281 @@ b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
 .IsRequired();
 b.Navigation("User");
 });
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany()
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
+.WithMany("ReportsReceived")
+.HasForeignKey("ReportedUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReporterUser")
+.WithMany("ReportsMade")
+.HasForeignKey("ReporterUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("ReportedUser");
+b.Navigation("ReporterUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwipedPlant")
+.WithMany()
+.HasForeignKey("SwipedPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
+.WithMany()
+.HasForeignKey("SwiperPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("SwipedPlant");
+b.Navigation("SwiperPlant");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithOne("Preferences")
+.HasForeignKey("Cuttr.Infrastructure.Entities.UserPreferencesEF", "UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Navigation("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Navigation("Plants");
+b.Navigation("Preferences")
+.IsRequired();
+b.Navigation("ReportsMade");
+b.Navigation("ReportsReceived");
+b.Navigation("SentMessages");
+});
+#pragma warning restore 612, 618
+}
+}
+}
+//20241228121555_updateUserEF
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+public partial class updateUserEF : Migration
+{
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+}
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+}
+}
+}
+//20241228121555_updateUserEF.Designer
+﻿
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+[DbContext(typeof(CuttrDbContext))]
+[Migration("20241228121555_updateUserEF")]
+partial class updateUserEF
+{
+protected override void BuildTargetModel(ModelBuilder modelBuilder)
+{
+#pragma warning disable 612, 618
+modelBuilder
+.HasAnnotation("ProductVersion", "9.0.0")
+.HasAnnotation("Relational:MaxIdentifierLength", 128);
+SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Property<int>("MatchId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("PlantId1")
+.HasColumnType("int");
+b.Property<int>("PlantId2")
+.HasColumnType("int");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.HasKey("MatchId");
+b.HasIndex("PlantId2");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.HasIndex("PlantId1", "PlantId2")
+.IsUnique();
+b.ToTable("Matches", t =>
+{
+t.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
+});
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.Property<int>("MessageId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsRead")
+.HasColumnType("bit");
+b.Property<int>("MatchId")
+.HasColumnType("int");
+b.Property<string>("MessageText")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SenderUserId")
+.HasColumnType("int");
+b.HasKey("MessageId");
+b.HasIndex("MatchId");
+b.HasIndex("SenderUserId");
+b.ToTable("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.Property<int>("PlantId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Description")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("Extras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ImageUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("IndoorOutdoor")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("LightRequirement")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PetFriendly")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantCategory")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantStage")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PropagationEase")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("Size")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("SpeciesName")
+.IsRequired()
+.HasMaxLength(200)
+.HasColumnType("nvarchar(200)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("WateringNeed")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.HasKey("PlantId");
+b.HasIndex("UserId");
+b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.Property<int>("RefreshTokenId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefreshTokenId"));
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime>("ExpiresAt")
+.HasColumnType("datetime2");
+b.Property<bool>("IsRevoked")
+.HasColumnType("bit");
+b.Property<DateTime?>("RevokedAt")
+.HasColumnType("datetime2");
+b.Property<string>("TokenHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.HasKey("RefreshTokenId");
+b.HasIndex("UserId");
+b.ToTable("RefreshTokens");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.Property<int>("ReportId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportId"));
+b.Property<string>("Comments")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsResolved")
+.HasColumnType("bit");
+b.Property<string>("Reason")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("ReportedUserId")
+.HasColumnType("int");
+b.Property<int>("ReporterUserId")
+.HasColumnType("int");
+b.HasKey("ReportId");
+b.HasIndex("ReportedUserId");
+b.HasIndex("ReporterUserId");
+b.ToTable("Reports");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.Property<int>("SwipeId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SwipeId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsLike")
+.HasColumnType("bit");
+b.Property<int>("SwipedPlantId")
+.HasColumnType("int");
+b.Property<int>("SwiperPlantId")
+.HasColumnType("int");
+b.HasKey("SwipeId");
+b.HasIndex("SwipedPlantId");
+b.HasIndex("SwiperPlantId", "SwipedPlantId")
+.IsUnique();
+b.ToTable("Swipes");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Property<int>("UserId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+b.Property<string>("Bio")
+.IsRequired()
+.HasMaxLength(500)
+.HasColumnType("nvarchar(500)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Email")
+.IsRequired()
+.HasMaxLength(256)
+.HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.IsRequired()
+.HasColumnType("geography");
+b.Property<string>("Name")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<string>("PasswordHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ProfilePictureUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.HasKey("UserId");
+b.HasIndex("Email")
+.IsUnique();
+b.ToTable("Users");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("PreferedExtras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedIndoorOutdoor")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedLightRequirement")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPetFriendly")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantCategory")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantStage")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPropagationEase")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedSize")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedWateringNeed")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SearchRadius")
+.HasColumnType("int");
+b.HasKey("UserId");
+b.ToTable("UserPreferences");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
+.WithMany()
+.HasForeignKey("PlantId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant2")
+.WithMany()
+.HasForeignKey("PlantId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Plant1");
+b.Navigation("Plant2");
+b.Navigation("User1");
+b.Navigation("User2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.MatchEF", "Match")
+.WithMany("Messages")
+.HasForeignKey("MatchId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
+.WithMany("SentMessages")
+.HasForeignKey("SenderUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Match");
+b.Navigation("SenderUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany("Plants")
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany()
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
+.WithMany("ReportsReceived")
+.HasForeignKey("ReportedUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReporterUser")
+.WithMany("ReportsMade")
+.HasForeignKey("ReporterUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("ReportedUser");
+b.Navigation("ReporterUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwipedPlant")
+.WithMany()
+.HasForeignKey("SwipedPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
+.WithMany()
+.HasForeignKey("SwiperPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("SwipedPlant");
+b.Navigation("SwiperPlant");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithOne("Preferences")
+.HasForeignKey("Cuttr.Infrastructure.Entities.UserPreferencesEF", "UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Navigation("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Navigation("Plants");
+b.Navigation("Preferences")
+.IsRequired();
+b.Navigation("ReportsMade");
+b.Navigation("ReportsReceived");
+b.Navigation("SentMessages");
+});
+#pragma warning restore 612, 618
+}
+}
+}
+//20241228121717_updateUserEF2
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+public partial class updateUserEF2 : Migration
+{
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.AlterColumn<string>(
+name: "ProfilePictureUrl",
+table: "Users",
+type: "nvarchar(max)",
+nullable: true,
+oldClrType: typeof(string),
+oldType: "nvarchar(max)");
+migrationBuilder.AlterColumn<Point>(
+name: "Location",
+table: "Users",
+type: "geography",
+nullable: true,
+oldClrType: typeof(Point),
+oldType: "geography");
+migrationBuilder.AlterColumn<string>(
+name: "Bio",
+table: "Users",
+type: "nvarchar(500)",
+maxLength: 500,
+nullable: true,
+oldClrType: typeof(string),
+oldType: "nvarchar(500)",
+oldMaxLength: 500);
+}
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.AlterColumn<string>(
+name: "ProfilePictureUrl",
+table: "Users",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "",
+oldClrType: typeof(string),
+oldType: "nvarchar(max)",
+oldNullable: true);
+migrationBuilder.AlterColumn<Point>(
+name: "Location",
+table: "Users",
+type: "geography",
+nullable: false,
+oldClrType: typeof(Point),
+oldType: "geography",
+oldNullable: true);
+migrationBuilder.AlterColumn<string>(
+name: "Bio",
+table: "Users",
+type: "nvarchar(500)",
+maxLength: 500,
+nullable: false,
+defaultValue: "",
+oldClrType: typeof(string),
+oldType: "nvarchar(500)",
+oldMaxLength: 500,
+oldNullable: true);
+}
+}
+}
+//20241228121717_updateUserEF2.Designer
+﻿
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+[DbContext(typeof(CuttrDbContext))]
+[Migration("20241228121717_updateUserEF2")]
+partial class updateUserEF2
+{
+protected override void BuildTargetModel(ModelBuilder modelBuilder)
+{
+#pragma warning disable 612, 618
+modelBuilder
+.HasAnnotation("ProductVersion", "9.0.0")
+.HasAnnotation("Relational:MaxIdentifierLength", 128);
+SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Property<int>("MatchId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("PlantId1")
+.HasColumnType("int");
+b.Property<int>("PlantId2")
+.HasColumnType("int");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.HasKey("MatchId");
+b.HasIndex("PlantId2");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.HasIndex("PlantId1", "PlantId2")
+.IsUnique();
+b.ToTable("Matches", t =>
+{
+t.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
+});
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.Property<int>("MessageId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsRead")
+.HasColumnType("bit");
+b.Property<int>("MatchId")
+.HasColumnType("int");
+b.Property<string>("MessageText")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SenderUserId")
+.HasColumnType("int");
+b.HasKey("MessageId");
+b.HasIndex("MatchId");
+b.HasIndex("SenderUserId");
+b.ToTable("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.Property<int>("PlantId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Description")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("Extras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ImageUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("IndoorOutdoor")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("LightRequirement")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PetFriendly")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantCategory")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantStage")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PropagationEase")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("Size")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("SpeciesName")
+.IsRequired()
+.HasMaxLength(200)
+.HasColumnType("nvarchar(200)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("WateringNeed")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.HasKey("PlantId");
+b.HasIndex("UserId");
+b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.Property<int>("RefreshTokenId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefreshTokenId"));
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime>("ExpiresAt")
+.HasColumnType("datetime2");
+b.Property<bool>("IsRevoked")
+.HasColumnType("bit");
+b.Property<DateTime?>("RevokedAt")
+.HasColumnType("datetime2");
+b.Property<string>("TokenHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.HasKey("RefreshTokenId");
+b.HasIndex("UserId");
+b.ToTable("RefreshTokens");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.Property<int>("ReportId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportId"));
+b.Property<string>("Comments")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsResolved")
+.HasColumnType("bit");
+b.Property<string>("Reason")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("ReportedUserId")
+.HasColumnType("int");
+b.Property<int>("ReporterUserId")
+.HasColumnType("int");
+b.HasKey("ReportId");
+b.HasIndex("ReportedUserId");
+b.HasIndex("ReporterUserId");
+b.ToTable("Reports");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.Property<int>("SwipeId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SwipeId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsLike")
+.HasColumnType("bit");
+b.Property<int>("SwipedPlantId")
+.HasColumnType("int");
+b.Property<int>("SwiperPlantId")
+.HasColumnType("int");
+b.HasKey("SwipeId");
+b.HasIndex("SwipedPlantId");
+b.HasIndex("SwiperPlantId", "SwipedPlantId")
+.IsUnique();
+b.ToTable("Swipes");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Property<int>("UserId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+b.Property<string>("Bio")
+.HasMaxLength(500)
+.HasColumnType("nvarchar(500)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Email")
+.IsRequired()
+.HasMaxLength(256)
+.HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.HasColumnType("geography");
+b.Property<string>("Name")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<string>("PasswordHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ProfilePictureUrl")
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.HasKey("UserId");
+b.HasIndex("Email")
+.IsUnique();
+b.ToTable("Users");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("PreferedExtras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedIndoorOutdoor")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedLightRequirement")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPetFriendly")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantCategory")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantStage")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPropagationEase")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedSize")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedWateringNeed")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SearchRadius")
+.HasColumnType("int");
+b.HasKey("UserId");
+b.ToTable("UserPreferences");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
+.WithMany()
+.HasForeignKey("PlantId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant2")
+.WithMany()
+.HasForeignKey("PlantId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Plant1");
+b.Navigation("Plant2");
+b.Navigation("User1");
+b.Navigation("User2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.MatchEF", "Match")
+.WithMany("Messages")
+.HasForeignKey("MatchId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
+.WithMany("SentMessages")
+.HasForeignKey("SenderUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Match");
+b.Navigation("SenderUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany("Plants")
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany()
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
+.WithMany("ReportsReceived")
+.HasForeignKey("ReportedUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReporterUser")
+.WithMany("ReportsMade")
+.HasForeignKey("ReporterUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("ReportedUser");
+b.Navigation("ReporterUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwipedPlant")
+.WithMany()
+.HasForeignKey("SwipedPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
+.WithMany()
+.HasForeignKey("SwiperPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("SwipedPlant");
+b.Navigation("SwiperPlant");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithOne("Preferences")
+.HasForeignKey("Cuttr.Infrastructure.Entities.UserPreferencesEF", "UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Navigation("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Navigation("Plants");
+b.Navigation("Preferences")
+.IsRequired();
+b.Navigation("ReportsMade");
+b.Navigation("ReportsReceived");
+b.Navigation("SentMessages");
+});
+#pragma warning restore 612, 618
+}
+}
+}
+//CuttrDbContextModelSnapshot
+﻿
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+[DbContext(typeof(CuttrDbContext))]
+partial class CuttrDbContextModelSnapshot : ModelSnapshot
+{
+protected override void BuildModel(ModelBuilder modelBuilder)
+{
+#pragma warning disable 612, 618
+modelBuilder
+.HasAnnotation("ProductVersion", "9.0.0")
+.HasAnnotation("Relational:MaxIdentifierLength", 128);
+SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Property<int>("MatchId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("PlantId1")
+.HasColumnType("int");
+b.Property<int>("PlantId2")
+.HasColumnType("int");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.HasKey("MatchId");
+b.HasIndex("PlantId2");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.HasIndex("PlantId1", "PlantId2")
+.IsUnique();
+b.ToTable("Matches", t =>
+{
+t.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
+});
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.Property<int>("MessageId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsRead")
+.HasColumnType("bit");
+b.Property<int>("MatchId")
+.HasColumnType("int");
+b.Property<string>("MessageText")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SenderUserId")
+.HasColumnType("int");
+b.HasKey("MessageId");
+b.HasIndex("MatchId");
+b.HasIndex("SenderUserId");
+b.ToTable("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.Property<int>("PlantId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Description")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("Extras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ImageUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("IndoorOutdoor")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("LightRequirement")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PetFriendly")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantCategory")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantStage")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PropagationEase")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("Size")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("SpeciesName")
+.IsRequired()
+.HasMaxLength(200)
+.HasColumnType("nvarchar(200)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("WateringNeed")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.HasKey("PlantId");
+b.HasIndex("UserId");
+b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.Property<int>("RefreshTokenId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefreshTokenId"));
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime>("ExpiresAt")
+.HasColumnType("datetime2");
+b.Property<bool>("IsRevoked")
+.HasColumnType("bit");
+b.Property<DateTime?>("RevokedAt")
+.HasColumnType("datetime2");
+b.Property<string>("TokenHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.HasKey("RefreshTokenId");
+b.HasIndex("UserId");
+b.ToTable("RefreshTokens");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.Property<int>("ReportId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportId"));
+b.Property<string>("Comments")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsResolved")
+.HasColumnType("bit");
+b.Property<string>("Reason")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("ReportedUserId")
+.HasColumnType("int");
+b.Property<int>("ReporterUserId")
+.HasColumnType("int");
+b.HasKey("ReportId");
+b.HasIndex("ReportedUserId");
+b.HasIndex("ReporterUserId");
+b.ToTable("Reports");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.Property<int>("SwipeId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SwipeId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsLike")
+.HasColumnType("bit");
+b.Property<int>("SwipedPlantId")
+.HasColumnType("int");
+b.Property<int>("SwiperPlantId")
+.HasColumnType("int");
+b.HasKey("SwipeId");
+b.HasIndex("SwipedPlantId");
+b.HasIndex("SwiperPlantId", "SwipedPlantId")
+.IsUnique();
+b.ToTable("Swipes");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Property<int>("UserId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+b.Property<string>("Bio")
+.HasMaxLength(500)
+.HasColumnType("nvarchar(500)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Email")
+.IsRequired()
+.HasMaxLength(256)
+.HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.HasColumnType("geography");
+b.Property<string>("Name")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<string>("PasswordHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ProfilePictureUrl")
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.HasKey("UserId");
+b.HasIndex("Email")
+.IsUnique();
+b.ToTable("Users");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("PreferedExtras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedIndoorOutdoor")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedLightRequirement")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPetFriendly")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantCategory")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantStage")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPropagationEase")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedSize")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedWateringNeed")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SearchRadius")
+.HasColumnType("int");
+b.HasKey("UserId");
+b.ToTable("UserPreferences");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
+.WithMany()
+.HasForeignKey("PlantId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant2")
+.WithMany()
+.HasForeignKey("PlantId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Plant1");
+b.Navigation("Plant2");
+b.Navigation("User1");
+b.Navigation("User2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.MatchEF", "Match")
+.WithMany("Messages")
+.HasForeignKey("MatchId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
+.WithMany("SentMessages")
+.HasForeignKey("SenderUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Match");
+b.Navigation("SenderUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany("Plants")
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany()
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
 {
 b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
@@ -5201,7 +6810,7 @@ b.Navigation("SentMessages");
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00deee3ac11edd4e1e5a820ae41e986873ca2de8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+daa8dc885faa3ab9717599e85152139d55b82eb6")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -5454,6 +7063,104 @@ var efPlants = await _context.Plants
 .Where(p => p.User.Location != null && p.User.Location.Distance(origin) <= radiusMeters)
 .ToListAsync();
 return efPlants.Select(EFToBusinessMapper.MapToPlant);
+}
+}
+}
+//RefreshTokenRepository
+namespace Cuttr.Infrastructure.Repositories
+{
+public class RefreshTokenRepository : IRefreshTokenRepository
+{
+private readonly CuttrDbContext _context;
+private readonly ILogger<RefreshTokenRepository> _logger;
+public RefreshTokenRepository(CuttrDbContext context, ILogger<RefreshTokenRepository> logger)
+{
+_context = context;
+_logger = logger;
+}
+public async Task<RefreshToken> CreateRefreshTokenAsync(RefreshToken token)
+{
+try
+{
+var ef = new RefreshTokenEF
+{
+UserId = token.UserId,
+TokenHash = token.TokenHash,
+ExpiresAt = token.ExpiresAt,
+IsRevoked = token.IsRevoked,
+CreatedAt = token.CreatedAt,
+RevokedAt = token.RevokedAt
+};
+_context.RefreshTokens.Add(ef);
+await _context.SaveChangesAsync();
+token.RefreshTokenId = ef.RefreshTokenId;
+return token;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while creating a refresh token for user with ID {UserId}.", token.UserId);
+throw new RepositoryException("An error occurred while creating a refresh token.", ex);
+}
+}
+public async Task<RefreshToken> GetRefreshTokenAsync(string tokenHash)
+{
+try
+{
+var ef = await _context.RefreshTokens
+.FirstOrDefaultAsync(t => t.TokenHash == tokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow);
+if (ef == null)
+{
+_logger.LogWarning("No valid refresh token found for the provided token hash.");
+return null;
+}
+return new RefreshToken
+{
+RefreshTokenId = ef.RefreshTokenId,
+UserId = ef.UserId,
+TokenHash = ef.TokenHash,
+ExpiresAt = ef.ExpiresAt,
+IsRevoked = ef.IsRevoked,
+CreatedAt = ef.CreatedAt,
+RevokedAt = ef.RevokedAt
+};
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while retrieving a refresh token by hash.");
+throw new RepositoryException("An error occurred while retrieving a refresh token.", ex);
+}
+}
+public async Task RevokeRefreshTokenAsync(string tokenHash)
+{
+try
+{
+var ef = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == tokenHash);
+if (ef != null && !ef.IsRevoked)
+{
+ef.IsRevoked = true;
+ef.RevokedAt = DateTime.UtcNow;
+await _context.SaveChangesAsync();
+}
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while revoking the refresh token for token hash: {TokenHash}", tokenHash);
+throw new RepositoryException("An error occurred while revoking the refresh token.", ex);
+}
+}
+public async Task DeleteRefreshTokensForUserAsync(int userId)
+{
+try
+{
+var tokens = _context.RefreshTokens.Where(t => t.UserId == userId);
+_context.RefreshTokens.RemoveRange(tokens);
+await _context.SaveChangesAsync();
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while deleting refresh tokens for user with ID {UserId}.", userId);
+throw new RepositoryException("An error occurred while deleting refresh tokens.", ex);
+}
 }
 }
 }

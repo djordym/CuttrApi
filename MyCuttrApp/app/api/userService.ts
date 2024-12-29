@@ -19,7 +19,7 @@ export const userService = {
   },
   updateProfilePicture: async (data: UserProfileImageUpdateRequest): Promise<UserResponse> => {
     const formData = new FormData();
-    formData.append('Image', data.Image);
+    formData.append('Image', data.image);
     const response = await api.put<UserResponse>('/users/me/profile-picture', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });

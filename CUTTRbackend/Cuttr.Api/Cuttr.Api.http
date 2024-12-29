@@ -1,6 +1,0 @@
-@Cuttr.Api_HostAddress = http://localhost:5098
-
-GET {{Cuttr.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
