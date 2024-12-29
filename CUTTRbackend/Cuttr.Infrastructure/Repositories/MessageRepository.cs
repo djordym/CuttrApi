@@ -32,7 +32,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 await _context.Messages.AddAsync(efMessage);
                 await _context.SaveChangesAsync();
-
+                _context.Entry(efMessage).State = EntityState.Detached;
                 return EFToBusinessMapper.MapToMessage(efMessage);
             }
             catch (Exception ex)
@@ -47,6 +47,7 @@ namespace Cuttr.Infrastructure.Repositories
             try
             {
                 var efMessages = await _context.Messages
+                    .AsNoTracking()
                     .Where(m => m.MatchId == matchId)
                     .OrderBy(m => m.CreatedAt)
                     .ToListAsync();

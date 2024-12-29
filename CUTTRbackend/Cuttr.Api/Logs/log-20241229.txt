@@ -413,3 +413,588 @@ Cuttr.Business.Exceptions.BusinessException: Error registering user.
 [2024-12-29 12:46:38 INF] HTTP Response Information: 200 []
 [2024-12-29 12:46:38 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 31.8817 ms
 [2024-12-29 12:46:38 INF] HTTP Response Information: 200 []
+[2024-12-29 14:22:44 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13","password":"1234"}
+[2024-12-29 14:22:45 INF] HTTP POST /api/auth/login responded 200 in 906.4373 ms
+[2024-12-29 14:22:45 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM1NDc4NTY1LCJleHAiOjE3MzU0Nzk0NjUsImlhdCI6MTczNTQ3ODU2NX0.UxqVUs5bzAHRbrEjnyXpxSvyCQZBMRKoCyse3ibIUUI","refreshToken":"WJVgnpxZ3OOOqCvfHWJxF1JnF+zM3vy3LDmKsAnTKLg=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 14:22:45 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 14:22:45 INF] HTTP GET /api/users/17 responded 200 in 38.2027 ms
+[2024-12-29 14:22:45 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 14:22:45 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 14:22:45 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 14:22:45 INF] HTTP GET /api/users/me/plants responded 200 in 79.6177 ms
+[2024-12-29 14:22:45 INF] HTTP Response Information: 200 []
+[2024-12-29 14:22:45 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 101.3976 ms
+[2024-12-29 14:22:45 INF] HTTP Response Information: 200 []
+[2024-12-29 14:31:03 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 14:31:03 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 14:31:03 INF] HTTP GET /api/users/me/plants responded 200 in 115.5649 ms
+[2024-12-29 14:31:03 INF] HTTP GET /api/users/17 responded 200 in 116.6066 ms
+[2024-12-29 14:31:03 INF] HTTP Response Information: 200 []
+[2024-12-29 14:31:03 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 14:34:18 INF] HTTP Request Information: PUT /api/users/me  {"name":"User","bio":"Dvtvtv"}
+[2024-12-29 14:34:18 ERR] An error occurred while updating user with ID 17.
+System.InvalidOperationException: The instance of entity type 'UserEF' cannot be tracked because another instance with the same key value for {'UserId'} is already being tracked. When attaching existing entities, ensure that only one entity instance with a given key value is attached. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see the conflicting key values.
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.ThrowIdentityConflict(InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.Add(TKey key, InternalEntityEntry entry, Boolean updateDuplicate)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.Add(TKey key, InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.Add(InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.StartTracking(InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.InternalEntityEntry.SetEntityState(EntityState oldState, EntityState newState, Boolean acceptChanges, Boolean modifyProperties)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.InternalEntityEntry.SetEntityState(EntityState entityState, Boolean acceptChanges, Boolean modifyProperties, Nullable`1 forceStateWhenUnknownKey, Nullable`1 fallbackState)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.EntityGraphAttacher.PaintAction(EntityEntryGraphNode`1 node)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.EntityEntryGraphIterator.TraverseGraph[TState](EntityEntryGraphNode`1 node, Func`2 handleNode)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.EntityGraphAttacher.AttachGraph(InternalEntityEntry rootEntry, EntityState targetState, EntityState storeGeneratedWithKeySetTargetState, Boolean forceStateWhenUnknownKey)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.SetEntityState(InternalEntityEntry entry, EntityState entityState)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.Update(TEntity entity)
+   at Cuttr.Infrastructure.Repositories.UserRepository.UpdateUserAsync(User user) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserRepository.cs:line 101
+[2024-12-29 14:34:18 ERR] Error updating user with ID 17.
+Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while updating user.
+ ---> System.InvalidOperationException: The instance of entity type 'UserEF' cannot be tracked because another instance with the same key value for {'UserId'} is already being tracked. When attaching existing entities, ensure that only one entity instance with a given key value is attached. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see the conflicting key values.
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.ThrowIdentityConflict(InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.Add(TKey key, InternalEntityEntry entry, Boolean updateDuplicate)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.Add(TKey key, InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.Add(InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.StartTracking(InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.InternalEntityEntry.SetEntityState(EntityState oldState, EntityState newState, Boolean acceptChanges, Boolean modifyProperties)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.InternalEntityEntry.SetEntityState(EntityState entityState, Boolean acceptChanges, Boolean modifyProperties, Nullable`1 forceStateWhenUnknownKey, Nullable`1 fallbackState)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.EntityGraphAttacher.PaintAction(EntityEntryGraphNode`1 node)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.EntityEntryGraphIterator.TraverseGraph[TState](EntityEntryGraphNode`1 node, Func`2 handleNode)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.EntityGraphAttacher.AttachGraph(InternalEntityEntry rootEntry, EntityState targetState, EntityState storeGeneratedWithKeySetTargetState, Boolean forceStateWhenUnknownKey)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.SetEntityState(InternalEntityEntry entry, EntityState entityState)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.Update(TEntity entity)
+   at Cuttr.Infrastructure.Repositories.UserRepository.UpdateUserAsync(User user) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserRepository.cs:line 101
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserRepository.UpdateUserAsync(User user) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserRepository.cs:line 112
+   at Cuttr.Business.Managers.UserManager.UpdateUserAsync(Int32 userId, UserUpdateRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 130
+[2024-12-29 14:34:18 ERR] Error updating user with ID 17.
+Cuttr.Business.Exceptions.BusinessException: Error updating user.
+ ---> Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while updating user.
+ ---> System.InvalidOperationException: The instance of entity type 'UserEF' cannot be tracked because another instance with the same key value for {'UserId'} is already being tracked. When attaching existing entities, ensure that only one entity instance with a given key value is attached. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see the conflicting key values.
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.ThrowIdentityConflict(InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.Add(TKey key, InternalEntityEntry entry, Boolean updateDuplicate)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.Add(TKey key, InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.IdentityMap`1.Add(InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.StartTracking(InternalEntityEntry entry)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.InternalEntityEntry.SetEntityState(EntityState oldState, EntityState newState, Boolean acceptChanges, Boolean modifyProperties)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.InternalEntityEntry.SetEntityState(EntityState entityState, Boolean acceptChanges, Boolean modifyProperties, Nullable`1 forceStateWhenUnknownKey, Nullable`1 fallbackState)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.EntityGraphAttacher.PaintAction(EntityEntryGraphNode`1 node)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.EntityEntryGraphIterator.TraverseGraph[TState](EntityEntryGraphNode`1 node, Func`2 handleNode)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.EntityGraphAttacher.AttachGraph(InternalEntityEntry rootEntry, EntityState targetState, EntityState storeGeneratedWithKeySetTargetState, Boolean forceStateWhenUnknownKey)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.SetEntityState(InternalEntityEntry entry, EntityState entityState)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.Update(TEntity entity)
+   at Cuttr.Infrastructure.Repositories.UserRepository.UpdateUserAsync(User user) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserRepository.cs:line 101
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserRepository.UpdateUserAsync(User user) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserRepository.cs:line 112
+   at Cuttr.Business.Managers.UserManager.UpdateUserAsync(Int32 userId, UserUpdateRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 130
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserManager.UpdateUserAsync(Int32 userId, UserUpdateRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserManager.cs:line 141
+   at Cuttr.Api.Controllers.UserController.UpdateUser(UserUpdateRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserController.cs:line 79
+[2024-12-29 14:34:18 INF] HTTP PUT /api/users/me responded 400 in 328.3286 ms
+[2024-12-29 14:34:18 INF] HTTP Response Information: 400 Error updating user.
+[2024-12-29 14:57:18 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 14:57:18 INF] HTTP Request Information: GET /api/userpreferences  
+[2024-12-29 14:57:18 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 14:57:19 INF] HTTP GET /api/userpreferences responded 401 in 147.0175 ms
+[2024-12-29 14:57:19 INF] HTTP Response Information: 401 
+[2024-12-29 14:57:19 INF] HTTP GET /api/users/17 responded 401 in 164.6828 ms
+[2024-12-29 14:57:19 INF] HTTP GET /api/users/me/plants responded 401 in 164.6356 ms
+[2024-12-29 14:57:19 INF] HTTP Response Information: 401 
+[2024-12-29 14:57:19 INF] HTTP Response Information: 401 
+[2024-12-29 14:57:19 INF] HTTP Request Information: POST /api/auth/refresh  {"refreshToken":"WJVgnpxZ3OOOqCvfHWJxF1JnF+zM3vy3LDmKsAnTKLg="}
+[2024-12-29 14:57:19 INF] HTTP POST /api/auth/refresh responded 200 in 823.2568 ms
+[2024-12-29 14:57:19 INF] HTTP Response Information: 200 {"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM1NDgwNjM5LCJleHAiOjE3MzU0ODE1MzksImlhdCI6MTczNTQ4MDYzOX0.VPDsM01wrNl8ix0XrmMFQXDVpbqesNpzp_iPdiUdTeA","refreshToken":"s61dif3b2LvB9xwl+jKxeoKIoAgDr17tBg6jzFjQCRQ=","tokenType":"Bearer","expiresIn":899}
+[2024-12-29 14:57:20 INF] HTTP Request Information: GET /api/userpreferences  
+[2024-12-29 14:57:20 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 14:57:20 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 14:57:20 ERR] An error occurred while retrieving user preferences for user ID 17.
+System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+[2024-12-29 14:57:20 INF] HTTP GET /api/users/17 responded 200 in 163.2016 ms
+[2024-12-29 14:57:20 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 14:57:20 ERR] Error retrieving user preferences for user ID 17.
+Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while retrieving user preferences.
+ ---> System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 47
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 36
+[2024-12-29 14:57:20 ERR] Error retrieving user preferences.
+Cuttr.Business.Exceptions.BusinessException: Error retrieving user preferences.
+ ---> Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while retrieving user preferences.
+ ---> System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 47
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 36
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 51
+   at Cuttr.Api.Controllers.UserPreferencesController.GetUserPreferences() in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserPreferencesController.cs:line 34
+[2024-12-29 14:57:20 INF] HTTP GET /api/users/me/plants responded 200 in 308.8539 ms
+[2024-12-29 14:57:20 INF] HTTP GET /api/userpreferences responded 400 in 324.7828 ms
+[2024-12-29 14:57:20 INF] HTTP Response Information: 200 []
+[2024-12-29 14:57:20 INF] HTTP Response Information: 400 Error retrieving user preferences.
+[2024-12-29 14:57:21 INF] HTTP Request Information: GET /api/userpreferences  
+[2024-12-29 14:57:21 ERR] An error occurred while retrieving user preferences for user ID 17.
+System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+[2024-12-29 14:57:21 ERR] Error retrieving user preferences for user ID 17.
+Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while retrieving user preferences.
+ ---> System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 47
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 36
+[2024-12-29 14:57:21 ERR] Error retrieving user preferences.
+Cuttr.Business.Exceptions.BusinessException: Error retrieving user preferences.
+ ---> Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while retrieving user preferences.
+ ---> System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 47
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 36
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 51
+   at Cuttr.Api.Controllers.UserPreferencesController.GetUserPreferences() in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserPreferencesController.cs:line 34
+[2024-12-29 14:57:21 INF] HTTP GET /api/userpreferences responded 400 in 152.3245 ms
+[2024-12-29 14:57:21 INF] HTTP Response Information: 400 Error retrieving user preferences.
+[2024-12-29 14:57:23 INF] HTTP Request Information: GET /api/userpreferences  
+[2024-12-29 14:57:23 ERR] An error occurred while retrieving user preferences for user ID 17.
+System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+[2024-12-29 14:57:23 ERR] Error retrieving user preferences for user ID 17.
+Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while retrieving user preferences.
+ ---> System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 47
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 36
+[2024-12-29 14:57:23 ERR] Error retrieving user preferences.
+Cuttr.Business.Exceptions.BusinessException: Error retrieving user preferences.
+ ---> Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while retrieving user preferences.
+ ---> System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 47
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 36
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 51
+   at Cuttr.Api.Controllers.UserPreferencesController.GetUserPreferences() in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserPreferencesController.cs:line 34
+[2024-12-29 14:57:23 INF] HTTP GET /api/userpreferences responded 400 in 141.1272 ms
+[2024-12-29 14:57:23 INF] HTTP Response Information: 400 Error retrieving user preferences.
+[2024-12-29 14:57:27 INF] HTTP Request Information: GET /api/userpreferences  
+[2024-12-29 14:57:28 ERR] An error occurred while retrieving user preferences for user ID 17.
+System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+[2024-12-29 14:57:28 ERR] Error retrieving user preferences for user ID 17.
+Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while retrieving user preferences.
+ ---> System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 47
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 36
+[2024-12-29 14:57:28 ERR] Error retrieving user preferences.
+Cuttr.Business.Exceptions.BusinessException: Error retrieving user preferences.
+ ---> Cuttr.Infrastructure.Exceptions.RepositoryException: An error occurred while retrieving user preferences.
+ ---> System.InvalidOperationException: The expression 'up.PreferedPlantStage' is invalid inside an 'Include' operation, since it does not represent a property access: 't => t.MyProperty'. To target navigations declared on derived types, use casting ('t => ((Derived)t).MyProperty') or the 'as' operator ('t => (t as Derived).MyProperty'). Collection navigation access can be filtered by composing Where, OrderBy(Descending), ThenBy(Descending), Skip or Take operations. For more information on including related data, see https://go.microsoft.com/fwlink/?LinkID=746393.
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.PopulateIncludeTree(IncludeTreeNode includeTreeNode, Expression expression, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.ProcessInclude(NavigationExpansionExpression source, Expression expression, Boolean thenInclude, Boolean setLoaded)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
+   at Microsoft.EntityFrameworkCore.Query.Internal.NavigationExpandingExpressionVisitor.Expand(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryTranslationPreprocessor.Process(Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
+   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
+   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, Expression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteAsync[TSource,TResult](MethodInfo operatorMethodInfo, IQueryable`1 source, LambdaExpression expression, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync[TSource](IQueryable`1 source, Expression`1 predicate, CancellationToken cancellationToken)
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 30
+   --- End of inner exception stack trace ---
+   at Cuttr.Infrastructure.Repositories.UserPreferencesRepository.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Infrastructure\Repositories\UserPreferencesRepository.cs:line 47
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 36
+   --- End of inner exception stack trace ---
+   at Cuttr.Business.Managers.UserPreferencesManager.GetUserPreferencesAsync(Int32 userId) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Business\Managers\UserPreferencesManager.cs:line 51
+   at Cuttr.Api.Controllers.UserPreferencesController.GetUserPreferences() in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\CUTTRbackend\Cuttr.Api\Controllers\UserPreferencesController.cs:line 34
+[2024-12-29 14:57:28 INF] HTTP GET /api/userpreferences responded 400 in 135.8676 ms
+[2024-12-29 14:57:28 INF] HTTP Response Information: 400 Error retrieving user preferences.
+[2024-12-29 14:59:16 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 14:59:16 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 14:59:16 INF] HTTP GET /api/users/me/plants responded 200 in 642.6089 ms
+[2024-12-29 14:59:16 INF] HTTP GET /api/users/17 responded 200 in 643.2681 ms
+[2024-12-29 14:59:16 INF] HTTP Response Information: 200 []
+[2024-12-29 14:59:16 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 14:59:19 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 14:59:19 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 14:59:19 INF] HTTP GET /api/users/17 responded 200 in 64.8479 ms
+[2024-12-29 14:59:19 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 14:59:19 INF] HTTP GET /api/users/me/plants responded 200 in 65.0114 ms
+[2024-12-29 14:59:19 INF] HTTP Response Information: 200 []
+[2024-12-29 14:59:22 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 14:59:22 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 14:59:22 INF] HTTP GET /api/users/17 responded 200 in 27.2953 ms
+[2024-12-29 14:59:22 INF] HTTP GET /api/users/me/plants responded 200 in 24.8843 ms
+[2024-12-29 14:59:22 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 14:59:22 INF] HTTP Response Information: 200 []
+[2024-12-29 14:59:34 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 14:59:34 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 14:59:34 INF] HTTP GET /api/users/17 responded 200 in 28.0406 ms
+[2024-12-29 14:59:34 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 14:59:34 INF] HTTP GET /api/users/me/plants responded 200 in 27.5483 ms
+[2024-12-29 14:59:34 INF] HTTP Response Information: 200 []
+[2024-12-29 15:01:17 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13","password":"1234"}
+[2024-12-29 15:01:18 INF] HTTP POST /api/auth/login responded 200 in 628.3783 ms
+[2024-12-29 15:01:18 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM1NDgwODc4LCJleHAiOjE3MzU0ODE3NzgsImlhdCI6MTczNTQ4MDg3OH0.gf06xnX-Wonvsy_iILCL1cc3C6UiHwZNT_niobk-Zes","refreshToken":"kBekwjvDFRWr28IIYou4RQfGdj26GQQX6T/0hId1cNw=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 15:01:18 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 15:01:18 INF] HTTP GET /api/users/17 responded 200 in 15.7839 ms
+[2024-12-29 15:01:18 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 15:01:18 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 15:01:18 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 15:01:18 INF] HTTP GET /api/users/me/plants responded 200 in 22.0285 ms
+[2024-12-29 15:01:18 INF] HTTP Response Information: 200 []
+[2024-12-29 15:01:18 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 101.0256 ms
+[2024-12-29 15:01:18 INF] HTTP Response Information: 200 []
+[2024-12-29 15:01:20 INF] HTTP Request Information: GET /api/userpreferences  
+[2024-12-29 15:01:21 INF] HTTP GET /api/userpreferences responded 200 in 40.4688 ms
+[2024-12-29 15:01:21 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}
+[2024-12-29 15:04:13 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13","password":"1234"}
+[2024-12-29 15:04:13 INF] HTTP POST /api/auth/login responded 200 in 265.7072 ms
+[2024-12-29 15:04:13 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM1NDgxMDUzLCJleHAiOjE3MzU0ODE5NTMsImlhdCI6MTczNTQ4MTA1M30.rszVnhGLYZ4ELfmOcsQJ5ulfWj1RfP_svyHeKLXfXUI","refreshToken":"Ir0kFEb7sS4Ku1rOELK/v5gZqbSWEBhfJYv+cmswbwQ=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 15:04:13 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 15:04:13 INF] HTTP GET /api/users/17 responded 200 in 14.7981 ms
+[2024-12-29 15:04:13 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 15:04:13 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 15:04:13 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 15:04:13 INF] HTTP GET /api/users/me/plants responded 200 in 36.0259 ms
+[2024-12-29 15:04:13 INF] HTTP Response Information: 200 []
+[2024-12-29 15:04:13 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 37.5412 ms
+[2024-12-29 15:04:13 INF] HTTP Response Information: 200 []
+[2024-12-29 15:04:14 INF] HTTP Request Information: GET /api/userpreferences  
+[2024-12-29 15:04:14 INF] HTTP GET /api/userpreferences responded 200 in 24.8009 ms
+[2024-12-29 15:04:14 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}
+[2024-12-29 15:13:20 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13","password":"1234"}
+[2024-12-29 15:13:20 INF] HTTP POST /api/auth/login responded 200 in 371.9824 ms
+[2024-12-29 15:13:20 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM1NDgxNjAwLCJleHAiOjE3MzU0ODI1MDAsImlhdCI6MTczNTQ4MTYwMH0.tKVg0K0GGbYvCeZLDRyiVzX6FGTLVwDxEDLp0lAN9SA","refreshToken":"10RMyNBYyaItD6Y7QzOfnbnpLpRXCa8P7Csrgkwji98=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 15:13:20 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 15:13:20 INF] HTTP GET /api/users/17 responded 200 in 18.5030 ms
+[2024-12-29 15:13:20 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 15:13:20 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 15:13:20 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 15:13:20 INF] HTTP GET /api/users/me/plants responded 200 in 44.0666 ms
+[2024-12-29 15:13:20 INF] HTTP Response Information: 200 []
+[2024-12-29 15:13:20 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 29.8055 ms
+[2024-12-29 15:13:20 INF] HTTP Response Information: 200 []
+[2024-12-29 15:25:54 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13","password":"1234"}
+[2024-12-29 15:25:54 INF] HTTP POST /api/auth/login responded 200 in 340.7961 ms
+[2024-12-29 15:25:54 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM1NDgyMzU0LCJleHAiOjE3MzU0ODMyNTQsImlhdCI6MTczNTQ4MjM1NH0.T_XuLSiO24RcjIIo1SwvM4BQRzfi5WG3362vzPrn0lg","refreshToken":"Rs/ndcExUYx66BHpEsvK+gCdU3y9NVs+NV0RpgW3Ifw=","tokenType":"Bearer","expiresIn":899}}
+[2024-12-29 15:25:54 INF] HTTP Request Information: GET /api/users/17  
+[2024-12-29 15:25:54 INF] HTTP GET /api/users/17 responded 200 in 18.5781 ms
+[2024-12-29 15:25:54 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2024-12-29 15:25:54 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2024-12-29 15:25:54 INF] HTTP Request Information: GET /api/users/me/plants  
+[2024-12-29 15:25:54 INF] HTTP GET /api/users/me/plants responded 200 in 26.6153 ms
+[2024-12-29 15:25:54 INF] HTTP Response Information: 200 []
+[2024-12-29 15:25:54 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 68.7660 ms
+[2024-12-29 15:25:54 INF] HTTP Response Information: 200 []
+[2024-12-29 15:25:56 INF] HTTP Request Information: GET /api/userpreferences  
+[2024-12-29 15:25:56 INF] HTTP GET /api/userpreferences responded 200 in 19.6761 ms
+[2024-12-29 15:25:56 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}

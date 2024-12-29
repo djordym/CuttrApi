@@ -32,6 +32,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 await _context.Swipes.AddAsync(efSwipe);
                 await _context.SaveChangesAsync();
+                _context.Entry(efSwipe).State = EntityState.Detached;
             }
             catch (Exception ex)
             {
@@ -44,7 +45,9 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var efSwipe = await _context.Swipes.FirstOrDefaultAsync(s =>
+                var efSwipe = await _context.Swipes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s =>
                     s.SwiperPlantId == swiperPlantId &&
                     s.SwipedPlantId == swipedPlantId &&
                     s.IsLike == isLike);
@@ -62,7 +65,7 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var exists = await _context.Swipes.AnyAsync(s =>
+                var exists = await _context.Swipes.AsNoTracking().AnyAsync(s =>
                     s.SwiperPlantId == swiperPlantId &&
                     s.SwipedPlantId == swipedPlantId);
 

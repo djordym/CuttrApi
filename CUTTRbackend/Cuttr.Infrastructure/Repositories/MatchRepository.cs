@@ -28,6 +28,7 @@ namespace Cuttr.Infrastructure.Repositories
             try
             {
                 var efMatches = await _context.Matches
+                    .AsNoTracking()
                     .Include(m => m.Plant1)
                         .ThenInclude(p => p.User)
                     .Include(m => m.Plant2)
@@ -49,6 +50,7 @@ namespace Cuttr.Infrastructure.Repositories
             try
             {
                 var efMatch = await _context.Matches
+                    .AsNoTracking()
                     .Include(m => m.Plant1)
                         .ThenInclude(p => p.User)
                     .Include(m => m.Plant2)
@@ -72,7 +74,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 await _context.Matches.AddAsync(efMatch);
                 await _context.SaveChangesAsync();
-
+                _context.Entry(efMatch).State = EntityState.Detached;
                 return EFToBusinessMapper.MapToMatch(efMatch);
             }
             catch (Exception ex)

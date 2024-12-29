@@ -36,6 +36,7 @@ namespace Cuttr.Infrastructure.Repositories
                 };
                 _context.RefreshTokens.Add(ef);
                 await _context.SaveChangesAsync();
+                _context.Entry(ef).State = EntityState.Detached;
                 token.RefreshTokenId = ef.RefreshTokenId;
                 return token;
             }
@@ -50,7 +51,7 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var ef = await _context.RefreshTokens
+                var ef = await _context.RefreshTokens.AsNoTracking()
                     .FirstOrDefaultAsync(t => t.TokenHash == tokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow);
 
                 if (ef == null)
@@ -87,6 +88,7 @@ namespace Cuttr.Infrastructure.Repositories
                     ef.IsRevoked = true;
                     ef.RevokedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
+                    _context.Entry(ef).State = EntityState.Detached;
                 }
             }
             catch (Exception ex)

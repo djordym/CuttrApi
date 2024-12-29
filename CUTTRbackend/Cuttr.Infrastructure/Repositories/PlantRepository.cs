@@ -33,7 +33,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 await _context.Plants.AddAsync(efPlant);
                 await _context.SaveChangesAsync();
-
+                _context.Entry(efPlant).State = EntityState.Detached;
                 return EFToBusinessMapper.MapToPlant(efPlant);
             }
             catch (Exception ex)
@@ -47,7 +47,7 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var efPlant = await _context.Plants
+                var efPlant = await _context.Plants.AsNoTracking()
                     .Include(p => p.User)
                     .FirstOrDefaultAsync(p => p.PlantId == plantId);
 
@@ -74,6 +74,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 _context.Plants.Update(efPlant);
                 await _context.SaveChangesAsync();
+                _context.Entry(efPlant).State = EntityState.Detached;
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -100,6 +101,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 _context.Plants.Remove(efPlant);
                 await _context.SaveChangesAsync();
+                _context.Entry(efPlant).State = EntityState.Detached;
             }
             catch (DbUpdateException ex)
             {
@@ -117,7 +119,7 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var efPlants = await _context.Plants
+                var efPlants = await _context.Plants.AsNoTracking()
                     .Where(p => p.UserId == userId)
                     .Include(p => p.User)
                     .ToListAsync();
@@ -135,7 +137,7 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var efPlants = await _context.Plants
+                var efPlants = await _context.Plants.AsNoTracking()
                     .Include(p => p.User)
                     .ToListAsync();
 
@@ -158,6 +160,7 @@ namespace Cuttr.Infrastructure.Repositories
 
             // Query plants whose user's location is within the radius
             var efPlants = await _context.Plants
+                .AsNoTracking()
                 .Include(p => p.User)
                 .Where(p => p.User.Location != null && p.User.Location.Distance(origin) <= radiusMeters)
                 .ToListAsync();

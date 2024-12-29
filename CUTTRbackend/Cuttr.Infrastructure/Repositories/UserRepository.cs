@@ -33,7 +33,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 await _context.Users.AddAsync(efUser);
                 await _context.SaveChangesAsync();
-
+                _context.Entry(efUser).State = EntityState.Detached;
                 // Map back to business entity
                 return EFToBusinessMapper.MapToUser(efUser);
             }
@@ -48,7 +48,7 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var efUser = await _context.Users
+                var efUser = await _context.Users.AsNoTracking()
                     .Include(u => u.Plants)
                     .Include(u => u.Preferences)
                     .FirstOrDefaultAsync(u => u.UserId == userId);
@@ -72,7 +72,7 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var efUser = await _context.Users
+                var efUser = await _context.Users.AsNoTracking()
                     .Include(u => u.Plants)
                     .Include(u => u.Preferences)
                     .FirstOrDefaultAsync(u => u.Email == email);
@@ -100,6 +100,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 _context.Users.Update(efUser);
                 await _context.SaveChangesAsync();
+                _context.Entry(efUser).State = EntityState.Detached;
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -126,6 +127,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 _context.Users.Remove(efUser);
                 await _context.SaveChangesAsync();
+                _context.Entry(efUser).State = EntityState.Detached;
             }
             catch (DbUpdateException ex)
             {
@@ -148,6 +150,7 @@ namespace Cuttr.Infrastructure.Repositories
 
             efUser.Location = point;
             await _context.SaveChangesAsync();
+            _context.Entry(efUser).State = EntityState.Detached;
         }
 
     }

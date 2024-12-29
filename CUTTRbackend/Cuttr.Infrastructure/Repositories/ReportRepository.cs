@@ -2,6 +2,7 @@
 using Cuttr.Business.Interfaces.RepositoryInterfaces;
 using Cuttr.Infrastructure.Exceptions;
 using Cuttr.Infrastructure.Mappers;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -31,7 +32,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 await _context.Reports.AddAsync(efReport);
                 await _context.SaveChangesAsync();
-
+                _context.Entry(efReport).State = EntityState.Detached;
                 return EFToBusinessMapper.MapToReport(efReport);
             }
             catch (Exception ex)

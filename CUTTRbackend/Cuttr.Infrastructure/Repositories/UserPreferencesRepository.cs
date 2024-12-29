@@ -27,16 +27,7 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var efPreferences = await _context.UserPreferences
-                    .Include(up => up.PreferedPlantStage)
-                    .Include(up => up.PreferedPlantCategory)
-                    .Include(up => up.PreferedWateringNeed)
-                    .Include(up => up.PreferedLightRequirement)
-                    .Include(up => up.PreferedSize)
-                    .Include(up => up.PreferedIndoorOutdoor)
-                    .Include(up => up.PreferedPropagationEase)
-                    .Include(up => up.PreferedPetFriendly)
-                    .Include(up => up.PreferedExtras)
+                var efPreferences = await _context.UserPreferences.AsNoTracking()
                     .FirstOrDefaultAsync(up => up.UserId == userId);
 
                 return EFToBusinessMapper.MapToUserPreferences(efPreferences);
@@ -56,7 +47,7 @@ namespace Cuttr.Infrastructure.Repositories
 
                 await _context.UserPreferences.AddAsync(efPreferences);
                 await _context.SaveChangesAsync();
-
+                _context.Entry(efPreferences).State = EntityState.Detached;
                 return EFToBusinessMapper.MapToUserPreferences(efPreferences);
             }
             catch (Exception ex)
@@ -73,6 +64,7 @@ namespace Cuttr.Infrastructure.Repositories
                 var efPreferences = BusinessToEFMapper.MapToUserPreferencesEF(preferences);
                 _context.UserPreferences.Update(efPreferences);
                 await _context.SaveChangesAsync();
+                _context.Entry(efPreferences).State = EntityState.Detached;
             }
             catch (Exception ex)
             {
