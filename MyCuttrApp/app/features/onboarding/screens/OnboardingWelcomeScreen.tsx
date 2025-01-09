@@ -8,7 +8,7 @@ const OnboardingWelcomeScreen: React.FC = () => {
 
   const handleNextPress = () => {
     // Go to the location screen next
-    navigation.navigate('OnboardingLocation' as never);
+    navigation.navigate('OnboardingBio' as never);
   };
 
   return (

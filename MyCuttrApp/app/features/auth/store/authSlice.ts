@@ -176,6 +176,7 @@ export const authSlice = createSlice({
         state.refreshToken = null;
         state.userId = null;
         state.email = null;
+        storage.clearTokens();
       });
   }
 });

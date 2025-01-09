@@ -437,7 +437,11 @@ return response.data;
 },
 updateLocation: async (data: UpdateLocationRequest): Promise<void> => {
 await api.put('/users/me/location', data);
-}
+},
+getCurrentUserProfile: async (): Promise<UserResponse> => {
+const response = await api.get<UserResponse>('/users/me');
+return response.data;
+},
 };
 // File: app\components\index.ts
 
@@ -827,6 +831,7 @@ state.accessToken = null;
 state.refreshToken = null;
 state.userId = null;
 state.email = null;
+storage.clearTokens();
 });
 }
 });
@@ -2604,6 +2609,114 @@ state.error = action.payload as string;
 export const { clearUserProfile } = userSlice.actions;
 // File: app\features\main\types\mainTypes.ts
 
+// File: app\features\onboarding\screens\OnboardingBioScreen.tsx
+const OnboardingBioScreen: React.FC = () => {
+const { t } = useTranslation();
+const navigation = useNavigation();
+const { data: userProfile } = useUserProfile();
+const [bio, setBio] = useState(userProfile?.bio ?? '');
+const handleSkip = () => {
+navigation.navigate('OnboardingLocation' as never);
+};
+const handleSubmitBio = async () => {
+if (!bio) {
+}
+try {
+await userService.updateMe({ name: userProfile?.name ?? '', bio });
+log.debug('Bio updated successfully');
+navigation.navigate('OnboardingLocation' as never);
+} catch (error) {
+Alert.alert('Error', 'Failed to update bio, please try again later.');
+log.error('OnboardingBioScreen handleSubmitBio error:', error);
+}
+};
+return (
+<View style={styles.container}>
+<Text style={styles.title}>{t('onboarding_bio_title') }</Text>
+<Text style={styles.subtitle}>
+{t('onboarding_bio_subtitle') }
+</Text>
+<TextInput
+style={styles.textInput}
+value={bio}
+onChangeText={setBio}
+placeholder={t('onboarding_bio_placeholder') }
+multiline
+/>
+<View style={styles.buttonContainer}>
+<TouchableOpacity onPress={handleSkip} style={[styles.button, styles.skipButton]}>
+<Text style={styles.buttonText}>{t('onboarding_bio_skip_button') }</Text>
+</TouchableOpacity>
+<TouchableOpacity onPress={handleSubmitBio} style={[styles.button, styles.submitButton]}>
+<Text style={styles.buttonText}>{t('onboarding_bio_submit_button') }</Text>
+</TouchableOpacity>
+</View>
+<Text style={styles.note}>
+{t('onboarding_bio_note') }
+</Text>
+</View>
+);
+};
+export default OnboardingBioScreen;
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: '#fff',
+padding: 20,
+justifyContent: 'flex-start',
+},
+title: {
+fontSize: 24,
+fontWeight: '700',
+marginBottom: 10,
+color: '#333',
+},
+subtitle: {
+fontSize: 16,
+marginBottom: 20,
+color: '#555',
+},
+textInput: {
+borderWidth: 1,
+borderColor: '#ccc',
+borderRadius: 8,
+padding: 10,
+fontSize: 14,
+minHeight: 80,
+marginBottom: 20,
+textAlignVertical: 'top',
+backgroundColor: '#fafafa',
+},
+buttonContainer: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+marginBottom: 10,
+},
+button: {
+flex: 0.45,
+paddingVertical: 12,
+borderRadius: 8,
+alignItems: 'center',
+justifyContent: 'center',
+},
+skipButton: {
+backgroundColor: '#ccc',
+},
+submitButton: {
+backgroundColor: '#1EAE98',
+},
+buttonText: {
+color: '#fff',
+fontWeight: '600',
+fontSize: 16,
+},
+note: {
+marginTop: 20,
+fontSize: 14,
+color: '#777',
+textAlign: 'center',
+},
+});
 // File: app\features\onboarding\screens\OnboardingLocationScreen.tsx
 const { width, height } = Dimensions.get('window');
 const OnboardingLocationScreen: React.FC = () => {
@@ -2703,7 +2816,7 @@ textAlign: 'center',
 const OnboardingWelcomeScreen: React.FC = () => {
 const navigation = useNavigation();
 const handleNextPress = () => {
-navigation.navigate('OnboardingLocation' as never);
+navigation.navigate('OnboardingBio' as never);
 };
 return (
 <View style={styles.container}>
@@ -2746,22 +2859,7 @@ textAlign: 'center',
 },
 });
 // File: app\hooks\useAuthToken.ts
-export const useAuthToken = () => {
-const [initializing, setInitializing] = useState(true);
-const [accessToken, setAccessToken] = useState<string | null>(null);
-const [refreshToken, setRefreshToken] = useState<string | null>(null);
-useEffect(() => {
-const loadTokens = async () => {
-const at = await storage.getAccessToken();
-const rt = await storage.getRefreshToken();
-setAccessToken(at);
-setRefreshToken(rt);
-setInitializing(false);
-};
-loadTokens();
-}, []);
-return { initializing, accessToken, refreshToken };
-};
+
 // File: app\hooks\useAxiosErrorHandler.ts
 
 // File: app\hooks\useNetworkStatus.ts
@@ -2834,7 +2932,13 @@ return i18n;
 "add_plant_save_button": "Save",
 "add_plant_cancel_button": "Cancel",
 "add_plant_error_message": "Failed to add plant.",
-"add_plant_no_image_selected": "No image selected."
+"add_plant_no_image_selected": "No image selected.",
+"onboarding_bio_title": "Tell Us About Yourself",
+"onboarding_bio_subtitle": "Add a brief bio so others can know more about you.",
+"onboarding_bio_placeholder": "Your bio here...",
+"onboarding_bio_skip_button": "Skip",
+"onboarding_bio_submit_button": "Save & Continue",
+"onboarding_bio_note": "You can always add or edit your bio later from your profile."
 }
 // File: app\i18n\locales\fr.json
 {
@@ -2891,8 +2995,45 @@ return i18n;
 }
 // File: app\navigation\AppNavigator.tsx
 const AppNavigator = () => {
+const dispatch = useDispatch();
 const { accessToken } = useSelector((state: RootState) => state.auth);
+const { refreshToken } = useSelector((state: RootState) => state.auth);
+const [initializing, setInitializing] = useState(true);
 const { data: userProfile, isLoading: userProfileLoading } = useUserProfile();
+useEffect(() => {
+const initializeAuth = async () => {
+const storedAccessToken = await storage.getAccessToken();
+const storedRefreshToken = await storage.getRefreshToken();
+if (storedAccessToken && storedRefreshToken) {
+dispatch(setInitialTokens({
+accessToken: storedAccessToken,
+refreshToken: storedRefreshToken,
+userId: null,
+email: null,
+}));
+try {
+const profile = await userService.getCurrentUserProfile();
+dispatch(setInitialTokens({
+accessToken: accessToken,
+refreshToken: refreshToken,
+userId: profile.userId,
+email: profile.email,
+}));
+} catch (err) {
+dispatch(logout());
+}
+}
+setInitializing(false);
+};
+initializeAuth();
+}, [dispatch]);
+if (initializing) {
+return (
+<View style={styles.loadingContainer}>
+<ActivityIndicator size="large" color="#1EAE98" />
+</View>
+);
+}
 if (!accessToken) {
 return <AuthNavigator />;
 }
@@ -2978,6 +3119,7 @@ return (
 <Stack.Navigator screenOptions={{ headerShown: false }}>
 {}
 <Stack.Screen name="OnboardingWelcome" component={OnboardingWelcomeScreen} />
+<Stack.Screen name="OnboardingBio" component={OnboardingBioScreen} />
 {}
 <Stack.Screen name="OnboardingLocation" component={OnboardingLocationScreen} />
 </Stack.Navigator>

@@ -27,5 +27,10 @@ export const userService = {
   },
   updateLocation: async (data: UpdateLocationRequest): Promise<void> => {
     await api.put('/users/me/location', data);
-  }
+  },
+
+  getCurrentUserProfile: async (): Promise<UserResponse> => {
+    const response = await api.get<UserResponse>('/users/me');
+    return response.data;
+  },
 };

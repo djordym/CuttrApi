@@ -27,13 +27,11 @@
   "edit_profile_confirm_button": "Confirm",
   "edit_profile_cancel_button": "Cancel",
   "edit_profile_error_message": "Failed to update profile.",
-  
   "change_location_title": "Change Location",
   "change_location_instructions": "Tap on the map to select your location.",
   "change_location_confirm_button": "Confirm",
   "change_location_cancel_button": "Cancel",
   "change_location_error_message": "Failed to update location.",
-  
   "add_plant_title": "Add a New Plant",
   "add_plant_species_name_label": "Species Name",
   "add_plant_description_label": "Description",
@@ -50,5 +48,11 @@
   "add_plant_save_button": "Save",
   "add_plant_cancel_button": "Cancel",
   "add_plant_error_message": "Failed to add plant.",
-  "add_plant_no_image_selected": "No image selected."
+  "add_plant_no_image_selected": "No image selected.",
+  "onboarding_bio_title": "Tell Us About Yourself",
+  "onboarding_bio_subtitle": "Add a brief bio so others can know more about you.",
+  "onboarding_bio_placeholder": "Your bio here...",
+  "onboarding_bio_skip_button": "Skip",
+  "onboarding_bio_submit_button": "Save & Continue",
+  "onboarding_bio_note": "You can always add or edit your bio later from your profile."
 }

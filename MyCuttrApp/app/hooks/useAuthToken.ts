@@ -1,21 +1,23 @@
-import { useEffect, useState } from 'react';
-import { storage } from '../utils/storage';
+//This file is up for deletion
 
-export const useAuthToken = () => {
-  const [initializing, setInitializing] = useState(true);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+// import { useEffect, useState } from 'react';
+// import { storage } from '../utils/storage';
 
-  useEffect(() => {
-    const loadTokens = async () => {
-      const at = await storage.getAccessToken();
-      const rt = await storage.getRefreshToken();
-      setAccessToken(at);
-      setRefreshToken(rt);
-      setInitializing(false);
-    };
-    loadTokens();
-  }, []);
+// export const useAuthToken = () => {
+//   const [initializing, setInitializing] = useState(true);
+//   const [accessToken, setAccessToken] = useState<string | null>(null);
+//   const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
-  return { initializing, accessToken, refreshToken };
-};
+//   useEffect(() => {
+//     const loadTokens = async () => {
+//       const at = await storage.getAccessToken();
+//       const rt = await storage.getRefreshToken();
+//       setAccessToken(at);
+//       setRefreshToken(rt);
+//       setInitializing(false);
+//     };
+//     loadTokens();
+//   }, []);
+
+//   return { initializing, accessToken, refreshToken };
+// };

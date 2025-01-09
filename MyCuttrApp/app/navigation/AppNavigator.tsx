@@ -1,17 +1,70 @@
 // File: app/navigation/AppNavigator.tsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
-import { useUserProfile } from '../features/main/hooks/useUser'; // Already defined in your code
+import { useUserProfile } from '../features/main/hooks/useUser';
+import { storage } from '../utils/storage';
+import { setInitialTokens } from '../features/auth/store/authSlice';
+import { userService } from '../api/userService';
+import { logout } from '../features/auth/store/authSlice';
+import { store } from '../store';
 
 const AppNavigator = () => {
+  const dispatch = useDispatch();
   const { accessToken } = useSelector((state: RootState) => state.auth);
-  // Custom React Query hook that fetches user profile
+  const { refreshToken } = useSelector((state: RootState) => state.auth);
+  const [initializing, setInitializing] = useState(true);
   const { data: userProfile, isLoading: userProfileLoading } = useUserProfile();
+
+// 1. Attempt to load tokens from storage
+useEffect(() => {
+  const initializeAuth = async () => {
+    const storedAccessToken = await storage.getAccessToken();
+    const storedRefreshToken = await storage.getRefreshToken();
+    
+    if (storedAccessToken && storedRefreshToken) {
+      // Put tokens in Redux so subsequent requests include Auth headers
+      dispatch(setInitialTokens({
+        accessToken: storedAccessToken,
+        refreshToken: storedRefreshToken,
+        userId: null, // userId is unknown until we fetch profile
+        email: null,
+      }));
+
+      // 2. Now fetch /me using these tokens
+      try {
+        const profile = await userService.getCurrentUserProfile();
+        // Once we have the profile, save userId and email in Redux
+        dispatch(setInitialTokens({
+          accessToken: store.getState().auth.accessToken,
+          refreshToken: store.getState().auth.refreshToken,
+          userId: profile.userId,
+          email: profile.email,
+        }));
+      } catch (err) {
+        // If /me fails, log out
+        dispatch(logout());
+      }
+    }
+
+    setInitializing(false);
+  };
+
+  initializeAuth();
+}, [dispatch]);
+
+  // Show spinner while initializing tokens
+  if (initializing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1EAE98" />
+      </View>
+    );
+  }
 
   // 1. If no token -> show Auth flow
   if (!accessToken) {

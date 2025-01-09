@@ -68,6 +68,32 @@ namespace Cuttr.Api.Controllers
             }
         }
 
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMeByToken()
+        {
+            try
+            {
+                var userId = User.GetUserId();
+                var userResponse = await _userManager.GetUserByIdAsync(userId);
+                return Ok(userResponse);
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, "User not found.");
+                return NotFound(ex.Message);
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, "Error retrieving user.");
+                return BadRequest(ex.Message);
+            }
+            catch (AuthenticationException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+        }   
+
         // PUT: api/me/users
         [HttpPut("me")]
         public async Task<IActionResult> UpdateUser([FromBody] UserUpdateRequest request)
@@ -200,6 +226,8 @@ namespace Cuttr.Api.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
             }
         }
+
+
 
     }
 }
