@@ -21,9 +21,7 @@ api.interceptors.request.use(
   async (config) => {
     const state: RootState = store.getState();
     const token = state.auth.accessToken; // adapt to your actual auth slice
-    log.debug("Token", token);
     if (token && config.headers) {
-      log.debug("configuring headers for token");
       config.headers.Authorization = `Bearer ${token}`;
     }
     

@@ -12,7 +12,7 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
         Task<User> CreateUserAsync(User user);
         Task<User> GetUserByIdAsync(int userId);
         Task<User> GetUserByEmailAsync(string email);
-        Task UpdateUserAsync(User user);
+        Task UpdateUserNameAndBioAsync(User user);
         Task DeleteUserAsync(int userId);
         Task UpdateUserLocationAsync(int userId, double latitude, double longitude);
     }

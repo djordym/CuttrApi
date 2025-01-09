@@ -19,7 +19,7 @@ import MapView, { Circle } from 'react-native-maps';
 
 import { useUserProfile } from '../hooks/useUser';
 import { useMyPlants } from '../hooks/usePlants';
-import { useSearchRadius } from '../hooks/useSearchRadius'; 
+import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse } from '../../../types/apiTypes';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { ChangeLocationModal } from '../components/ChangeLocationModal';
@@ -36,7 +36,7 @@ const COLORS = {
 };
 
 const MyProfileScreen: React.FC = () => {
-  // 1. Declare all Hooks at the top unconditionally
+  // 1. Declare Hooks at top
   const { t } = useTranslation();
   const navigation = useNavigation();
 
@@ -83,7 +83,7 @@ const MyProfileScreen: React.FC = () => {
     navigation.navigate('AddPlant' as never);
   }, [navigation]);
 
-  // 2. Pre-compute user location without fallback
+  // 2. Check if user has location
   const userHasLocation =
     userProfile?.locationLatitude !== undefined &&
     userProfile?.locationLongitude !== undefined;
@@ -97,7 +97,7 @@ const MyProfileScreen: React.FC = () => {
       }
     : undefined;
 
-  // 3. Plant item renderer
+  // 3. Render each plant
   const renderPlantItem = ({ item }: { item: PlantResponse }) => (
     <View style={styles.plantCard}>
       {item.imageUrl ? (
@@ -115,20 +115,19 @@ const MyProfileScreen: React.FC = () => {
     </View>
   );
 
-  // 4. Decide what to render in a single variable
+  // 4. Decide main content
   let content: JSX.Element;
 
-  // Loading states
   if (loadingProfile || loadingPlants || srLoading) {
+    // Loading
     content = (
       <SafeAreaView style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>{t('profile_loading_message')}</Text>
       </SafeAreaView>
     );
-  }
-  // Error states
-  else if (errorProfile || errorPlants || srError) {
+  } else if (errorProfile || errorPlants || srError) {
+    // Error
     content = (
       <SafeAreaView style={styles.centerContainer}>
         <Text style={styles.errorText}>{t('profile_error_message')}</Text>
@@ -145,9 +144,8 @@ const MyProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </SafeAreaView>
     );
-  }
-  // No user profile
-  else if (!userProfile) {
+  } else if (!userProfile) {
+    // No profile
     content = (
       <SafeAreaView style={styles.centerContainer}>
         <Text style={styles.errorText}>
@@ -155,9 +153,8 @@ const MyProfileScreen: React.FC = () => {
         </Text>
       </SafeAreaView>
     );
-  }
-  // Normal UI
-  else {
+  } else {
+    // Normal UI
     content = (
       <SafeAreaView style={styles.container}>
         {/* HEADER: GRADIENT */}
@@ -215,7 +212,7 @@ const MyProfileScreen: React.FC = () => {
                           latitude: region.latitude,
                           longitude: region.longitude,
                         }}
-                        radius={searchRadius * 1000} // searchRadius is in km -> convert to meters
+                        radius={searchRadius * 1000} // searchRadius in km -> convert to meters
                         strokeWidth={1.5}
                         strokeColor="#1EAE98"
                         fillColor="rgba(30, 174, 152, 0.2)"
@@ -295,10 +292,14 @@ const MyProfileScreen: React.FC = () => {
           onClose={() => setEditProfileVisible(false)}
           onUpdated={handleProfileUpdated}
         />
+        {/**
+         * IMPORTANT: We pass userProfile.locationLatitude and locationLongitude
+         * directly without the `|| undefined` fallback.
+         */}
         <ChangeLocationModal
           visible={changeLocationVisible}
-          initialLatitude={userProfile.locationLatitude || undefined}
-          initialLongitude={userProfile.locationLongitude || undefined}
+          initialLatitude={userProfile.locationLatitude}
+          initialLongitude={userProfile.locationLongitude}
           onClose={() => setChangeLocationVisible(false)}
           onUpdated={handleLocationUpdated}
         />
@@ -306,7 +307,6 @@ const MyProfileScreen: React.FC = () => {
     );
   }
 
-  // 5. Return the final content
   return content;
 };
 
@@ -537,3 +537,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

@@ -1,0 +1,149 @@
+[2025-01-09 10:30:09 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13 ","password":"1234"}
+[2025-01-09 10:30:10 INF] HTTP POST /api/auth/login responded 200 in 1606.5983 ms
+[2025-01-09 10:30:10 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM2NDE1MDEwLCJleHAiOjE3MzY0MTU5MTAsImlhdCI6MTczNjQxNTAxMH0.NHTB0sgJK7GpoTQlgkAuvjoOj7fkxer73bfc6BIsK_A","refreshToken":"VQ4fAmq+/pEyP4QavHAp35NyREhoatacQKqR4YbNRVw=","tokenType":"Bearer","expiresIn":899}}
+[2025-01-09 10:30:10 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 10:30:10 INF] HTTP GET /api/users/17 responded 200 in 116.9830 ms
+[2025-01-09 10:30:10 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2025-01-09 10:30:11 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2025-01-09 10:30:11 INF] HTTP Request Information: GET /api/users/me/plants  
+[2025-01-09 10:30:11 INF] HTTP GET /api/users/me/plants responded 200 in 77.9656 ms
+[2025-01-09 10:30:11 INF] HTTP Response Information: 200 []
+[2025-01-09 10:30:11 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 138.0764 ms
+[2025-01-09 10:30:11 INF] HTTP Response Information: 200 []
+[2025-01-09 10:30:19 INF] HTTP Request Information: GET /api/userpreferences  
+[2025-01-09 10:30:19 INF] HTTP GET /api/userpreferences responded 200 in 35.8219 ms
+[2025-01-09 10:30:19 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}
+[2025-01-09 10:45:13 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13","password":"1234"}
+[2025-01-09 10:45:14 INF] HTTP POST /api/auth/login responded 200 in 327.0227 ms
+[2025-01-09 10:45:14 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM2NDE1OTE0LCJleHAiOjE3MzY0MTY4MTQsImlhdCI6MTczNjQxNTkxNH0.MynROnVIZsJu6vvIm2HCVGHg7UcNd6bR3tUCKskw3QM","refreshToken":"O2HgQJvuJVf7c99WLHpLyA7Owmx8aG/KAvBwYg5T8HI=","tokenType":"Bearer","expiresIn":899}}
+[2025-01-09 10:45:14 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 10:45:14 INF] HTTP GET /api/users/17 responded 200 in 18.3798 ms
+[2025-01-09 10:45:14 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":37.7847356224394,"locationLongitude":-122.4520844221115}
+[2025-01-09 10:45:14 INF] HTTP Request Information: GET /api/users/me/plants  
+[2025-01-09 10:45:14 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2025-01-09 10:45:14 INF] HTTP GET /api/users/me/plants responded 200 in 37.2978 ms
+[2025-01-09 10:45:14 INF] HTTP Response Information: 200 []
+[2025-01-09 10:45:14 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 28.7486 ms
+[2025-01-09 10:45:14 INF] HTTP Response Information: 200 []
+[2025-01-09 10:45:15 INF] HTTP Request Information: GET /api/userpreferences  
+[2025-01-09 10:45:15 INF] HTTP GET /api/userpreferences responded 200 in 15.8011 ms
+[2025-01-09 10:45:15 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}
+[2025-01-09 10:46:01 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":38.73320904498261,"longitude":-117.16189820319416}
+[2025-01-09 10:46:02 INF] HTTP PUT /api/users/me/location responded 204 in 81.4281 ms
+[2025-01-09 10:46:02 INF] HTTP Response Information: 204 
+[2025-01-09 10:46:02 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 10:46:02 INF] HTTP GET /api/users/17 responded 200 in 17.3513 ms
+[2025-01-09 10:46:02 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":38.73320904498261,"locationLongitude":-117.16189820319416}
+[2025-01-09 10:48:13 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":38.73320904498261,"longitude":-117.16189820319416}
+[2025-01-09 10:48:13 INF] HTTP PUT /api/users/me/location responded 204 in 24.6432 ms
+[2025-01-09 10:48:13 INF] HTTP Response Information: 204 
+[2025-01-09 10:48:13 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 10:48:13 INF] HTTP GET /api/users/17 responded 200 in 18.9715 ms
+[2025-01-09 10:48:13 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":38.73320904498261,"locationLongitude":-117.16189820319416}
+[2025-01-09 10:48:58 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13","password":"1234"}
+[2025-01-09 10:48:59 INF] HTTP POST /api/auth/login responded 200 in 250.0170 ms
+[2025-01-09 10:48:59 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM2NDE2MTM5LCJleHAiOjE3MzY0MTcwMzksImlhdCI6MTczNjQxNjEzOX0.73B6Xk9sAlJy4j-KKz2QPc5EdA5cjPB-EO1cMDoSKKY","refreshToken":"o66hQjkyD8O25x0PZ/OIfgNN0e/MZdjWKy7NiBKUVAY=","tokenType":"Bearer","expiresIn":899}}
+[2025-01-09 10:48:59 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 10:48:59 INF] HTTP GET /api/users/17 responded 200 in 16.3355 ms
+[2025-01-09 10:48:59 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":null,"locationLatitude":38.73320904498261,"locationLongitude":-117.16189820319416}
+[2025-01-09 10:48:59 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2025-01-09 10:48:59 INF] HTTP Request Information: GET /api/users/me/plants  
+[2025-01-09 10:48:59 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 44.4675 ms
+[2025-01-09 10:48:59 INF] HTTP Response Information: 200 []
+[2025-01-09 10:48:59 INF] HTTP GET /api/users/me/plants responded 200 in 29.6982 ms
+[2025-01-09 10:48:59 INF] HTTP Response Information: 200 []
+[2025-01-09 10:49:00 INF] HTTP Request Information: GET /api/userpreferences  
+[2025-01-09 10:49:00 INF] HTTP GET /api/userpreferences responded 200 in 16.0997 ms
+[2025-01-09 10:49:00 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}
+[2025-01-09 10:57:22 INF] HTTP Request Information: PUT /api/users/me  {"name":"User","bio":"Hello i am jordy"}
+[2025-01-09 10:57:23 INF] HTTP PUT /api/users/me responded 200 in 124.9939 ms
+[2025-01-09 10:57:23 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy","locationLatitude":38.73320904498261,"locationLongitude":-117.16189820319416}
+[2025-01-09 10:57:23 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 10:57:23 INF] HTTP GET /api/users/17 responded 200 in 20.1780 ms
+[2025-01-09 10:57:23 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy","locationLatitude":null,"locationLongitude":null}
+[2025-01-09 10:57:47 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":37.920320228119635,"longitude":-122.60330200195312}
+[2025-01-09 10:57:47 INF] HTTP PUT /api/users/me/location responded 204 in 31.1156 ms
+[2025-01-09 10:57:47 INF] HTTP Response Information: 204 
+[2025-01-09 10:57:47 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 10:57:47 INF] HTTP GET /api/users/17 responded 200 in 20.6559 ms
+[2025-01-09 10:57:47 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy","locationLatitude":37.920320228119635,"locationLongitude":-122.60330200195312}
+[2025-01-09 10:57:47 INF] HTTP Request Information: GET /api/users/me/plants  
+[2025-01-09 10:57:47 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2025-01-09 10:57:47 INF] HTTP GET /api/users/me/plants responded 200 in 32.4182 ms
+[2025-01-09 10:57:47 INF] HTTP Response Information: 200 []
+[2025-01-09 10:57:47 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 29.4064 ms
+[2025-01-09 10:57:47 INF] HTTP Response Information: 200 []
+[2025-01-09 10:57:48 INF] HTTP Request Information: GET /api/userpreferences  
+[2025-01-09 10:57:48 INF] HTTP GET /api/userpreferences responded 200 in 14.3752 ms
+[2025-01-09 10:57:48 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}
+[2025-01-09 10:58:02 INF] HTTP Request Information: PUT /api/users/me  {"name":"User","bio":"Hello i am jordy gghh"}
+[2025-01-09 10:58:02 INF] HTTP PUT /api/users/me responded 200 in 18.9755 ms
+[2025-01-09 10:58:02 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy gghh","locationLatitude":37.920320228119635,"locationLongitude":-122.60330200195312}
+[2025-01-09 10:58:02 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 10:58:02 INF] HTTP GET /api/users/17 responded 200 in 14.2877 ms
+[2025-01-09 10:58:02 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy gghh","locationLatitude":null,"locationLongitude":null}
+[2025-01-09 11:11:37 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":37.75968834189073,"longitude":-122.4589019268751}
+[2025-01-09 11:11:37 INF] HTTP PUT /api/users/me/location responded 401 in 124.7170 ms
+[2025-01-09 11:11:37 INF] HTTP Response Information: 401 
+[2025-01-09 11:11:37 INF] HTTP Request Information: POST /api/auth/refresh  {"refreshToken":"o66hQjkyD8O25x0PZ/OIfgNN0e/MZdjWKy7NiBKUVAY="}
+[2025-01-09 11:11:38 INF] HTTP POST /api/auth/refresh responded 200 in 646.8447 ms
+[2025-01-09 11:11:38 INF] HTTP Response Information: 200 {"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM2NDE3NDk3LCJleHAiOjE3MzY0MTgzOTcsImlhdCI6MTczNjQxNzQ5N30.h0V8yOWGv7DTqasshYbhqC1FzGmagUfUl2nv2s8j89c","refreshToken":"6QqtWgKzDeD/YGCO15Og3mugjtNTwqXm8HeKN9ghXWE=","tokenType":"Bearer","expiresIn":899}
+[2025-01-09 11:11:38 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":37.75968834189073,"longitude":-122.4589019268751}
+[2025-01-09 11:11:38 INF] HTTP PUT /api/users/me/location responded 204 in 134.5086 ms
+[2025-01-09 11:11:38 INF] HTTP Response Information: 204 
+[2025-01-09 11:11:38 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 11:11:38 INF] HTTP GET /api/users/17 responded 200 in 37.9829 ms
+[2025-01-09 11:11:38 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy gghh","locationLatitude":37.75968834189073,"locationLongitude":-122.4589019268751}
+[2025-01-09 11:11:38 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2025-01-09 11:11:38 INF] HTTP Request Information: GET /api/users/me/plants  
+[2025-01-09 11:11:38 INF] HTTP GET /api/users/me/plants responded 200 in 45.6978 ms
+[2025-01-09 11:11:38 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 60.1528 ms
+[2025-01-09 11:11:38 INF] HTTP Response Information: 200 []
+[2025-01-09 11:11:38 INF] HTTP Response Information: 200 []
+[2025-01-09 11:12:41 INF] HTTP Request Information: GET /api/userpreferences  
+[2025-01-09 11:12:41 INF] HTTP GET /api/userpreferences responded 200 in 34.2350 ms
+[2025-01-09 11:12:41 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}
+[2025-01-09 11:12:53 INF] HTTP Request Information: PUT /api/users/me  {"name":"User","bio":"Hello i am jordy gghhggg"}
+[2025-01-09 11:23:41 INF] HTTP Request Information: PUT /api/users/me  {"name":"User","bio":"Hello i am jordy gghhgggvgg"}
+[2025-01-09 11:23:46 INF] HTTP PUT /api/users/me responded 200 in 4862.5736 ms
+[2025-01-09 11:23:46 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy gghhgggvgg","locationLatitude":37.75968834189073,"locationLongitude":-122.4589019268751}
+[2025-01-09 11:23:46 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 11:23:46 INF] HTTP GET /api/users/17 responded 200 in 56.6115 ms
+[2025-01-09 11:23:46 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy gghhgggvgg","locationLatitude":null,"locationLongitude":null}
+[2025-01-09 11:24:24 INF] HTTP Request Information: PUT /api/users/me/location  {"latitude":37.765912857647116,"longitude":-122.45083618909122}
+[2025-01-09 11:24:25 INF] HTTP PUT /api/users/me/location responded 204 in 643.9066 ms
+[2025-01-09 11:24:25 INF] HTTP Response Information: 204 
+[2025-01-09 11:24:25 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 11:24:25 INF] HTTP GET /api/users/17 responded 200 in 80.8473 ms
+[2025-01-09 11:24:25 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy gghhgggvgg","locationLatitude":37.765912857647116,"locationLongitude":-122.45083618909122}
+[2025-01-09 11:24:25 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2025-01-09 11:24:25 INF] HTTP Request Information: GET /api/users/me/plants  
+[2025-01-09 11:24:26 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 87.4068 ms
+[2025-01-09 11:24:26 INF] HTTP GET /api/users/me/plants responded 200 in 85.5725 ms
+[2025-01-09 11:24:26 INF] HTTP Response Information: 200 []
+[2025-01-09 11:24:26 INF] HTTP Response Information: 200 []
+[2025-01-09 11:24:27 INF] HTTP Request Information: GET /api/userpreferences  
+[2025-01-09 11:24:27 INF] HTTP GET /api/userpreferences responded 200 in 34.2717 ms
+[2025-01-09 11:24:27 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}
+[2025-01-09 11:24:31 INF] HTTP Request Information: PUT /api/users/me  {"name":"User","bio":"Hello i am jordy gghhgggvgggghh"}
+[2025-01-09 11:25:17 INF] HTTP Request Information: PUT /api/users/me  {"name":"User","bio":"Hello i am jordy gghhgggvgggghh"}
+[2025-01-09 11:25:17 INF] HTTP PUT /api/users/me responded 200 in 650.5946 ms
+[2025-01-09 11:25:17 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy gghhgggvgggghh","locationLatitude":37.765912857647116,"locationLongitude":-122.45083618909122}
+[2025-01-09 11:25:18 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 11:25:18 INF] HTTP GET /api/users/17 responded 200 in 59.5172 ms
+[2025-01-09 11:25:18 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy gghhgggvgggghh","locationLatitude":37.765912857647116,"locationLongitude":-122.45083618909122}
+[2025-01-09 11:29:06 INF] HTTP Request Information: POST /api/auth/login  {"email":"User13 ","password":"1234"}
+[2025-01-09 11:29:07 INF] HTTP POST /api/auth/login responded 200 in 642.0100 ms
+[2025-01-09 11:29:07 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","tokens":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxNyIsImVtYWlsIjoiVXNlcjEzIiwidW5pcXVlX25hbWUiOiJVc2VyIiwibmJmIjoxNzM2NDE4NTQ3LCJleHAiOjE3MzY0MTk0NDcsImlhdCI6MTczNjQxODU0N30.o11GAvPr0oZG3G_AhGqhSnPHusqWeGZmuC2UdCrtePg","refreshToken":"vL+aYmdc1wapDq+vmy/3cQ+MvIMp72R2DCFLoG0X6kQ=","tokenType":"Bearer","expiresIn":899}}
+[2025-01-09 11:29:07 INF] HTTP Request Information: GET /api/users/17  
+[2025-01-09 11:29:07 INF] HTTP GET /api/users/17 responded 200 in 17.7013 ms
+[2025-01-09 11:29:07 INF] HTTP Response Information: 200 {"userId":17,"email":"User13","name":"User","profilePictureUrl":null,"bio":"Hello i am jordy gghhgggvgggghh","locationLatitude":37.765912857647116,"locationLongitude":-122.45083618909122}
+[2025-01-09 11:29:07 INF] HTTP Request Information: GET /api/swipes/me/likable-plants  
+[2025-01-09 11:29:07 INF] HTTP Request Information: GET /api/users/me/plants  
+[2025-01-09 11:29:07 INF] HTTP GET /api/users/me/plants responded 200 in 50.8060 ms
+[2025-01-09 11:29:07 INF] HTTP Response Information: 200 []
+[2025-01-09 11:29:07 INF] HTTP GET /api/swipes/me/likable-plants responded 200 in 74.3044 ms
+[2025-01-09 11:29:07 INF] HTTP Response Information: 200 []
+[2025-01-09 11:29:08 INF] HTTP Request Information: GET /api/userpreferences  
+[2025-01-09 11:29:08 INF] HTTP GET /api/userpreferences responded 200 in 30.8432 ms
+[2025-01-09 11:29:08 INF] HTTP Response Information: 200 {"userId":17,"searchRadius":10000,"preferedPlantStage":[],"preferedPlantCategory":[],"preferedWateringNeed":[],"preferedLightRequirement":[],"preferedSize":[],"preferedIndoorOutdoor":[],"preferedPropagationEase":[],"preferedPetFriendly":[],"preferedExtras":[]}

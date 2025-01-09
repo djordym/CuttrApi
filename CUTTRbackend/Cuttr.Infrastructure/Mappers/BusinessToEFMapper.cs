@@ -1,6 +1,7 @@
 ﻿using Cuttr.Business.Entities;
 using Cuttr.Business.Enums;
 using Cuttr.Infrastructure.Entities;
+using NetTopologySuite.Geometries;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,18 @@ namespace Cuttr.Infrastructure.Mappers
             if (user == null)
                 return null;
 
+            NetTopologySuite.Geometries.Point location = null;
+            if (user.LocationLongitude.HasValue && user.LocationLatitude.HasValue)
+            {
+                location = new NetTopologySuite.Geometries.Point(
+                    user.LocationLongitude.Value,
+                    user.LocationLatitude.Value
+                )
+                {
+                    SRID = 4326
+                };
+            }
+
             return new UserEF
             {
                 UserId = user.UserId,
@@ -27,6 +40,7 @@ namespace Cuttr.Infrastructure.Mappers
                 Bio = user.Bio,
                 Plants = user.Plants?.Select(MapToPlantEFWithoutUser).ToList(),
                 Preferences = MapToUserPreferencesEF(user.Preferences),
+                Location = location,
                 // CreatedAt and UpdatedAt are handled by EF Core
             };
         }

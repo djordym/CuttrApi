@@ -127,7 +127,7 @@ namespace Cuttr.Business.Managers
                 // Update user properties
                 ContractToBusinessMapper.MapToUser(request, user);
 
-                await _userRepository.UpdateUserAsync(user);
+                await _userRepository.UpdateUserNameAndBioAsync(user);
 
                 return BusinessToContractMapper.MapToUserResponse(user);
             }
@@ -191,7 +191,7 @@ namespace Cuttr.Business.Managers
                     user.ProfilePictureUrl = imageUrl;
                 }
 
-                await _userRepository.UpdateUserAsync(user);
+                await _userRepository.UpdateUserNameAndBioAsync(user);
 
                 return BusinessToContractMapper.MapToUserResponse(user);
             }

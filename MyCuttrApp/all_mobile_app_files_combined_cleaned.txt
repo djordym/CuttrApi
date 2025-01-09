@@ -228,9 +228,7 @@ api.interceptors.request.use(
 async (config) => {
 const state: RootState = store.getState();
 const token = state.auth.accessToken;
-log.debug("Token", token);
 if (token && config.headers) {
-log.debug("configuring headers for token");
 config.headers.Authorization = `Bearer ${token}`;
 }
 log.debug("API Request", {
@@ -534,6 +532,8 @@ textAlign:'center'
 // File: app\components\feedback\ErrorState.tsx
 
 // File: app\components\feedback\LoadingSpinner.tsx
+
+// File: app\context\AuthContext.tsx
 
 // File: app\features\auth\index.ts
 
@@ -843,69 +843,167 @@ initialLongitude?: number;
 onClose: () => void;
 onUpdated: () => void;
 }
-export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({ visible, initialLatitude, initialLongitude, onClose, onUpdated }) => {
+export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
+visible,
+initialLatitude,
+initialLongitude,
+onClose,
+onUpdated,
+}) => {
+const { t } = useTranslation();
+const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState<string | null>(null);
+const hasInitialCoords =
+typeof initialLatitude === 'number' &&
+!Number.isNaN(initialLatitude) &&
+typeof initialLongitude === 'number' &&
+!Number.isNaN(initialLongitude);
+useEffect(() => {
+if (visible) {
+if (hasInitialCoords) {
+setMarkerPosition({ lat: initialLatitude!, lng: initialLongitude! });
+} else {
+setMarkerPosition(null);
+}
+}
+}, [visible, hasInitialCoords, initialLatitude, initialLongitude]);
+const handleMapPress = (e: MapPressEvent) => {
+const { coordinate } = e.nativeEvent;
+setMarkerPosition({ lat: coordinate.latitude, lng: coordinate.longitude });
+};
+const handleConfirm = async () => {
+if (!markerPosition) {
+return onClose();
+}
+setLoading(true);
+setError(null);
+const payload: UpdateLocationRequest = {
+latitude: markerPosition.lat,
+longitude: markerPosition.lng,
+};
+try {
+await userService.updateLocation(payload);
+onUpdated();
+onClose();
+} catch {
+setError(t('change_location_error_message'));
+} finally {
+setLoading(false);
+}
+};
+const handleCancel = () => {
+onClose();
+};
 return (
 <Modal visible={visible} animationType="slide" transparent>
+<View style={styles.overlay}>
+<View style={styles.modalContainer}>
+<Text style={styles.title}>{t('change_location_title')}</Text>
+<Text style={styles.subtitle}>{t('change_location_instructions')}</Text>
+{error && <Text style={styles.errorText}>{error}</Text>}
+<View style={styles.mapContainer}>
+<MapView
+style={{ flex: 1 }}
+initialRegion={{
+latitude: hasInitialCoords ? initialLatitude! : 37.78825,
+longitude: hasInitialCoords ? initialLongitude! : -122.4324,
+latitudeDelta: 0.0922,
+longitudeDelta: 0.0421,
+}}
+onPress={handleMapPress}
+>
+{markerPosition && (
+<Marker
+coordinate={{
+latitude: markerPosition.lat,
+longitude: markerPosition.lng,
+}}
+/>
+)}
+</MapView>
+</View>
+{loading && (
+<ActivityIndicator size="small" color="#1EAE98" style={{ marginVertical: 10 }} />
+)}
+<View style={styles.actions}>
+<TouchableOpacity
+onPress={handleCancel}
+style={styles.cancelButton}
+accessibilityRole="button"
+>
+<Text style={styles.cancelButtonText}>{t('change_location_cancel_button')}</Text>
+</TouchableOpacity>
+<TouchableOpacity
+onPress={handleConfirm}
+style={styles.confirmButton}
+accessibilityRole="button"
+>
+<Text style={styles.confirmButtonText}>{t('change_location_confirm_button')}</Text>
+</TouchableOpacity>
+</View>
+</View>
+</View>
 </Modal>
-)
+);
 };
 const styles = StyleSheet.create({
-overlay:{
-flex:1,
-backgroundColor:'rgba(0,0,0,0.5)',
-justifyContent:'center',
-alignItems:'center'
+overlay: {
+flex: 1,
+backgroundColor: 'rgba(0,0,0,0.5)',
+justifyContent: 'center',
+alignItems: 'center',
 },
-modalContainer:{
-width:'90%',
-height:'80%',
-backgroundColor:'#fff',
-borderRadius:16,
-padding:20
+modalContainer: {
+width: '90%',
+height: '80%',
+backgroundColor: '#fff',
+borderRadius: 16,
+padding: 20,
 },
-title:{
-fontSize:18,
-fontWeight:'700',
-color:'#333',
-marginBottom:10
+title: {
+fontSize: 18,
+fontWeight: '700',
+color: '#333',
+marginBottom: 10,
 },
-subtitle:{
-fontSize:14,
-color:'#555',
-marginBottom:10
+subtitle: {
+fontSize: 14,
+color: '#555',
+marginBottom: 10,
 },
-errorText:{
-color:'#FF6B6B',
-marginBottom:10
+errorText: {
+color: '#FF6B6B',
+marginBottom: 10,
 },
-mapContainer:{
-flex:1,
-borderRadius:8,
-overflow:'hidden',
-marginBottom:10
+mapContainer: {
+flex: 1,
+borderRadius: 8,
+overflow: 'hidden',
+marginBottom: 10,
 },
-actions:{
-flexDirection:'row',
-justifyContent:'flex-end'
+actions: {
+flexDirection: 'row',
+justifyContent: 'flex-end',
 },
-cancelButton:{
-marginRight:10
+cancelButton: {
+marginRight: 10,
 },
-cancelButtonText:{
-fontSize:16,
-color:'#333'
+cancelButtonText: {
+fontSize: 16,
+color: '#333',
 },
-confirmButton:{
-backgroundColor:'#1EAE98',
-paddingHorizontal:15,
-paddingVertical:10,
-borderRadius:8
+confirmButton: {
+backgroundColor: '#1EAE98',
+paddingHorizontal: 15,
+paddingVertical: 10,
+borderRadius: 8,
 },
-confirmButtonText:{
-fontSize:16,
-color:'#fff',
-fontWeight:'600'
-}
+confirmButtonText: {
+fontSize: 16,
+color: '#fff',
+fontWeight: '600',
+},
 });
 // File: app\features\main\components\EditProfileModal.tsx
 interface EditProfileModalProps {
@@ -1371,6 +1469,15 @@ updatePreferences: mutation.mutate,
 isUpdating: mutation.isLoading
 };
 };
+// File: app\features\main\hooks\useSearchRadius.ts
+export const useSearchRadius = () => {
+const { data: preferences, isLoading, isError } = useUserPreferences();
+return {
+searchRadius: preferences?.searchRadius ?? 0,
+isLoading,
+isError,
+};
+};
 // File: app\features\main\hooks\useSwipe.ts
 export const useLikablePlants = () => {
 const query = useQuery<PlantResponse[], Error>(
@@ -1584,7 +1691,6 @@ ActivityIndicator,
 TouchableOpacity,
 FlatList,
 Image,
-Alert,
 Dimensions,
 Platform,
 } from 'react-native';
@@ -1598,7 +1704,7 @@ textLight: '#FFFFFF',
 cardBg: '#FFFFFF',
 border: '#ddd',
 };
-const ProfileScreen: React.FC = () => {
+const MyProfileScreen: React.FC = () => {
 const { t } = useTranslation();
 const navigation = useNavigation();
 const {
@@ -1613,6 +1719,11 @@ isLoading: loadingPlants,
 isError: errorPlants,
 refetch: refetchPlants,
 } = useMyPlants();
+const {
+searchRadius,
+isLoading: srLoading,
+isError: srError,
+} = useSearchRadius();
 const [editProfileVisible, setEditProfileVisible] = useState(false);
 const [changeLocationVisible, setChangeLocationVisible] = useState(false);
 const handleEditProfile = useCallback(() => {
@@ -1630,6 +1741,17 @@ refetchProfile();
 const handleAddPlant = useCallback(() => {
 navigation.navigate('AddPlant' as never);
 }, [navigation]);
+const userHasLocation =
+userProfile?.locationLatitude !== undefined &&
+userProfile?.locationLongitude !== undefined;
+const region = userHasLocation
+? {
+latitude: userProfile.locationLatitude!,
+longitude: userProfile.locationLongitude!,
+latitudeDelta: 0.05,
+longitudeDelta: 0.05,
+}
+: undefined;
 const renderPlantItem = ({ item }: { item: PlantResponse }) => (
 <View style={styles.plantCard}>
 {item.imageUrl ? (
@@ -1646,16 +1768,16 @@ const renderPlantItem = ({ item }: { item: PlantResponse }) => (
 </View>
 </View>
 );
-if (loadingProfile || loadingPlants) {
-return (
+let content: JSX.Element;
+if (loadingProfile || loadingPlants || srLoading) {
+content = (
 <SafeAreaView style={styles.centerContainer}>
 <ActivityIndicator size="large" color={COLORS.primary} />
 <Text style={styles.loadingText}>{t('profile_loading_message')}</Text>
 </SafeAreaView>
 );
-}
-if (errorProfile || errorPlants) {
-return (
+} else if (errorProfile || errorPlants || srError) {
+content = (
 <SafeAreaView style={styles.centerContainer}>
 <Text style={styles.errorText}>{t('profile_error_message')}</Text>
 <TouchableOpacity
@@ -1665,19 +1787,22 @@ refetchPlants();
 }}
 style={styles.retryButton}
 >
-<Text style={styles.retryButtonText}>{t('profile_retry_button')}</Text>
+<Text style={styles.retryButtonText}>
+{t('profile_retry_button')}
+</Text>
 </TouchableOpacity>
 </SafeAreaView>
 );
-}
-if (!userProfile) {
-return null;
-}
-const userLocation =
-userProfile.locationLatitude && userProfile.locationLongitude
-? `Lat: ${userProfile.locationLatitude.toFixed(2)}, Lng: ${userProfile.locationLongitude.toFixed(2)}`
-: t('profile_no_location');
-return (
+} else if (!userProfile) {
+content = (
+<SafeAreaView style={styles.centerContainer}>
+<Text style={styles.errorText}>
+{t('profile_no_user_profile_error')}
+</Text>
+</SafeAreaView>
+);
+} else {
+content = (
 <SafeAreaView style={styles.container}>
 {}
 <LinearGradient
@@ -1702,11 +1827,7 @@ style={styles.profilePicture}
 />
 ) : (
 <View style={styles.profilePlaceholder}>
-<Ionicons
-name="person-circle-outline"
-size={90}
-color="#ccc"
-/>
+<Ionicons name="person-circle-outline" size={90} color="#ccc" />
 </View>
 )}
 <View style={styles.profileTextSection}>
@@ -1721,11 +1842,31 @@ color="#ccc"
 </Text>
 </>
 ) : null}
+{}
 <View style={styles.profileLocationSection}>
 <Text style={styles.profileLabel}>
 {t('profile_location_label')}:
 </Text>
-<Text style={styles.profileValue}>{userLocation}</Text>
+{userHasLocation ? (
+<View style={styles.mapContainer}>
+<MapView style={styles.map} initialRegion={region}>
+<Circle
+center={{
+latitude: region.latitude,
+longitude: region.longitude,
+}}
+radius={searchRadius * 1000}
+strokeWidth={1.5}
+strokeColor="#1EAE98"
+fillColor="rgba(30, 174, 152, 0.2)"
+/>
+</MapView>
+</View>
+) : (
+<Text style={styles.profileValue}>
+{t('profile_no_location')}
+</Text>
+)}
 </View>
 <TouchableOpacity
 onPress={handleChangeLocation}
@@ -1790,17 +1931,20 @@ initialBio={userProfile.bio || ''}
 onClose={() => setEditProfileVisible(false)}
 onUpdated={handleProfileUpdated}
 />
+{}
 <ChangeLocationModal
 visible={changeLocationVisible}
-initialLatitude={userProfile.locationLatitude || undefined}
-initialLongitude={userProfile.locationLongitude || undefined}
+initialLatitude={userProfile.locationLatitude}
+initialLongitude={userProfile.locationLongitude}
 onClose={() => setChangeLocationVisible(false)}
 onUpdated={handleLocationUpdated}
 />
 </SafeAreaView>
 );
+}
+return content;
 };
-export default ProfileScreen;
+export default MyProfileScreen;
 const styles = StyleSheet.create({
 container: {
 flex: 1,
@@ -1899,6 +2043,18 @@ marginBottom: 8,
 },
 profileLocationSection: {
 marginTop: 6,
+},
+mapContainer: {
+marginTop: 6,
+width: 200,
+height: 120,
+borderRadius: 8,
+overflow: 'hidden',
+backgroundColor: '#ddd',
+},
+map: {
+width: '100%',
+height: '100%',
 },
 locationButton: {
 flexDirection: 'row',
@@ -2853,6 +3009,8 @@ log.debug("Redux Action Dispatched", { type: action.type, payload: action.payloa
 const result = next(action);
 return result;
 };
+// File: app\store\middlewares\tokenRefreshMiddleware.ts
+
 // File: app\store\slices\globalErrorSlice.ts
 interface GlobalErrorState {
 message: string | null;
