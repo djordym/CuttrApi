@@ -140,9 +140,6 @@ builder.Services.AddSwaggerGen(options =>
 // Configure JWT Authentication
 var secretKey = builder.Configuration["Jwt:Secret"];
 var testforconfig = builder.Configuration["ConnectionStrings:CuttrDb"];
-Console.WriteLine(testforconfig);
-Console.WriteLine("secretkey on next line");
-Console.WriteLine(secretKey);
 var key = Encoding.UTF8.GetBytes(secretKey);
 
 builder.Services
