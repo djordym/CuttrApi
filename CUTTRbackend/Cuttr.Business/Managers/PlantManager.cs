@@ -53,6 +53,7 @@ namespace Cuttr.Business.Managers
 
                 var plant = ContractToBusinessMapper.MapToPlant(request.PlantDetails);
                 plant.ImageUrl = imageUrl;
+                plant.UserId = userId;
 
                 var createdPlant = await _plantRepository.AddPlantAsync(plant);
 

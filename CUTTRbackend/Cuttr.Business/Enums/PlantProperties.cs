@@ -8,8 +8,9 @@ namespace Cuttr.Business.Enums
 {
     public enum PlantStage
     {
+        Seedling,
         Cutting,
-        GrownPlantTree
+        Mature
     }
 
     public enum PlantCategory
@@ -21,7 +22,9 @@ namespace Cuttr.Business.Enums
         Herb,          // Culinary or medicinal plants (e.g., Basil, Rosemary)
         Palm,          // Tropical trees with fronds, often indoor-friendly
         LeafyHouseplant, // General category for common indoor foliage varieties (e.g., Pothos)
-        FloweringHouseplant, // General category for common indoor flowering varieties (e.g., African Violet)
+        AquaticPlant,
+        ClimbingPlant,
+        Tree,          // Woody plants with a single trunk
         Other          // Catch-all for plants not fitting any category above
     }
 
@@ -37,8 +40,9 @@ namespace Cuttr.Business.Enums
     public enum LightRequirement
     {
         FullSun,
-        PartialShade,
-        Shade
+        PartialSun,
+        BrightIndirectLight,
+        LowLight
     }
 
     public enum Size

@@ -16,7 +16,6 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Circle } from 'react-native-maps';
-
 import { useUserProfile } from '../hooks/useUser';
 import { useMyPlants } from '../hooks/usePlants';
 import { useSearchRadius } from '../hooks/useSearchRadius';

@@ -1,9 +1,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import MyProfileScreen from '../features/main/screens/MyProfileScreen';
 import SettingsScreen from '../features/main/screens/SettingsScreen';
 import SwipeScreen from '../features/main/screens/SwipeScreen';
 import { Image, StyleSheet } from 'react-native';
+import ProfileStackNavigator from './ProfileStackNavigator';
 
 const Tab = createBottomTabNavigator();
 
@@ -36,7 +36,7 @@ const MainNavigator = () => {
       })}
     >
       <Tab.Screen name="Swipe" component={SwipeScreen}/>
-      <Tab.Screen name="Profile" component={MyProfileScreen}/>
+      <Tab.Screen name="Profile" component={ProfileStackNavigator}/>
       <Tab.Screen name="Settings" component={SettingsScreen}/>
     </Tab.Navigator>
   );

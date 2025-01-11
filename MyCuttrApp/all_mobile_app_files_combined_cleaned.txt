@@ -82,6 +82,7 @@ plugins: ['react-native-reanimated/plugin'],
 "expo-constants": "~17.0.3",
 "expo-font": "~13.0.2",
 "expo-haptics": "~14.0.0",
+"expo-image-manipulator": "^13.0.5",
 "expo-image-picker": "^16.0.3",
 "expo-linear-gradient": "~14.0.1",
 "expo-linking": "~7.0.3",
@@ -339,25 +340,70 @@ return response.data;
 }
 };
 // File: app\api\plantService.ts
+PlantCreateRequest,
+PlantResponse,
+PlantRequest,
+} from "../types/apiTypes";
 export const plantService = {
 addMyPlant: async (data: PlantCreateRequest): Promise<PlantResponse> => {
 const formData = new FormData();
-formData.append('Image', data.Image);
-formData.append('SpeciesName', data.PlantDetails.SpeciesName);
-formData.append('Description', data.PlantDetails.Description);
-formData.append('PlantStage', data.PlantDetails.PlantStage);
-formData.append('PlantCategory', data.PlantDetails.PlantCategory);
-formData.append('WateringNeed', data.PlantDetails.WateringNeed);
-formData.append('LightRequirement', data.PlantDetails.LightRequirement);
-if (data.PlantDetails.Size) formData.append('Size', data.PlantDetails.Size);
-if (data.PlantDetails.IndoorOutdoor) formData.append('IndoorOutdoor', data.PlantDetails.IndoorOutdoor);
-if (data.PlantDetails.PropagationEase) formData.append('PropagationEase', data.PlantDetails.PropagationEase);
-if (data.PlantDetails.PetFriendly) formData.append('PetFriendly', data.PlantDetails.PetFriendly);
-if (data.PlantDetails.Extras) {
-data.PlantDetails.Extras.forEach((extra) => formData.append('Extras', extra));
+formData.append("Image", data.image);
+formData.append("PlantDetails.SpeciesName", data.plantDetails.speciesName);
+formData.append(
+"PlantDetails.PlantStage",
+String(data.plantDetails.plantStage)
+);
+formData.append(
+"PlantDetails.Description",
+data.plantDetails.description ?? ""
+);
+formData.append(
+"PlantDetails.PlantCategory",
+data.plantDetails.plantCategory != null
+? String(data.plantDetails.plantCategory)
+: ""
+);
+formData.append(
+"PlantDetails.WateringNeed",
+data.plantDetails.wateringNeed != null
+? String(data.plantDetails.wateringNeed)
+: ""
+);
+formData.append(
+"PlantDetails.LightRequirement",
+data.plantDetails.lightRequirement != null
+? String(data.plantDetails.lightRequirement)
+: ""
+);
+formData.append(
+"PlantDetails.Size",
+data.plantDetails.size != null ? String(data.plantDetails.size) : ""
+);
+formData.append(
+"PlantDetails.IndoorOutdoor",
+data.plantDetails.indoorOutdoor != null
+? String(data.plantDetails.indoorOutdoor)
+: ""
+);
+formData.append(
+"PlantDetails.PropagationEase",
+data.plantDetails.propagationEase != null
+? String(data.plantDetails.propagationEase)
+: ""
+);
+formData.append(
+"PlantDetails.PetFriendly",
+data.plantDetails.petFriendly != null
+? String(data.plantDetails.petFriendly)
+: ""
+);
+if (data.plantDetails.extras && data.plantDetails.extras.length > 0) {
+data.plantDetails.extras.forEach((extra) => {
+formData.append("PlantDetails.Extras", String(extra));
+});
 }
-const response = await api.post<PlantResponse>('/plants/me', formData, {
-headers: { 'Content-Type': 'multipart/form-data' }
+const response = await api.post<PlantResponse>("/plants/me", formData, {
+headers: { "Content-Type": "multipart/form-data" },
 });
 return response.data;
 },
@@ -365,8 +411,14 @@ getPlantById: async (plantId: number): Promise<PlantResponse> => {
 const response = await api.get<PlantResponse>(`/plants/${plantId}`);
 return response.data;
 },
-updateMyPlant: async (plantId: number, data: PlantRequest): Promise<PlantResponse> => {
-const response = await api.put<PlantResponse>(`/plants/me/${plantId}`, data);
+updateMyPlant: async (
+plantId: number,
+data: PlantRequest
+): Promise<PlantResponse> => {
+const response = await api.put<PlantResponse>(
+`/plants/me/${plantId}`,
+data
+);
 return response.data;
 },
 deleteMyPlant: async (plantId: number): Promise<void> => {
@@ -377,9 +429,9 @@ const response = await api.get<PlantResponse[]>(`/users/${userId}/plants`);
 return response.data;
 },
 getMyPlants: async (): Promise<PlantResponse[]> => {
-const response = await api.get<PlantResponse[]>('/users/me/plants');
+const response = await api.get<PlantResponse[]>("/users/me/plants");
 return response.data;
-}
+},
 };
 // File: app\api\reportService.ts
 export const reportService = {
@@ -1514,173 +1566,557 @@ staleTime: 1000 * 60 * 5
 );
 };
 // File: app\features\main\screens\AddPlantScreen.tsx
+View,
+Text,
+StyleSheet,
+TouchableOpacity,
+ScrollView,
+Image,
+Alert,
+TextInput,
+ActivityIndicator,
+Platform,
+} from 'react-native';
+PlantCreateRequest,
+PlantRequest,
+} from '../../../types/apiTypes';
+PlantCategory,
+PlantStage,
+WateringNeed,
+LightRequirement,
+Size,
+IndoorOutdoor,
+PropagationEase,
+PetFriendly,
+Extras,
+} from '../../../types/enums';
+const SingleSelectTagGroup = <T extends string | number>({
+values,
+selectedValue,
+onSelect,
+isRequired,
+}: {
+values: T[];
+selectedValue: T | null;
+onSelect: (val: T | null) => void;
+isRequired?: boolean;
+}) => {
+return (
+<View style={styles.tagGroupContainer}>
+{values.map((val) => {
+const isSelected = val === selectedValue;
+return (
+<TouchableOpacity
+key={String(val)}
+style={[
+styles.singleTag,
+isSelected && styles.singleTagSelected,
+]}
+onPress={() => {
+if (isRequired) {
+onSelect(val);
+} else {
+onSelect(isSelected ? null : val);
+}
+}}
+>
+<Text
+style={[
+styles.singleTagText,
+isSelected && styles.singleTagTextSelected,
+]}
+>
+{val}
+</Text>
+</TouchableOpacity>
+);
+})}
+</View>
+);
+};
 const AddPlantScreen: React.FC = () => {
 const { t } = useTranslation();
+const navigation = useNavigation();
 const [speciesName, setSpeciesName] = useState('');
-const [description, setDescription] = useState('');
-const [stage, setStage] = useState<PlantStage>(PlantStage.Cutting);
-const [category, setCategory] = useState<PlantCategory>(PlantCategory.Other);
-const [watering, setWatering] = useState<WateringNeed>(WateringNeed.ModerateWater);
-const [light, setLight] = useState<LightRequirement>(LightRequirement.PartialShade);
+const [stage, setStage] = useState<PlantStage | null>(null);
 const [image, setImage] = useState<any>(null);
+const queryClient = useQueryClient();
+const [category, setCategory] = useState<PlantCategory | null>(null);
+const [watering, setWatering] = useState<WateringNeed | null>(null);
+const [light, setLight] = useState<LightRequirement | null>(null);
+const [size, setSize] = useState<Size | null>(null);
+const [indoorOutdoor, setIndoorOutdoor] = useState<IndoorOutdoor | null>(null);
+const [propagationEase, setPropagationEase] = useState<PropagationEase | null>(
+null
+);
+const [petFriendly, setPetFriendly] = useState<PetFriendly | null>(null);
+const [selectedExtras, setSelectedExtras] = useState<Extras[]>([]);
+const [description, setDescription] = useState('');
 const [loading, setLoading] = useState(false);
 const [error, setError] = useState<string | null>(null);
-const handleSelectImage = async () => {
-let result = await ImagePicker.launchImageLibraryAsync({
+const handleSelectImageOption = async () => {
+Alert.alert(
+t('add_plant_select_image_title'),
+t('add_plant_select_image_desc'),
+[
+{
+text: t('add_plant_select_picture_button'),
+onPress: pickImageFromLibrary,
+},
+{
+text: t('add_plant_take_picture_button'),
+onPress: takePictureWithCamera,
+},
+{
+text: t('add_plant_cancel_button'),
+style: 'cancel',
+},
+]
+);
+};
+const pickImageFromLibrary = async () => {
+try {
+const result = await ImagePicker.launchImageLibraryAsync({
 mediaTypes: ImagePicker.MediaTypeOptions.Images,
 allowsEditing: true,
-quality: 0.7,
 aspect: [3, 4],
+quality: 0.7,
 });
 if (!result.canceled) {
-setImage(result.assets[0]);
+const resized = await resizeImage(result.assets[0].uri);
+setImage(resized);
+}
+} catch (err) {
+console.error('pickImageFromLibrary error:', err);
+Alert.alert('Error', 'Could not open image library.');
 }
 };
+const takePictureWithCamera = async () => {
+try {
+const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+if (!cameraPermission.granted) {
+Alert.alert('Error', 'Camera permission denied.');
+return;
+}
+const result = await ImagePicker.launchCameraAsync({
+allowsEditing: true,
+aspect: [3, 4],
+quality: 0.7,
+});
+if (!result.canceled) {
+const resized = await resizeImage(result.assets[0].uri);
+setImage(resized);
+}
+} catch (err) {
+console.error('takePictureWithCamera error:', err);
+Alert.alert('Error', 'Could not open camera.');
+}
+};
+const resizeImage = async (uri: string) => {
+return await ImageManipulator.manipulateAsync(
+uri,
+[{ resize: { width: 800 } }],
+{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+);
+};
+const handleExtraToggle = (extra: Extras) => {
+setSelectedExtras((prev) =>
+prev.includes(extra)
+? prev.filter((e) => e !== extra)
+: [...prev, extra]
+);
+};
+const isExtraSelected = (extra: Extras) => selectedExtras.includes(extra);
+const handleCancel = () => {
+navigation.goBack();
+}
 const handleSave = async () => {
-if (!speciesName || !description || !image) {
-Alert.alert("Error", "Please fill all required fields and select an image.");
+if (!speciesName.trim()) {
+Alert.alert('Validation Error', 'Species name is required.');
+return;
+}
+if (!stage) {
+Alert.alert('Validation Error', 'Plant stage is required.');
+return;
+}
+if (!image) {
+Alert.alert('Validation Error', 'An image is required.');
 return;
 }
 setLoading(true);
 setError(null);
-const formData = new FormData();
-formData.append('image', {
-uri: image,
-name: 'plant.jpg',
-type: 'image/jpeg'
-} as any);
-formData.append('speciesName', speciesName);
-formData.append('description', description);
-formData.append('plantStage', stage.toString());
-formData.append('plantCategory', category.toString());
-formData.append('wateringNeed', watering.toString());
-formData.append('lightRequirement', light.toString());
 try {
-await plantService.addMyPlant({ plantDetails: { speciesName: speciesName, description: description, plantStage: stage, plantCategory: category, wateringNeed: watering, lightRequirement: light }, image: formData.get('image') as any });
-Alert.alert("Success", "Plant added successfully.");
-} catch {
+const plantRequest: PlantRequest = {
+speciesName: speciesName.trim(),
+plantStage: stage,
+description: description.trim() ? description : null,
+plantCategory: category,
+wateringNeed: watering,
+lightRequirement: light,
+size: size,
+indoorOutdoor: indoorOutdoor,
+propagationEase: propagationEase,
+petFriendly: petFriendly,
+extras: selectedExtras,
+};
+const photo = {
+uri: image.uri,
+name: 'plant.jpg',
+type: 'image/jpeg',
+} as any;
+const plantCreateRequest: PlantCreateRequest = {
+plantDetails: plantRequest,
+image: photo,
+};
+await plantService.addMyPlant(plantCreateRequest);
+queryClient.invalidateQueries('myPlants');
+navigation.goBack();
+} catch (err) {
+console.error('Error adding plant:', err);
 setError(t('add_plant_error_message'));
 } finally {
 setLoading(false);
 }
 };
 return (
-<ScrollView style={styles.container} contentContainerStyle={{padding:20}}>
-<Text style={styles.title}>{t('add_plant_title')}</Text>
+<View style={styles.container}>
+{}
+<LinearGradient
+colors={[COLORS.primary, COLORS.secondary]}
+style={styles.gradientBackground}
+>
+<ScrollView
+contentContainerStyle={styles.scrollContent}
+showsVerticalScrollIndicator={false}
+>
+<View style={styles.headerRow}>
+<Text style={styles.headerTitle}>{t('add_plant_title')}</Text>
+<MaterialIcons name="local_florist" size={24} color="#fff" />
+</View>
+<View style={styles.formContainer}>
 {error && <Text style={styles.errorText}>{error}</Text>}
+{}
 <Text style={styles.label}>{t('add_plant_species_name_label')}:</Text>
-<TextInput style={styles.input} value={speciesName} onChangeText={setSpeciesName} />
+<TextInput
+style={styles.input}
+value={speciesName}
+onChangeText={setSpeciesName}
+placeholder="e.g. Monstera Deliciosa"
+/>
+{}
 <Text style={styles.label}>{t('add_plant_description_label')}:</Text>
-<TextInput style={[styles.input, {height:80}]} value={description} onChangeText={setDescription} multiline />
+<TextInput
+style={[styles.input, { height: 80 }]}
+value={description}
+onChangeText={setDescription}
+multiline
+/>
+{}
 <Text style={styles.label}>{t('add_plant_stage_label')}:</Text>
-<TextInput style={styles.input} value={PlantStage[stage]} onChangeText={(txt) => setStage(PlantStage[txt as keyof typeof PlantStage] || PlantStage.Cutting)} />
+<SingleSelectTagGroup<PlantStage>
+values={Object.values(PlantStage)}
+selectedValue={stage}
+onSelect={(val) => setStage(val)}
+isRequired={true}
+/>
+{}
 <Text style={styles.label}>{t('add_plant_category_label')}:</Text>
-<TextInput style={styles.input} value={PlantCategory[category]} onChangeText={(txt) => setCategory(PlantCategory[txt as keyof typeof PlantCategory] || PlantCategory.Other)} />
+<SingleSelectTagGroup<PlantCategory>
+values={Object.values(PlantCategory)}
+selectedValue={category}
+onSelect={(val) => {
+setCategory(val === category ? null : val);
+}}
+isRequired={false}
+/>
+{}
 <Text style={styles.label}>{t('add_plant_watering_label')}:</Text>
-<TextInput style={styles.input} value={WateringNeed[watering]} onChangeText={(txt) => setWatering(WateringNeed[txt as keyof typeof WateringNeed] || WateringNeed.ModerateWater)} />
+<SingleSelectTagGroup<WateringNeed>
+values={Object.values(WateringNeed)}
+selectedValue={watering}
+onSelect={(val) => setWatering(val === watering ? null : val)}
+/>
+{}
 <Text style={styles.label}>{t('add_plant_light_label')}:</Text>
-<TextInput style={styles.input} value={LightRequirement[light]} onChangeText={(txt) => setLight(LightRequirement[txt as keyof typeof LightRequirement] || LightRequirement.PartialShade)} />
-<Text style={styles.label}>{t('add_plant_select_image_button')}:</Text>
-<TouchableOpacity onPress={handleSelectImage} style={styles.imageButton}>
+<SingleSelectTagGroup<LightRequirement>
+values={Object.values(LightRequirement)}
+selectedValue={light}
+onSelect={(val) => setLight(val === light ? null : val)}
+/>
+{}
+<Text style={styles.label}>{t('add_plant_size_question')}:</Text>
+<SingleSelectTagGroup<Size>
+values={Object.values(Size)}
+selectedValue={size}
+onSelect={(val) => setSize(val === size ? null : val)}
+/>
+{}
+<Text style={styles.label}>{t('add_plant_indoor_outdoor_question')}:</Text>
+<SingleSelectTagGroup<IndoorOutdoor>
+values={Object.values(IndoorOutdoor)}
+selectedValue={indoorOutdoor}
+onSelect={(val) => setIndoorOutdoor(val === indoorOutdoor ? null : val)}
+/>
+{}
+<Text style={styles.label}>{t('add_plant_propagation_ease_question')}:</Text>
+<SingleSelectTagGroup<PropagationEase>
+values={Object.values(PropagationEase)}
+selectedValue={propagationEase}
+onSelect={(val) => setPropagationEase(val === propagationEase ? null : val)}
+/>
+{}
+<Text style={styles.label}>{t('add_plant_pet_friendly_question')}:</Text>
+<SingleSelectTagGroup<PetFriendly>
+values={Object.values(PetFriendly)}
+selectedValue={petFriendly}
+onSelect={(val) => setPetFriendly(val === petFriendly ? null : val)}
+/>
+{}
+<Text style={styles.label}>{t('add_plant_extras_question')}:</Text>
+<View style={styles.extrasContainer}>
+{Object.values(Extras).map((extra) => {
+const selected = isExtraSelected(extra);
+return (
+<TouchableOpacity
+key={extra}
+style={[
+styles.extraTag,
+selected && styles.extraTagSelected,
+]}
+onPress={() => handleExtraToggle(extra)}
+>
+<Text
+style={[
+styles.extraTagText,
+selected && styles.extraTagTextSelected,
+]}
+>
+{extra}
+</Text>
+</TouchableOpacity>
+);
+})}
+</View>
+{}
+<Text style={styles.label}>{t('add_plant_select_image_title')}:</Text>
+<TouchableOpacity style={styles.imageButton} onPress={handleSelectImageOption}>
 <Ionicons name="image" size={24} color="#fff" />
-<Text style={styles.imageButtonText}>{t('add_plant_select_image_button')}</Text>
+<Text style={styles.imageButtonText}>
+{t('add_plant_select_image_title')}
+</Text>
 </TouchableOpacity>
 {image ? (
-<Image source={{ uri: image }} style={styles.previewImage} />
+<Image source={{ uri: image.uri }} style={styles.previewImage} />
 ) : (
-<Text style={styles.noImageText}>{t('add_plant_no_image_selected')}</Text>
+<Text style={styles.noImageText}>
+{t('add_plant_no_image_selected')}
+</Text>
 )}
-{loading && <ActivityIndicator size="small" color="#1EAE98" style={{marginVertical:10}}/>}
+{loading && (
+<ActivityIndicator
+size="small"
+color={COLORS.primary}
+style={{ marginVertical: 10 }}
+/>
+)}
+{}
 <View style={styles.actions}>
-<TouchableOpacity style={styles.cancelButton} onPress={() => Alert.alert("Canceled", "Plant addition canceled.")}>
-<Text style={styles.cancelButtonText}>{t('add_plant_cancel_button')}</Text>
+<TouchableOpacity
+style={styles.cancelButton}
+onPress={handleCancel}
+>
+<Text style={styles.cancelButtonText}>
+{t('add_plant_cancel_button')}
+</Text>
 </TouchableOpacity>
 <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-<Text style={styles.saveButtonText}>{t('add_plant_save_button')}</Text>
+<Text style={styles.saveButtonText}>
+{t('add_plant_save_button')}
+</Text>
 </TouchableOpacity>
 </View>
+</View>
 </ScrollView>
+</LinearGradient>
+</View>
 );
 };
 export default AddPlantScreen;
+const COLORS = {
+primary: '#1EAE98',
+secondary: '#5EE2C6',
+accent: '#FF6F61',
+textLight: '#fff',
+textDark: '#333',
+background: '#f8f8f8',
+};
 const styles = StyleSheet.create({
-container:{
-flex:1,
-backgroundColor:'#f8f8f8'
+container: {
+flex: 1,
 },
-title:{
-fontSize:20,
-fontWeight:'700',
-color:'#333',
-marginBottom:20
+gradientBackground: {
+flex: 1,
 },
-errorText:{
-color:'#FF6B6B',
-marginBottom:10
+scrollContent: {
+paddingTop: 30,
+paddingBottom: 30,
 },
-label:{
-fontSize:14,
-fontWeight:'600',
-color:'#333',
-marginBottom:4
+headerRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+alignItems: 'center',
+marginHorizontal: 20,
+marginBottom: 10,
 },
-input:{
-borderWidth:1,
-borderColor:'#ccc',
-borderRadius:8,
-padding:10,
-marginBottom:10,
-fontSize:14,
-backgroundColor:'#fff'
+headerTitle: {
+fontSize: 24,
+fontWeight: 'bold',
+color: COLORS.textLight,
 },
-imageButton:{
-flexDirection:'row',
-alignItems:'center',
-backgroundColor:'#1EAE98',
-padding:10,
-borderRadius:8,
-marginBottom:10
+formContainer: {
+backgroundColor: '#fff',
+marginHorizontal: 20,
+borderRadius: 12,
+padding: 16,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 4 },
 },
-imageButtonText:{
-color:'#fff',
-fontSize:14,
-marginLeft:5
+android: {
+elevation: 3,
 },
-previewImage:{
-width:'100%',
-height:200,
-resizeMode:'cover',
-borderRadius:8,
-marginBottom:10
+}),
 },
-noImageText:{
-fontSize:14,
-color:'#555',
-marginBottom:10
+errorText: {
+color: COLORS.accent,
+marginBottom: 10,
+fontWeight: '600',
 },
-actions:{
-flexDirection:'row',
-justifyContent:'flex-end',
-marginTop:10
+label: {
+fontSize: 14,
+fontWeight: '600',
+color: COLORS.textDark,
+marginTop: 12,
+marginBottom: 4,
 },
-cancelButton:{
-marginRight:10
+input: {
+borderWidth: 1,
+borderColor: '#ccc',
+borderRadius: 8,
+paddingHorizontal: 10,
+paddingVertical: 8,
+fontSize: 14,
 },
-cancelButtonText:{
-fontSize:16,
-color:'#333'
+tagGroupContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+marginBottom: 6,
 },
-saveButton:{
-backgroundColor:'#1EAE98',
-paddingHorizontal:15,
-paddingVertical:10,
-borderRadius:8
+singleTag: {
+borderWidth: 1,
+borderColor: COLORS.primary,
+borderRadius: 20,
+paddingVertical: 6,
+paddingHorizontal: 12,
+marginRight: 8,
+marginBottom: 8,
 },
-saveButtonText:{
-fontSize:16,
-color:'#fff',
-fontWeight:'600'
-}
+singleTagSelected: {
+backgroundColor: COLORS.primary,
+},
+singleTagText: {
+fontSize: 12,
+color: COLORS.primary,
+},
+singleTagTextSelected: {
+color: '#fff',
+fontWeight: '600',
+},
+extrasContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+marginTop: 4,
+},
+extraTag: {
+borderWidth: 1,
+borderColor: COLORS.primary,
+borderRadius: 20,
+paddingVertical: 6,
+paddingHorizontal: 12,
+marginRight: 8,
+marginBottom: 8,
+},
+extraTagSelected: {
+backgroundColor: COLORS.primary,
+},
+extraTagText: {
+fontSize: 12,
+color: COLORS.primary,
+},
+extraTagTextSelected: {
+color: '#fff',
+fontWeight: '600',
+},
+imageButton: {
+flexDirection: 'row',
+alignItems: 'center',
+backgroundColor: COLORS.primary,
+padding: 10,
+borderRadius: 8,
+marginTop: 6,
+},
+imageButtonText: {
+fontSize: 14,
+color: '#fff',
+marginLeft: 6,
+fontWeight: '600',
+},
+previewImage: {
+width: '100%',
+height: 250,
+borderRadius: 8,
+marginTop: 6,
+marginBottom: 10,
+resizeMode: 'cover',
+},
+noImageText: {
+fontSize: 14,
+color: '#555',
+marginTop: 6,
+marginBottom: 10,
+},
+actions: {
+flexDirection: 'row',
+justifyContent: 'flex-end',
+marginTop: 16,
+},
+cancelButton: {
+borderWidth: 1,
+borderColor: COLORS.primary,
+borderRadius: 8,
+paddingVertical: 10,
+paddingHorizontal: 16,
+marginRight: 10,
+},
+cancelButtonText: {
+fontSize: 14,
+color: COLORS.primary,
+fontWeight: '600',
+},
+saveButton: {
+backgroundColor: COLORS.primary,
+borderRadius: 8,
+paddingVertical: 10,
+paddingHorizontal: 16,
+},
+saveButtonText: {
+fontSize: 14,
+color: '#fff',
+fontWeight: '600',
+},
 });
 // File: app\features\main\screens\ChatScreen.tsx
 
@@ -2929,6 +3365,7 @@ return i18n;
 "add_plant_pet_friendly_label": "Pet Friendly",
 "add_plant_extras_label": "Extras",
 "add_plant_select_image_button": "Select Image",
+"add_plant_select_image_title": "Select Image",
 "add_plant_save_button": "Save",
 "add_plant_cancel_button": "Cancel",
 "add_plant_error_message": "Failed to add plant.",
@@ -2938,7 +3375,66 @@ return i18n;
 "onboarding_bio_placeholder": "Your bio here...",
 "onboarding_bio_skip_button": "Skip",
 "onboarding_bio_submit_button": "Save & Continue",
-"onboarding_bio_note": "You can always add or edit your bio later from your profile."
+"onboarding_bio_note": "You can always add or edit your bio later from your profile.",
+"add_plant_size_question": "Size",
+"add_plant_indoor_outdoor_question": "Indoor/Outdoor",
+"add_plant_propagation_ease_question": "Propagation Ease",
+"add_plant_pet_friendly_question": "Pet Friendly",
+"add_plant_extras_question": "Extras",
+"plant_stage_seedling": "Seed(ling)",
+"plant_stage_cutting": "Cutting",
+"plant_stage_mature": "Mature",
+"plant_category_succulent": "Succulent",
+"plant_category_cactus": "Cactus",
+"plant_category_fern": "Fern",
+"plant_category_orchid": "Orchid",
+"plant_category_herb": "Herb",
+"plant_category_palm": "Palm",
+"plant_category_leafy_houseplant": "Leafy Houseplant",
+"plant_category_aquatic_plant": "Aquatic Plant",
+"plant_category_climbing_plant": "Climbing Plant",
+"plant_category_tree": "Tree",
+"plant_category_other": "Other",
+"watering_need_very_low_water": "Very Low Water",
+"watering_need_low_water": "Low Water",
+"watering_need_moderate_water": "Moderate Water",
+"watering_need_high_water": "High Water",
+"watering_need_very_high_water": "Very High Water",
+"light_requirement_full_sun": "Full Sun",
+"light_requirement_partial_sun": "Partial Sun",
+"light_requirement_bright_indirect_light": "Bright Indirect Light",
+"light_requirement_low_light": "Low Light",
+"size_small_size": "Small Size",
+"size_medium_size": "Medium Size",
+"size_large_size": "Large Size",
+"indoor_outdoor_indoor": "Indoor",
+"indoor_outdoor_outdoor": "Outdoor",
+"indoor_outdoor_indoor_and_outdoor": "Indoor and Outdoor",
+"propagation_ease_easy_propagation": "Easy Propagation",
+"propagation_ease_moderate_propagation": "Moderate Propagation",
+"propagation_ease_difficult_propagation": "Difficult Propagation",
+"pet_friendly_pet_friendly": "Pet Friendly",
+"pet_friendly_not_pet_friendly": "Not Pet Friendly",
+"extras_fragrant": "Fragrant",
+"extras_edible": "Edible",
+"extras_medicinal": "Medicinal",
+"extras_air_purifying": "Air Purifying",
+"extras_decorative": "Decorative",
+"extras_flowering": "Flowering",
+"extras_tropical_vibe": "Tropical Vibe",
+"extras_foliage_heavy": "Foliage Heavy",
+"extras_drought_tolerant": "Drought Tolerant",
+"extras_humidity_loving": "Humidity Loving",
+"extras_low_maintenance": "Low Maintenance",
+"extras_winter_hardy": "Winter Hardy",
+"extras_beginner_friendly": "Beginner Friendly",
+"extras_fruiting": "Fruiting",
+"extras_pollinator_friendly": "Pollinator Friendly",
+"extras_fast_growing": "Fast Growing",
+"extras_variegated_foliage": "Variegated Foliage",
+"extras_climbing": "Climbing",
+"extras_ground_cover": "Ground Cover",
+"extras_rare": "Rare"
 }
 // File: app\i18n\locales\fr.json
 {
@@ -3014,8 +3510,8 @@ email: null,
 try {
 const profile = await userService.getCurrentUserProfile();
 dispatch(setInitialTokens({
-accessToken: accessToken,
-refreshToken: refreshToken,
+accessToken: store.getState().auth.accessToken,
+refreshToken: store.getState().auth.refreshToken,
 userId: profile.userId,
 email: profile.email,
 }));
@@ -3098,7 +3594,7 @@ tabBarInactiveTintColor: 'gray',
 })}
 >
 <Tab.Screen name="Swipe" component={SwipeScreen}/>
-<Tab.Screen name="Profile" component={MyProfileScreen}/>
+<Tab.Screen name="Profile" component={ProfileStackNavigator}/>
 <Tab.Screen name="Settings" component={SettingsScreen}/>
 </Tab.Navigator>
 );
@@ -3126,6 +3622,21 @@ return (
 );
 };
 export default OnboardingNavigator;
+// File: app\navigation\ProfileStackNavigator.tsx
+export type ProfileStackParamList = {
+ProfileHome: undefined;
+AddPlant: undefined;
+};
+const Stack = createNativeStackNavigator<ProfileStackParamList>();
+const ProfileStackNavigator = () => {
+return (
+<Stack.Navigator screenOptions={{ headerShown: false }}>
+<Stack.Screen name="ProfileHome" component={MyProfileScreen} />
+<Stack.Screen name="AddPlant" component={AddPlantScreen} />
+</Stack.Navigator>
+);
+};
+export default ProfileStackNavigator;
 // File: app\store\hooks.ts
 export const useAppDispatch: () => AppDispatch = useDispatch;
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
@@ -3195,16 +3706,16 @@ image: File;
 }
 export interface PlantRequest {
 speciesName: string;
-description: string;
+description: string | null;
 plantStage: PlantStage;
-plantCategory: PlantCategory;
-wateringNeed: WateringNeed;
-lightRequirement: LightRequirement;
-size?: Size;
-indoorOutdoor?: IndoorOutdoor;
-propagationEase?: PropagationEase;
-petFriendly?: PetFriendly;
-extras?: Extras[];
+plantCategory: PlantCategory | null;
+wateringNeed: WateringNeed | null;
+lightRequirement: LightRequirement | null;
+size: Size | null;
+indoorOutdoor: IndoorOutdoor | null;
+propagationEase: PropagationEase | null;
+petFriendly: PetFriendly | null;
+extras: Extras[];
 }
 export interface PlantUpdateRequest {
 speciesName: string;
@@ -3333,8 +3844,9 @@ locationLongitude?: number;
 }
 // File: app\types\enums.ts
 export enum PlantStage {
+Seedling = "Seedling",
 Cutting = "Cutting",
-GrownPlantTree = "GrownPlantTree"
+Mature = "Mature",
 }
 export enum PlantCategory {
 Succulent = "Succulent",
@@ -3344,7 +3856,9 @@ Orchid = "Orchid",
 Herb = "Herb",
 Palm = "Palm",
 LeafyHouseplant = "LeafyHouseplant",
-FloweringHouseplant = "FloweringHouseplant",
+AquaticPlant = "AquaticPlant",
+ClimbingPlant = "ClimbingPlant",
+Tree = "Tree",
 Other = "Other"
 }
 export enum WateringNeed {
@@ -3356,8 +3870,9 @@ VeryHighWater = "VeryHighWater"
 }
 export enum LightRequirement {
 FullSun = "FullSun",
-PartialShade = "PartialShade",
-Shade = "Shade"
+PartialSun = "PartialSun",
+BrightIndirectLight = "BrightIndirectLight",
+LowLight = "LowLight",
 }
 export enum Size {
 SmallSize = "SmallSize",

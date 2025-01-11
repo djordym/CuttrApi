@@ -45,19 +45,49 @@ namespace Cuttr.Infrastructure.Mappers
                 UserId = efPlant.UserId,
                 SpeciesName = efPlant.SpeciesName,
                 Description = efPlant.Description,
+
+                // Required enum property parsed directly
                 PlantStage = Enum.Parse<PlantStage>(efPlant.PlantStage),
-                PlantCategory = Enum.Parse<PlantCategory>(efPlant.PlantCategory),
-                WateringNeed = Enum.Parse<WateringNeed>(efPlant.WateringNeed),
-                LightRequirement = Enum.Parse<LightRequirement>(efPlant.LightRequirement),
-                Size = Enum.Parse<Size>(efPlant.Size),
-                IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
-                PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
-                PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
-                Extras = efPlant.Extras != null ? DeserializeExtras(efPlant.Extras) : null,
+
+                // Nullable enum properties: check for null or empty and assign accordingly
+                PlantCategory = !string.IsNullOrWhiteSpace(efPlant.PlantCategory)
+                        ? Enum.Parse<PlantCategory>(efPlant.PlantCategory)
+                        : null,
+
+                WateringNeed = !string.IsNullOrWhiteSpace(efPlant.WateringNeed)
+                        ? Enum.Parse<WateringNeed>(efPlant.WateringNeed)
+                        : null,
+
+                LightRequirement = !string.IsNullOrWhiteSpace(efPlant.LightRequirement)
+                        ? Enum.Parse<LightRequirement>(efPlant.LightRequirement)
+                        : null,
+
+                Size = !string.IsNullOrWhiteSpace(efPlant.Size)
+                        ? Enum.Parse<Size>(efPlant.Size)
+                        : null,
+
+                IndoorOutdoor = !string.IsNullOrWhiteSpace(efPlant.IndoorOutdoor)
+                        ? Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor)
+                        : null,
+
+                PropagationEase = !string.IsNullOrWhiteSpace(efPlant.PropagationEase)
+                        ? Enum.Parse<PropagationEase>(efPlant.PropagationEase)
+                        : null,
+
+                PetFriendly = !string.IsNullOrWhiteSpace(efPlant.PetFriendly)
+                        ? Enum.Parse<PetFriendly>(efPlant.PetFriendly)
+                        : null,
+
+                Extras = efPlant.Extras != null
+                ? DeserializeExtras(efPlant.Extras)
+                : null,
+
                 ImageUrl = efPlant.ImageUrl,
                 User = MapToUserWithoutPlants(efPlant.User),
                 // Exclude CreatedAt and UpdatedAt
             };
+
+
         }
 
         // Helper method to map PlantEF without User to prevent circular reference
@@ -72,15 +102,43 @@ namespace Cuttr.Infrastructure.Mappers
                 UserId = efPlant.UserId,
                 SpeciesName = efPlant.SpeciesName,
                 Description = efPlant.Description,
+
+                // Required enum property parsed directly
                 PlantStage = Enum.Parse<PlantStage>(efPlant.PlantStage),
-                PlantCategory = Enum.Parse<PlantCategory>(efPlant.PlantCategory),
-                WateringNeed = Enum.Parse<WateringNeed>(efPlant.WateringNeed),
-                LightRequirement = Enum.Parse<LightRequirement>(efPlant.LightRequirement),
-                Size = Enum.Parse<Size>(efPlant.Size),
-                IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
-                PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
-                PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
-                Extras = DeserializeExtras(efPlant.Extras),
+
+                // Nullable enum properties: check for null or empty and assign accordingly
+                PlantCategory = !string.IsNullOrWhiteSpace(efPlant.PlantCategory)
+                        ? Enum.Parse<PlantCategory>(efPlant.PlantCategory)
+                        : null,
+
+                WateringNeed = !string.IsNullOrWhiteSpace(efPlant.WateringNeed)
+                        ? Enum.Parse<WateringNeed>(efPlant.WateringNeed)
+                        : null,
+
+                LightRequirement = !string.IsNullOrWhiteSpace(efPlant.LightRequirement)
+                        ? Enum.Parse<LightRequirement>(efPlant.LightRequirement)
+                        : null,
+
+                Size = !string.IsNullOrWhiteSpace(efPlant.Size)
+                        ? Enum.Parse<Size>(efPlant.Size)
+                        : null,
+
+                IndoorOutdoor = !string.IsNullOrWhiteSpace(efPlant.IndoorOutdoor)
+                        ? Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor)
+                        : null,
+
+                PropagationEase = !string.IsNullOrWhiteSpace(efPlant.PropagationEase)
+                        ? Enum.Parse<PropagationEase>(efPlant.PropagationEase)
+                        : null,
+
+                PetFriendly = !string.IsNullOrWhiteSpace(efPlant.PetFriendly)
+                        ? Enum.Parse<PetFriendly>(efPlant.PetFriendly)
+                        : null,
+
+                Extras = efPlant.Extras != null
+                ? DeserializeExtras(efPlant.Extras)
+                : null,
+
                 ImageUrl = efPlant.ImageUrl,
                 // User is not mapped to prevent circular reference
             };

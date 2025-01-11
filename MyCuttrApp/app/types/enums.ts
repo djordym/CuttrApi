@@ -1,6 +1,7 @@
 export enum PlantStage {
+	Seedling = "Seedling",
 	Cutting = "Cutting",
-	GrownPlantTree = "GrownPlantTree"
+	Mature = "Mature",
   }
   
   export enum PlantCategory {
@@ -11,7 +12,9 @@ export enum PlantStage {
 	Herb = "Herb",
 	Palm = "Palm",
 	LeafyHouseplant = "LeafyHouseplant",
-	FloweringHouseplant = "FloweringHouseplant",
+	AquaticPlant = "AquaticPlant",
+	ClimbingPlant = "ClimbingPlant",
+	Tree = "Tree",
 	Other = "Other"
   }
   
@@ -25,8 +28,9 @@ export enum PlantStage {
   
   export enum LightRequirement {
 	FullSun = "FullSun",
-	PartialShade = "PartialShade",
-	Shade = "Shade"
+	PartialSun = "PartialSun",
+	BrightIndirectLight = "BrightIndirectLight",
+	LowLight = "LowLight",
   }
   
   export enum Size {

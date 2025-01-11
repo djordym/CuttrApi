@@ -144,44 +144,52 @@ namespace Cuttr.Business.Managers
                 if (user.Preferences.PreferedPlantCategory != null && user.Preferences.PreferedPlantCategory.Any())
                 {
                     candidatePlants = candidatePlants
-                        .Where(p => user.Preferences.PreferedPlantCategory.Contains(p.PlantCategory));
+                        .Where(p => p.PlantCategory.HasValue
+                                    && user.Preferences.PreferedPlantCategory.Contains(p.PlantCategory.Value));
                 }
 
                 if (user.Preferences.PreferedWateringNeed != null && user.Preferences.PreferedWateringNeed.Any())
                 {
                     candidatePlants = candidatePlants
-                        .Where(p => user.Preferences.PreferedWateringNeed.Contains(p.WateringNeed));
+                        .Where(p => p.WateringNeed.HasValue
+                                    && user.Preferences.PreferedWateringNeed.Contains(p.WateringNeed.Value));
                 }
 
                 if (user.Preferences.PreferedLightRequirement != null && user.Preferences.PreferedLightRequirement.Any())
                 {
                     candidatePlants = candidatePlants
-                        .Where(p => user.Preferences.PreferedLightRequirement.Contains(p.LightRequirement));
+                        .Where(p => p.LightRequirement.HasValue
+                                    && user.Preferences.PreferedLightRequirement.Contains(p.LightRequirement.Value));
                 }
 
                 if (user.Preferences.PreferedSize != null && user.Preferences.PreferedSize.Any())
                 {
                     candidatePlants = candidatePlants
-                        .Where(p => user.Preferences.PreferedSize.Contains(p.Size));
+                        .Where(p => p.Size.HasValue
+                                    && user.Preferences.PreferedSize.Contains(p.Size.Value));
                 }
 
                 if (user.Preferences.PreferedIndoorOutdoor != null && user.Preferences.PreferedIndoorOutdoor.Any())
                 {
                     candidatePlants = candidatePlants
-                        .Where(p => user.Preferences.PreferedIndoorOutdoor.Contains(p.IndoorOutdoor));
+                        .Where(p => p.IndoorOutdoor.HasValue
+                                    && user.Preferences.PreferedIndoorOutdoor.Contains(p.IndoorOutdoor.Value));
                 }
 
                 if (user.Preferences.PreferedPropagationEase != null && user.Preferences.PreferedPropagationEase.Any())
                 {
                     candidatePlants = candidatePlants
-                        .Where(p => user.Preferences.PreferedPropagationEase.Contains(p.PropagationEase));
+                        .Where(p => p.PropagationEase.HasValue
+                                    && user.Preferences.PreferedPropagationEase.Contains(p.PropagationEase.Value));
                 }
 
                 if (user.Preferences.PreferedPetFriendly != null && user.Preferences.PreferedPetFriendly.Any())
                 {
                     candidatePlants = candidatePlants
-                        .Where(p => user.Preferences.PreferedPetFriendly.Contains(p.PetFriendly));
+                        .Where(p => p.PetFriendly.HasValue
+                                    && user.Preferences.PreferedPetFriendly.Contains(p.PetFriendly.Value));
                 }
+
 
                 if (user.Preferences.PreferedExtras != null && user.Preferences.PreferedExtras.Any())
                 {

@@ -1,27 +1,78 @@
-import api from './axiosConfig';
-import { PlantCreateRequest, PlantResponse, PlantRequest } from '../types/apiTypes';
+import api from "./axiosConfig";
+import {
+  PlantCreateRequest,
+  PlantResponse,
+  PlantRequest,
+} from "../types/apiTypes";
 
 export const plantService = {
   addMyPlant: async (data: PlantCreateRequest): Promise<PlantResponse> => {
     const formData = new FormData();
-    formData.append('Image', data.Image);
-    formData.append('SpeciesName', data.PlantDetails.SpeciesName);
-    formData.append('Description', data.PlantDetails.Description);
-    formData.append('PlantStage', data.PlantDetails.PlantStage);
-    formData.append('PlantCategory', data.PlantDetails.PlantCategory);
-    formData.append('WateringNeed', data.PlantDetails.WateringNeed);
-    formData.append('LightRequirement', data.PlantDetails.LightRequirement);
-    if (data.PlantDetails.Size) formData.append('Size', data.PlantDetails.Size);
-    if (data.PlantDetails.IndoorOutdoor) formData.append('IndoorOutdoor', data.PlantDetails.IndoorOutdoor);
-    if (data.PlantDetails.PropagationEase) formData.append('PropagationEase', data.PlantDetails.PropagationEase);
-    if (data.PlantDetails.PetFriendly) formData.append('PetFriendly', data.PlantDetails.PetFriendly);
-    if (data.PlantDetails.Extras) {
-      data.PlantDetails.Extras.forEach((extra) => formData.append('Extras', extra));
+
+    // Use the prefix "PlantDetails." for fields of the nested PlantDetails object
+    formData.append("Image", data.image); // Keep top-level if matching the property name in PlantCreateRequest
+    formData.append("PlantDetails.SpeciesName", data.plantDetails.speciesName);
+    formData.append(
+      "PlantDetails.PlantStage",
+      String(data.plantDetails.plantStage)
+    );
+
+    formData.append(
+      "PlantDetails.Description",
+      data.plantDetails.description ?? ""
+    );
+    formData.append(
+      "PlantDetails.PlantCategory",
+      data.plantDetails.plantCategory != null
+        ? String(data.plantDetails.plantCategory)
+        : ""
+    );
+    formData.append(
+      "PlantDetails.WateringNeed",
+      data.plantDetails.wateringNeed != null
+        ? String(data.plantDetails.wateringNeed)
+        : ""
+    );
+    formData.append(
+      "PlantDetails.LightRequirement",
+      data.plantDetails.lightRequirement != null
+        ? String(data.plantDetails.lightRequirement)
+        : ""
+    );
+    formData.append(
+      "PlantDetails.Size",
+      data.plantDetails.size != null ? String(data.plantDetails.size) : ""
+    );
+    formData.append(
+      "PlantDetails.IndoorOutdoor",
+      data.plantDetails.indoorOutdoor != null
+        ? String(data.plantDetails.indoorOutdoor)
+        : ""
+    );
+    formData.append(
+      "PlantDetails.PropagationEase",
+      data.plantDetails.propagationEase != null
+        ? String(data.plantDetails.propagationEase)
+        : ""
+    );
+    formData.append(
+      "PlantDetails.PetFriendly",
+      data.plantDetails.petFriendly != null
+        ? String(data.plantDetails.petFriendly)
+        : ""
+    );
+
+    if (data.plantDetails.extras && data.plantDetails.extras.length > 0) {
+      data.plantDetails.extras.forEach((extra) => {
+        // Append each extra with the same key using the dot notation prefix
+        formData.append("PlantDetails.Extras", String(extra));
+      });
     }
 
-    const response = await api.post<PlantResponse>('/plants/me', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+    const response = await api.post<PlantResponse>("/plants/me", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
+
     return response.data;
   },
 
@@ -30,9 +81,15 @@ export const plantService = {
     return response.data;
   },
 
-  updateMyPlant: async (plantId: number, data: PlantRequest): Promise<PlantResponse> => {
+  updateMyPlant: async (
+    plantId: number,
+    data: PlantRequest
+  ): Promise<PlantResponse> => {
     // Here just sending JSON request body
-    const response = await api.put<PlantResponse>(`/plants/me/${plantId}`, data);
+    const response = await api.put<PlantResponse>(
+      `/plants/me/${plantId}`,
+      data
+    );
     return response.data;
   },
 
@@ -46,7 +103,7 @@ export const plantService = {
   },
 
   getMyPlants: async (): Promise<PlantResponse[]> => {
-    const response = await api.get<PlantResponse[]>('/users/me/plants');
+    const response = await api.get<PlantResponse[]>("/users/me/plants");
     return response.data;
-  }
+  },
 };

@@ -22,7 +22,7 @@ namespace Cuttr.Infrastructure.Entities
         [MaxLength(200)]
         public string SpeciesName { get; set; }
 
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
         // Enum properties stored as strings
         [Required]

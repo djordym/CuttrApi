@@ -29,8 +29,6 @@ namespace Cuttr.Infrastructure.Repositories
             try
             {
                 var efPlant = BusinessToEFMapper.MapToPlantEF(plant);
-                efPlant.PlantId = 0; // Ensure the ID is unset for new entities
-
                 await _context.Plants.AddAsync(efPlant);
                 await _context.SaveChangesAsync();
                 _context.Entry(efPlant).State = EntityState.Detached;

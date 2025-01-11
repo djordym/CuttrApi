@@ -16,16 +16,16 @@ export interface PlantCreateRequest {
 
 export interface PlantRequest {
     speciesName: string;
-    description: string;
+    description: string | null;
     plantStage: PlantStage;
-    plantCategory: PlantCategory;
-    wateringNeed: WateringNeed;
-    lightRequirement: LightRequirement;
-    size?: Size;
-    indoorOutdoor?: IndoorOutdoor;
-    propagationEase?: PropagationEase;
-    petFriendly?: PetFriendly;
-    extras?: Extras[];
+    plantCategory: PlantCategory | null;
+    wateringNeed: WateringNeed | null;
+    lightRequirement: LightRequirement | null;
+    size: Size | null;
+    indoorOutdoor: IndoorOutdoor | null;
+    propagationEase: PropagationEase | null;
+    petFriendly: PetFriendly | null;
+    extras: Extras[];
 }
 
 export interface PlantUpdateRequest {
