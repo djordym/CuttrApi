@@ -38,6 +38,7 @@ import {
   PetFriendly,
   Extras,
 } from '../../../types/enums';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 /**
  * Reusable component for single-select tags (with optional deselection).
@@ -297,14 +298,14 @@ const AddPlantScreen: React.FC = () => {
         colors={[COLORS.primary, COLORS.secondary]}
         style={styles.gradientBackground}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
           <View style={styles.headerRow}>
             <Text style={styles.headerTitle}>{t('add_plant_title')}</Text>
             <MaterialIcons name="local_florist" size={24} color="#fff" />
           </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
 
           <View style={styles.formContainer}>
             {error && <Text style={styles.errorText}>{error}</Text>}
@@ -488,12 +489,14 @@ const styles = StyleSheet.create({
   },
   gradientBackground: {
     flex: 1,
+    
   },
   scrollContent: {
-    paddingTop: 30,
+    paddingTop: 0,
     paddingBottom: 30,
   },
   headerRow: {
+    position: 'sticky',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

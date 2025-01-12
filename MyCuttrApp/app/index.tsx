@@ -9,6 +9,8 @@ import { store } from './store';
 import AppNavigator from './navigation/AppNavigator';
 import { initI18n } from './i18n';
 import { log } from './utils/logger';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 const queryClient = new QueryClient();
 
@@ -36,13 +38,16 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
           {/* Provide the i18n instance to the app */}
           <I18nextProvider i18n={i18nInstance}>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <AppNavigator />
+            <GestureHandlerRootView>
+                <StatusBar
+                  style="dark"
+                  backgroundColor='#1EAE98' // allow content to appear behind status bar
+                />
+                <AppNavigator />
             </GestureHandlerRootView>
           </I18nextProvider>
         </QueryClientProvider>

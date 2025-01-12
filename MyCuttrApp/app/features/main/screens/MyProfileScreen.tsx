@@ -5,21 +5,27 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  FlatList,
   Image,
   Dimensions,
   Platform,
+  ScrollView,
+  Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Circle } from 'react-native-maps';
+
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+
 import { useUserProfile } from '../hooks/useUser';
 import { useMyPlants } from '../hooks/usePlants';
 import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse } from '../../../types/apiTypes';
+import { userService } from '../../../api/userService'; // for updating the profile picture
 import { EditProfileModal } from '../components/EditProfileModal';
 import { ChangeLocationModal } from '../components/ChangeLocationModal';
 
@@ -35,7 +41,6 @@ const COLORS = {
 };
 
 const MyProfileScreen: React.FC = () => {
-  // 1. Declare Hooks at top
   const { t } = useTranslation();
   const navigation = useNavigation();
 
@@ -59,13 +64,94 @@ const MyProfileScreen: React.FC = () => {
     isError: srError,
   } = useSearchRadius();
 
+  // For modals
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [changeLocationVisible, setChangeLocationVisible] = useState(false);
 
+  // For toggling between thumbnail vs. fullsize
+  const [showFullSize, setShowFullSize] = useState(false);
+
+  // -- IMAGE PICKER & UPDATE PFP --
+  const handleChangeProfilePicture = useCallback(() => {
+    Alert.alert(
+      t('profile_change_picture_title'),
+      t('profile_change_picture_msg'),
+      [
+        { text: t('profile_picture_select_library'), onPress: pickImageFromLibrary },
+        { text: t('profile_picture_take_photo'), onPress: takePictureWithCamera },
+        { text: t('profile_picture_cancel'), style: 'cancel' },
+      ]
+    );
+  }, [t]);
+
+  const pickImageFromLibrary = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1], // for a square/circle profile
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets[0].uri) {
+        const resized = await resizeImage(result.assets[0].uri);
+        await uploadProfilePicture(resized);
+      }
+    } catch (err) {
+      console.error('pickImageFromLibrary error:', err);
+      Alert.alert('Error', 'Could not open image library.');
+    }
+  };
+
+  const takePictureWithCamera = async () => {
+    try {
+      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!cameraPermission.granted) {
+        Alert.alert('Error', 'Camera permission denied.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets[0].uri) {
+        const resized = await resizeImage(result.assets[0].uri);
+        await uploadProfilePicture(resized);
+      }
+    } catch (err) {
+      console.error('takePictureWithCamera error:', err);
+      Alert.alert('Error', 'Could not open camera.');
+    }
+  };
+
+  const resizeImage = async (uri: string) => {
+    return await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 800 } }],
+      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+    );
+  };
+
+  const uploadProfilePicture = async (img: ImageManipulator.ImageResult) => {
+    try {
+      const photo = {
+        uri: img.uri,
+        name: 'profile.jpg',
+        type: 'image/jpeg',
+      } as any;
+      await userService.updateProfilePicture({ image: photo });
+      refetchProfile(); // refresh the user data to show updated pfp
+    } catch (err) {
+      console.error('Error uploading profile picture:', err);
+      Alert.alert('Error', 'Profile picture update failed.');
+    }
+  };
+  // -- END IMAGE PICKER & UPDATE PFP --
+
+  // Modals
   const handleEditProfile = useCallback(() => {
     setEditProfileVisible(true);
   }, []);
-
   const handleProfileUpdated = useCallback(() => {
     refetchProfile();
   }, [refetchProfile]);
@@ -73,7 +159,6 @@ const MyProfileScreen: React.FC = () => {
   const handleChangeLocation = useCallback(() => {
     setChangeLocationVisible(true);
   }, []);
-
   const handleLocationUpdated = useCallback(() => {
     refetchProfile();
   }, [refetchProfile]);
@@ -82,7 +167,7 @@ const MyProfileScreen: React.FC = () => {
     navigation.navigate('AddPlant' as never);
   }, [navigation]);
 
-  // 2. Check if user has location
+  // Check if user has location
   const userHasLocation =
     userProfile?.locationLatitude !== undefined &&
     userProfile?.locationLongitude !== undefined;
@@ -96,25 +181,74 @@ const MyProfileScreen: React.FC = () => {
       }
     : undefined;
 
-  // 3. Render each plant
-  const renderPlantItem = ({ item }: { item: PlantResponse }) => (
-    <View style={styles.plantCard}>
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.plantImage} />
-      ) : (
-        <View style={styles.plantPlaceholder}>
-          <Ionicons name="leaf" size={40} color={COLORS.primary} />
+  // -- PLANT CARD RENDERING --
+  const renderPlantItem = (item: PlantResponse) => {
+    if (!showFullSize) {
+      // THUMBNAIL VIEW
+      return (
+        <View key={item.plantId} style={styles.plantCardThumbnail}>
+          {item.imageUrl ? (
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={styles.thumbImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={styles.plantPlaceholder}>
+              <Ionicons name="leaf" size={40} color={COLORS.primary} />
+            </View>
+          )}
+          <View style={styles.thumbTextWrapper}>
+            <Text style={styles.thumbPlantName} numberOfLines={1}>
+              {item.speciesName}
+            </Text>
+          </View>
         </View>
-      )}
-      <View style={styles.plantDetails}>
-        <Text style={styles.plantName} numberOfLines={1}>
-          {item.speciesName}
-        </Text>
-      </View>
-    </View>
-  );
+      );
+    } else {
+      // FULLSIZE VIEW
+      return (
+        <View key={item.plantId} style={styles.plantCardFull}>
+          <View style={styles.fullImageContainer}>
+            {item.imageUrl ? (
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={styles.fullImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={styles.plantPlaceholder}>
+                <Ionicons name="leaf" size={60} color={COLORS.primary} />
+              </View>
+            )}
+            {/* Overlay for tags & description */}
+            <View style={styles.fullImageOverlay}>
+              <View style={styles.overlayContent}>
+                <Text style={styles.fullPlantName}>{item.speciesName}</Text>
+                {/* Show tags if item.extras or other categories are present */}
+                {item.extras && item.extras.length > 0 && (
+                  <View style={styles.tagRow}>
+                    {item.extras.map((tag) => (
+                      <View key={tag} style={styles.tag}>
+                        <Text style={styles.tagText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {/* description */}
+                {item.description ? (
+                  <Text style={styles.fullDescription}>{item.description}</Text>
+                ) : null}
+              </View>
+            </View>
+          </View>
+        </View>
+      );
+    }
+  };
+  // -- END RENDERING --
 
-  // 4. Decide main content
+  // Decide main content
   let content: JSX.Element;
 
   if (loadingProfile || loadingPlants || srLoading) {
@@ -155,124 +289,178 @@ const MyProfileScreen: React.FC = () => {
   } else {
     // Normal UI
     content = (
-      <SafeAreaView style={styles.container}>
-        {/* HEADER: GRADIENT */}
-        <LinearGradient
-          colors={[COLORS.primary, '#5EE2C6']}
-          style={styles.headerContainer}
+      <SafeAreaProvider style={styles.container}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
         >
-          <View style={styles.headerTopRow}>
-            <Text style={styles.headerTitle}>{t('profile_title')}</Text>
-            <TouchableOpacity
-              onPress={handleEditProfile}
-              style={styles.headerActionButton}
-              accessibilityLabel={t('profile_edit_button')}
-            >
-              <MaterialIcons name="edit" size={24} color={COLORS.textLight} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.profileInfoContainer}>
-            {userProfile.profilePictureUrl ? (
-              <Image
-                source={{ uri: userProfile.profilePictureUrl }}
-                style={styles.profilePicture}
-              />
-            ) : (
-              <View style={styles.profilePlaceholder}>
-                <Ionicons name="person-circle-outline" size={90} color="#ccc" />
-              </View>
-            )}
-
-            <View style={styles.profileTextSection}>
-              <Text style={styles.profileName}>{userProfile.name}</Text>
-
-              {userProfile.bio ? (
-                <>
-                  <Text style={styles.profileLabel}>
-                    {t('profile_bio_label')}:
-                  </Text>
-                  <Text style={styles.profileValue} numberOfLines={3}>
-                    {userProfile.bio}
-                  </Text>
-                </>
-              ) : null}
-
-              {/* LOCATION */}
-              <View style={styles.profileLocationSection}>
-                <Text style={styles.profileLabel}>
-                  {t('profile_location_label')}:
-                </Text>
-                {userHasLocation ? (
-                  <View style={styles.mapContainer}>
-                    <MapView style={styles.map} initialRegion={region}>
-                      <Circle
-                        center={{
-                          latitude: region.latitude,
-                          longitude: region.longitude,
-                        }}
-                        radius={searchRadius * 1000} // searchRadius in km -> convert to meters
-                        strokeWidth={1.5}
-                        strokeColor="#1EAE98"
-                        fillColor="rgba(30, 174, 152, 0.2)"
-                      />
-                    </MapView>
-                  </View>
-                ) : (
-                  <Text style={styles.profileValue}>
-                    {t('profile_no_location')}
-                  </Text>
-                )}
-              </View>
-
+          {/* HEADER: GRADIENT */}
+          <LinearGradient
+            colors={[COLORS.primary, '#5EE2C6']}
+            style={styles.headerContainer}
+          >
+            <View style={styles.headerTopRow}>
+              <Text style={styles.headerTitle}>{t('profile_title')}</Text>
               <TouchableOpacity
-                onPress={handleChangeLocation}
-                style={styles.locationButton}
-                accessibilityRole="button"
-                accessibilityLabel={t('profile_change_location_button')}
+                onPress={handleEditProfile}
+                style={styles.headerActionButton}
+                accessibilityLabel={t('profile_edit_button')}
               >
-                <Ionicons
-                  name="location-outline"
-                  size={18}
-                  color={COLORS.primary}
-                />
-                <Text style={styles.locationButtonText}>
-                  {t('profile_change_location_button')}
+                <MaterialIcons name="edit" size={24} color={COLORS.textLight} />
+              </TouchableOpacity>
+            </View>
+
+            {/* PROFILE INFO */}
+            <View style={styles.profileInfoContainer}>
+              {/* Tap on pfp or "Edit" icon to change profile picture */}
+              <TouchableOpacity
+                onPress={handleChangeProfilePicture}
+                activeOpacity={0.8}
+                style={styles.profilePictureWrapper}
+              >
+                {userProfile.profilePictureUrl ? (
+                  <Image
+                    source={{ uri: userProfile.profilePictureUrl }}
+                    style={styles.profilePicture}
+                  />
+                ) : (
+                  <View style={styles.profilePlaceholder}>
+                    <Ionicons name="person-circle-outline" size={90} color="#ccc" />
+                  </View>
+                )}
+                <View style={styles.cameraIconWrapper}>
+                  <Ionicons name="camera" size={18} color={COLORS.textLight} />
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.profileTextSection}>
+                <Text style={styles.profileName}>{userProfile.name}</Text>
+                {userProfile.bio ? (
+                  <>
+                    <Text style={styles.profileLabel}>
+                      {t('profile_bio_label')}:
+                    </Text>
+                    <Text style={styles.profileValue} numberOfLines={3}>
+                      {userProfile.bio}
+                    </Text>
+                  </>
+                ) : null}
+
+                {/* LOCATION */}
+                <View style={styles.profileLocationSection}>
+                  <Text style={styles.profileLabel}>
+                    {t('profile_location_label')}:
+                  </Text>
+                  {userHasLocation ? (
+                    <View style={styles.mapContainer}>
+                      <MapView style={styles.map} initialRegion={region}>
+                        <Circle
+                          center={{
+                            latitude: region.latitude,
+                            longitude: region.longitude,
+                          }}
+                          radius={searchRadius * 1000} // searchRadius in km -> convert to meters
+                          strokeWidth={1.5}
+                          strokeColor="#1EAE98"
+                          fillColor="rgba(30, 174, 152, 0.2)"
+                        />
+                      </MapView>
+                    </View>
+                  ) : (
+                    <Text style={styles.profileValue}>
+                      {t('profile_no_location')}
+                    </Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleChangeLocation}
+                  style={styles.locationButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('profile_change_location_button')}
+                >
+                  <Ionicons
+                    name="location-outline"
+                    size={18}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.locationButtonText}>
+                    {t('profile_change_location_button')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </LinearGradient>
+
+          {/* MY PLANTS SECTION */}
+          <View style={styles.plantsSectionWrapper}>
+            <View style={styles.plantsSectionHeader}>
+              <Text style={styles.plantsSectionTitle}>
+                {t('profile_my_plants_section')}
+              </Text>
+              <TouchableOpacity
+                onPress={handleAddPlant}
+                style={styles.addPlantButton}
+                accessibilityRole="button"
+                accessibilityLabel={t('profile_add_plant_button')}
+              >
+                <Ionicons name="add-circle" size={24} color={COLORS.primary} />
+                <Text style={styles.addPlantButtonText}>
+                  {t('profile_add_plant_button')}
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </LinearGradient>
 
-        {/* MY PLANTS SECTION */}
-        <View style={styles.plantsSectionWrapper}>
-          <View style={styles.plantsSectionHeader}>
-            <Text style={styles.plantsSectionTitle}>
-              {t('profile_my_plants_section')}
-            </Text>
-            <TouchableOpacity
-              onPress={handleAddPlant}
-              style={styles.addPlantButton}
-              accessibilityRole="button"
-              accessibilityLabel={t('profile_add_plant_button')}
-            >
-              <Ionicons name="add-circle" size={24} color={COLORS.primary} />
-              <Text style={styles.addPlantButtonText}>
-                {t('profile_add_plant_button')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            {/* CUSTOM TOGGLE (instead of Switch) */}
+            <View style={styles.viewToggleContainer}>
+              <TouchableOpacity
+                onPress={() => setShowFullSize(false)}
+                style={[
+                  styles.viewToggleOption,
+                  !showFullSize && styles.viewToggleOptionActive,
+                ]}
+                activeOpacity={0.9}
+              >
+                <Text
+                  style={[
+                    styles.viewToggleText,
+                    !showFullSize && styles.viewToggleTextActive,
+                  ]}
+                >
+                  {t('Thumbnails')}
+                </Text>
+              </TouchableOpacity>
 
-          <View style={styles.plantsContainer}>
+              <TouchableOpacity
+                onPress={() => setShowFullSize(true)}
+                style={[
+                  styles.viewToggleOption,
+                  showFullSize && styles.viewToggleOptionActive,
+                ]}
+                activeOpacity={0.9}
+              >
+                <Text
+                  style={[
+                    styles.viewToggleText,
+                    showFullSize && styles.viewToggleTextActive,
+                  ]}
+                >
+                  {t('Full Size')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* PLANTS DISPLAY */}
             {myPlants && myPlants.length > 0 ? (
-              <FlatList
-                data={myPlants}
-                keyExtractor={(item) => item.plantId.toString()}
-                renderItem={renderPlantItem}
-                numColumns={2}
-                columnWrapperStyle={{ justifyContent: 'space-between' }}
-                contentContainerStyle={styles.plantListContent}
-              />
+              <View
+                style={[
+                  showFullSize
+                    ? styles.fullViewContainer
+                    : styles.thumbViewContainer,
+                ]}
+              >
+                {myPlants.map((plant) => renderPlantItem(plant))}
+              </View>
             ) : (
               <View style={styles.noPlantsContainer}>
                 <Text style={styles.noPlantsText}>
@@ -281,28 +469,24 @@ const MyProfileScreen: React.FC = () => {
               </View>
             )}
           </View>
-        </View>
 
-        {/* MODALS */}
-        <EditProfileModal
-          visible={editProfileVisible}
-          initialName={userProfile.name}
-          initialBio={userProfile.bio || ''}
-          onClose={() => setEditProfileVisible(false)}
-          onUpdated={handleProfileUpdated}
-        />
-        {/**
-         * IMPORTANT: We pass userProfile.locationLatitude and locationLongitude
-         * directly without the `|| undefined` fallback.
-         */}
-        <ChangeLocationModal
-          visible={changeLocationVisible}
-          initialLatitude={userProfile.locationLatitude}
-          initialLongitude={userProfile.locationLongitude}
-          onClose={() => setChangeLocationVisible(false)}
-          onUpdated={handleLocationUpdated}
-        />
-      </SafeAreaView>
+          {/* MODALS */}
+          <EditProfileModal
+            visible={editProfileVisible}
+            initialName={userProfile.name}
+            initialBio={userProfile.bio || ''}
+            onClose={() => setEditProfileVisible(false)}
+            onUpdated={handleProfileUpdated}
+          />
+          <ChangeLocationModal
+            visible={changeLocationVisible}
+            initialLatitude={userProfile.locationLatitude}
+            initialLongitude={userProfile.locationLongitude}
+            onClose={() => setChangeLocationVisible(false)}
+            onUpdated={handleLocationUpdated}
+          />
+        </ScrollView>
+      </SafeAreaProvider>
     );
   }
 
@@ -373,12 +557,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 15,
   },
+  profilePictureWrapper: {
+    position: 'relative',
+    marginRight: 15,
+  },
   profilePicture: {
     width: 100,
     height: 100,
     borderRadius: 50,
     backgroundColor: '#eee',
-    marginRight: 15,
     borderWidth: 2,
     borderColor: '#fff',
   },
@@ -389,7 +576,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 15,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  cameraIconWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    padding: 4,
   },
   profileTextSection: {
     flexShrink: 1,
@@ -451,7 +647,6 @@ const styles = StyleSheet.create({
 
   // PLANTS SECTION
   plantsSectionWrapper: {
-    flex: 1,
     paddingHorizontal: 10,
     paddingTop: 10,
   },
@@ -477,30 +672,44 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontWeight: '600',
   },
-  plantsContainer: {
-    flex: 1,
+
+  // CUSTOM TOGGLE
+  viewToggleContainer: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    borderColor: COLORS.border,
+    borderWidth: 1,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 12,
   },
-  plantListContent: {
-    paddingHorizontal: 10,
-    paddingBottom: 20,
+  viewToggleOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
   },
-  noPlantsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+  viewToggleOptionActive: {
+    backgroundColor: COLORS.primary,
   },
-  noPlantsText: {
-    fontSize: 16,
-    color: '#555',
-    textAlign: 'center',
+  viewToggleText: {
+    fontSize: 14,
+    color: COLORS.textDark,
+    fontWeight: '600',
+  },
+  viewToggleTextActive: {
+    color: '#fff',
   },
 
-  // PLANT CARD
-  plantCard: {
-    width: (width - 60) / 2,
+  // THUMBNAIL VIEW
+  thumbViewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  plantCardThumbnail: {
+    width: (width - 50) / 3,
     backgroundColor: COLORS.cardBg,
-    borderRadius: 15,
+    borderRadius: 8,
     marginBottom: 15,
     overflow: 'hidden',
     ...Platform.select({
@@ -514,10 +723,9 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  plantImage: {
+  thumbImage: {
     width: '100%',
-    height: 120,
-    resizeMode: 'cover',
+    aspectRatio: 3/4,
   },
   plantPlaceholder: {
     width: '100%',
@@ -526,14 +734,96 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  plantDetails: {
-    padding: 10,
+  thumbTextWrapper: {
+    padding: 8,
+    alignItems: 'center',
   },
-  plantName: {
+  thumbPlantName: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.textDark,
+  },
+
+  // FULL-SIZE VIEW
+  fullViewContainer: {
+    // a simple vertical stack
+    width: '100%',
+  },
+  plantCardFull: {
+    marginBottom: 15,
+    width: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
+    
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 5,
+        shadowOffset: { width: 0, height: 3 },
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  fullImageContainer: {
+    width: '100%',
+    // remove forced aspect ratio so the image can keep its own ratio via "contain"
+    position: 'relative',
+  },
+  fullImage: {
+    width: '100%',
+    aspectRatio: 3/4,
+    //here I want an automatic height based on the width
+  },
+  fullImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+  },
+  overlayContent: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10,
+  },
+  fullPlantName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 6,
+  },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 6,
+  },
+  tag: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  tagText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  fullDescription: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '400',
+  },
+
+  // NO PLANTS
+  noPlantsContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noPlantsText: {
+    fontSize: 16,
+    color: '#555',
     textAlign: 'center',
   },
 });
-
