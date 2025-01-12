@@ -28,6 +28,7 @@ import { PlantResponse } from '../../../types/apiTypes';
 import { userService } from '../../../api/userService'; // for updating the profile picture
 import { EditProfileModal } from '../components/EditProfileModal';
 import { ChangeLocationModal } from '../components/ChangeLocationModal';
+import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
 
 const { width } = Dimensions.get('window');
 const COLORS = {
@@ -223,7 +224,9 @@ const MyProfileScreen: React.FC = () => {
             )}
             {/* Overlay for tags & description */}
             <View style={styles.fullImageOverlay}>
-              <View style={styles.overlayContent}>
+              <LinearGradient 
+              colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 1)']}
+              style={styles.overlayContent}>
                 <Text style={styles.fullPlantName}>{item.speciesName}</Text>
                 {/* Show tags if item.extras or other categories are present */}
                 {item.extras && item.extras.length > 0 && (
@@ -239,7 +242,7 @@ const MyProfileScreen: React.FC = () => {
                 {item.description ? (
                   <Text style={styles.fullDescription}>{item.description}</Text>
                 ) : null}
-              </View>
+              </LinearGradient>
             </View>
           </View>
         </View>
@@ -533,8 +536,8 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     marginBottom: 10,
   },
   headerTopRow: {
@@ -782,8 +785,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   overlayContent: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
     padding: 10,
+    paddingTop: 100,
   },
   fullPlantName: {
     fontSize: 18,

@@ -8,7 +8,7 @@ export const useLikablePlants = () => {
     swipeService.getLikablePlants,
     {
       staleTime: 1000 * 60 * 1, // 1 min
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       retry: 1,
     }
   );
