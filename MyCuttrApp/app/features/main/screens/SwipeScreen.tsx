@@ -1,86 +1,40 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+// File: SwipeScreen.tsx
+
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  StyleSheet,
   View,
   Text,
-  StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
+  ActivityIndicator,
   Alert,
+  SafeAreaView,
+  FlatList,
+  Dimensions,
   Platform,
-  ScrollView,
 } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
+// --- Hooks ---
 import { useLikablePlants } from '../hooks/useSwipe';
-import { useMyPlants } from '../hooks/usePlants';
+import { useUserProfile } from '../hooks/useUser';
 import { useUserPreferences } from '../hooks/usePreferences';
+import { useMyPlants } from '../hooks/usePlants';
 
+// --- Components & Services ---
 import { SwipeableCard } from '../components/SwipeableCard';
 import { SelectPlantsModal } from '../components/SelectPlantsModal';
-import { EditUserPreferencesModal } from '../components/EditUserPreferencesModal';
-
 import { swipeService } from '../../../api/swipeService';
-import {
-  SwipeRequest,
-  PlantResponse,
-  UserPreferencesResponse,
-} from '../../../types/apiTypes';
 
-/**
- * Convert the entire UserPreferencesResponse into a list of "chips," each containing:
- * - the raw string (e.g. "Herbs", "Indoor", etc.)
- * - the preference array name it belongs to (e.g. "preferedPlantCategory")
- *
- * This is so we can display them and remove them if the user taps the “X.”
- */
-type FilterChipData = {
-  id: string;             // Unique ID, e.g. preferedPlantCategory:Herbs
-  text: string;           // The actual string, e.g. "Herbs"
-  arrayName:
-    | 'preferedPlantStage'
-    | 'preferedPlantCategory'
-    | 'preferedWateringNeed'
-    | 'preferedLightRequirement'
-    | 'preferedSize'
-    | 'preferedIndoorOutdoor'
-    | 'preferedPropagationEase'
-    | 'preferedPetFriendly'
-    | 'preferedExtras';
-};
+// --- Types ---
+import { PlantResponse, SwipeRequest } from '../../../types/apiTypes';
 
-function buildActiveFilters(prefs: UserPreferencesResponse): FilterChipData[] {
-  const chips: FilterChipData[] = [];
+// Screen dimensions for layout references
+const { width } = Dimensions.get('window');
 
-  const pushItems = (
-    arr: string[] | undefined,
-    arrayName: FilterChipData['arrayName']
-  ) => {
-    if (!arr) return;
-    arr.forEach((item) => {
-      // create a stable ID
-      chips.push({
-        id: `${arrayName}:${item}`,
-        text: item,
-        arrayName,
-      });
-    });
-  };
-
-  pushItems(prefs.preferedPlantStage, 'preferedPlantStage');
-  pushItems(prefs.preferedPlantCategory, 'preferedPlantCategory');
-  pushItems(prefs.preferedWateringNeed, 'preferedWateringNeed');
-  pushItems(prefs.preferedLightRequirement, 'preferedLightRequirement');
-  pushItems(prefs.preferedSize, 'preferedSize');
-  pushItems(prefs.preferedIndoorOutdoor, 'preferedIndoorOutdoor');
-  pushItems(prefs.preferedPropagationEase, 'preferedPropagationEase');
-  pushItems(prefs.preferedPetFriendly, 'preferedPetFriendly');
-  pushItems(prefs.preferedExtras, 'preferedExtras');
-
-  return chips;
-}
-
+// Feel free to tweak or unify these colors with your own theme.
 const COLORS = {
   primary: '#1EAE98',
   primaryLight: '#5EE2C6',
@@ -92,276 +46,229 @@ const COLORS = {
   border: '#ddd',
 };
 
-export const SwipeScreen: React.FC = () => {
-  // -------------------------------------------------------------------------
-  // QUERIES: Fetch plants, user plants, and user preferences
-  // -------------------------------------------------------------------------
-  const { data: plants, isLoading, isError, refetch } = useLikablePlants();
+interface SwipeScreenProps {}
+
+const SwipeScreen: React.FC<SwipeScreenProps> = () => {
+  const navigation = useNavigation();
+
+  // ----- Data Fetching Hooks -----
+  const {
+    data: likablePlants,
+    isLoading: loadingPlants,
+    isError: errorPlants,
+    refetch: refetchLikablePlants,
+  } = useLikablePlants();
+
+  const { data: userProfile } = useUserProfile();
+  const {
+    data: userPreferences,
+    updatePreferences,
+    isUpdating: updatingPrefs,
+  } = useUserPreferences();
+
   const {
     data: myPlants,
     isLoading: loadingMyPlants,
     isError: errorMyPlants,
     refetch: refetchMyPlants,
   } = useMyPlants();
-  const {
-    data: userPreferences,
-    isLoading: prefLoading,
-    isError: prefError,
-    refetch: refetchPreferences,
-    updatePreferences,
-  } = useUserPreferences();
 
-  // -------------------------------------------------------------------------
-  // LOCAL STATE
-  // -------------------------------------------------------------------------
-  const [localPlants, setLocalPlants] = useState<PlantResponse[]>(plants || []);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [pendingRightSwipePlant, setPendingRightSwipePlant] =
-    useState<PlantResponse | null>(null);
+  // ----- Local State -----
+  const [plantStack, setPlantStack] = useState<PlantResponse[]>([]);
+  const [showSelectModal, setShowSelectModal] = useState(false);
+  const [plantToLike, setPlantToLike] = useState<PlantResponse | null>(null);
 
-  // For opening/closing the "EditUserPreferencesModal"
-  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
-
-  // -------------------------------------------------------------------------
-  // EFFECTS
-  // -------------------------------------------------------------------------
-  // Keep local plants synced with server data
+  // Initialize plant stack when likablePlants change
   useEffect(() => {
-    if (plants) {
-      setLocalPlants(plants);
+    if (likablePlants) {
+      setPlantStack(likablePlants);
     }
-  }, [plants]);
+  }, [likablePlants]);
 
-  // -------------------------------------------------------------------------
-  // BUILD "ACTIVE FILTER" CHIPS
-  // -------------------------------------------------------------------------
-  const activeFilterChips = useMemo(() => {
-    if (!userPreferences) return [];
-    return buildActiveFilters(userPreferences);
-  }, [userPreferences]);
+  // ----- Navigation: filter button -----
+  const handleFilterPress = useCallback(() => {
+    navigation.navigate('SetUserPreferences' as never);
+  }, [navigation]);
 
-  // -------------------------------------------------------------------------
-  // CARD SWIPE LOGIC
-  // -------------------------------------------------------------------------
-  const removeTopCard = (plantId: number) => {
-    setLocalPlants((prev) => prev.filter((p) => p.plantId !== plantId));
-  };
+  // ----- Removing Single Preference Tag -----
+  const handleRemoveSinglePreference = useCallback(
+    async (tagKey: string, valueToRemove: string) => {
+      if (!userPreferences) return;
 
-  const handleSwipeLeft = useCallback(
-    async (plantId: number) => {
-      if (!myPlants) {
-        Alert.alert(
-          'Error',
-          'Add some plants or cuttings if you want to start trading.'
-        );
-        return;
+      const updatedPrefs = { ...userPreferences };
+
+      switch (tagKey) {
+        case 'Stage':
+          updatedPrefs.preferedPlantStage = userPreferences.preferedPlantStage.filter(
+            (val) => val !== valueToRemove
+          );
+          break;
+        case 'Category':
+          updatedPrefs.preferedPlantCategory = userPreferences.preferedPlantCategory.filter(
+            (val) => val !== valueToRemove
+          );
+          break;
+        case 'Light':
+          updatedPrefs.preferedLightRequirement = userPreferences.preferedLightRequirement.filter(
+            (val) => val !== valueToRemove
+          );
+          break;
+        case 'Water':
+          updatedPrefs.preferedWateringNeed = userPreferences.preferedWateringNeed.filter(
+            (val) => val !== valueToRemove
+          );
+          break;
+        case 'Size':
+          updatedPrefs.preferedSize = userPreferences.preferedSize.filter(
+            (val) => val !== valueToRemove
+          );
+          break;
+        case 'IndoorOutdoor':
+          updatedPrefs.preferedIndoorOutdoor = userPreferences.preferedIndoorOutdoor.filter(
+            (val) => val !== valueToRemove
+          );
+          break;
+        case 'PropagationEase':
+          updatedPrefs.preferedPropagationEase = userPreferences.preferedPropagationEase.filter(
+            (val) => val !== valueToRemove
+          );
+          break;
+        case 'PetFriendly':
+          updatedPrefs.preferedPetFriendly = userPreferences.preferedPetFriendly.filter(
+            (val) => val !== valueToRemove
+          );
+          break;
+        case 'Extras':
+          updatedPrefs.preferedExtras = userPreferences.preferedExtras.filter(
+            (val) => val !== valueToRemove
+          );
+          break;
+        default:
+          break;
       }
-      const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
-        swiperPlantId: userPlant.plantId,
-        swipedPlantId: plantId,
-        isLike: false,
-      }));
-      try {
-        await swipeService.sendSwipes(swipeRequests);
-      } catch (err) {
-        console.error(err);
-        Alert.alert('Error', 'Failed to register swipe.');
-      }
-      removeTopCard(plantId);
-    },
-    [myPlants]
-  );
-
-  const handleRightSwipeInitiation = useCallback(
-    (plantId: number) => {
-      if (!myPlants) {
-        Alert.alert(
-          'Error',
-          'Add some plants or cuttings if you want to start trading.'
-        );
-        return;
-      }
-      const plantToLike = localPlants.find((p) => p.plantId === plantId);
-      if (!plantToLike) return;
-      setPendingRightSwipePlant(plantToLike);
-      setModalVisible(true);
-    },
-    [localPlants, myPlants]
-  );
-
-  const handleRightSwipeConfirm = useCallback(
-    async (selectedPlantIds: number[]) => {
-      if (!pendingRightSwipePlant || !myPlants) return;
-
-      const plantId = pendingRightSwipePlant.plantId;
-      const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
-        swiperPlantId: userPlant.plantId,
-        swipedPlantId: plantId,
-        isLike: selectedPlantIds.includes(userPlant.plantId),
-      }));
 
       try {
-        await swipeService.sendSwipes(swipeRequests);
+        await updatePreferences(updatedPrefs);
       } catch (err) {
-        console.error(err);
-        Alert.alert('Error', 'Failed to send swipe requests.');
-        return;
+        Alert.alert('Error', 'Could not remove preference.');
       }
-      removeTopCard(plantId);
-      setPendingRightSwipePlant(null);
-      setModalVisible(false);
     },
-    [myPlants, pendingRightSwipePlant]
+    [userPreferences, updatePreferences]
   );
 
-  const handleModalClose = () => {
-    setPendingRightSwipePlant(null);
-    setModalVisible(false);
+  // ----- SWIPE ACTIONS -----
+  const handleSwipeLeft = (swipedPlantId: number) => {
+    if (!myPlants) return;
+    const requests: SwipeRequest[] = myPlants.map((myPlant) => ({
+      swiperPlantId: myPlant.plantId,
+      swipedPlantId,
+      isLike: false,
+    }));
+
+    swipeService
+      .sendSwipes(requests)
+      .then(() => {
+        // Remove the top card from the stack
+        setPlantStack((prevStack) => prevStack.slice(1));
+      })
+      .catch(() => {
+        Alert.alert('Error', 'Failed to send swipes.');
+      });
   };
 
-  const topCard = useMemo(() => {
-    return localPlants.length > 0 ? localPlants[0] : null;
-  }, [localPlants]);
+  const handleSwipeRight = (swipedPlantId: number) => {
+    const foundPlant = plantStack.find((p) => p.plantId === swipedPlantId) ?? null;
+    if (foundPlant) {
+      setPlantToLike(foundPlant);
+      setShowSelectModal(true);
+    }
+  };
+
+  const handleSelectConfirm = (selectedMyPlantIds: number[]) => {
+    if (!plantToLike || !myPlants) return;
+    const selectedSet = new Set(selectedMyPlantIds);
+
+    const requests: SwipeRequest[] = myPlants.map((mp) => ({
+      swiperPlantId: mp.plantId,
+      swipedPlantId: plantToLike.plantId,
+      isLike: selectedSet.has(mp.plantId),
+    }));
+
+    swipeService
+      .sendSwipes(requests)
+      .then(() => {
+        setShowSelectModal(false);
+        setPlantToLike(null);
+        // Remove the top card after successful like
+        setPlantStack((prevStack) => prevStack.slice(1));
+      })
+      .catch(() => {
+        Alert.alert('Error', 'Failed to send swipes.');
+      });
+  };
+
+  const handleSelectCancel = () => {
+    setShowSelectModal(false);
+    setPlantToLike(null);
+  };
 
   const handlePassPress = () => {
+    const topCard = plantStack[0];
     if (topCard) {
       handleSwipeLeft(topCard.plantId);
     }
   };
 
   const handleLikePress = () => {
+    const topCard = plantStack[0];
     if (topCard) {
-      handleRightSwipeInitiation(topCard.plantId);
+      handleSwipeRight(topCard.plantId);
     }
   };
 
-  // -------------------------------------------------------------------------
-  // REMOVING A FILTER DIRECTLY FROM A CHIP
-  // -------------------------------------------------------------------------
-  const handleRemoveFilter = (chip: FilterChipData) => {
-    if (!userPreferences) return;
+  // ----- RENDERING THE HEADER WITH FILTER TAGS -----
+  const renderHeader = () => {
+    const prefTags: Array<{ key: string; value: string }> = [];
 
-    // We create a new copy, then remove the text from that array
-    const newPrefs = { ...userPreferences };
-
-    switch (chip.arrayName) {
-      case 'preferedPlantStage': {
-        newPrefs.preferedPlantStage = newPrefs.preferedPlantStage?.filter(
-          (val) => val !== chip.text
-        );
-        break;
-      }
-      case 'preferedPlantCategory': {
-        newPrefs.preferedPlantCategory = newPrefs.preferedPlantCategory?.filter(
-          (val) => val !== chip.text
-        );
-        break;
-      }
-      case 'preferedWateringNeed': {
-        newPrefs.preferedWateringNeed = newPrefs.preferedWateringNeed?.filter(
-          (val) => val !== chip.text
-        );
-        break;
-      }
-      case 'preferedLightRequirement': {
-        newPrefs.preferedLightRequirement =
-          newPrefs.preferedLightRequirement?.filter(
-            (val) => val !== chip.text
-          );
-        break;
-      }
-      case 'preferedSize': {
-        newPrefs.preferedSize = newPrefs.preferedSize?.filter(
-          (val) => val !== chip.text
-        );
-        break;
-      }
-      case 'preferedIndoorOutdoor': {
-        newPrefs.preferedIndoorOutdoor =
-          newPrefs.preferedIndoorOutdoor?.filter((val) => val !== chip.text);
-        break;
-      }
-      case 'preferedPropagationEase': {
-        newPrefs.preferedPropagationEase =
-          newPrefs.preferedPropagationEase?.filter((val) => val !== chip.text);
-        break;
-      }
-      case 'preferedPetFriendly': {
-        newPrefs.preferedPetFriendly = newPrefs.preferedPetFriendly?.filter(
-          (val) => val !== chip.text
-        );
-        break;
-      }
-      case 'preferedExtras': {
-        newPrefs.preferedExtras = newPrefs.preferedExtras?.filter(
-          (val) => val !== chip.text
-        );
-        break;
-      }
-      default:
-        break;
+    if (userPreferences) {
+      userPreferences.preferedPlantStage?.forEach((val) =>
+        prefTags.push({ key: 'Stage', value: val })
+      );
+      userPreferences.preferedPlantCategory?.forEach((val) =>
+        prefTags.push({ key: 'Category', value: val })
+      );
+      userPreferences.preferedLightRequirement?.forEach((val) =>
+        prefTags.push({ key: 'Light', value: val })
+      );
+      userPreferences.preferedWateringNeed?.forEach((val) =>
+        prefTags.push({ key: 'Water', value: val })
+      );
+      userPreferences.preferedSize?.forEach((val) =>
+        prefTags.push({ key: 'Size', value: val })
+      );
+      userPreferences.preferedIndoorOutdoor?.forEach((val) =>
+        prefTags.push({ key: 'IndoorOutdoor', value: val })
+      );
+      userPreferences.preferedPropagationEase?.forEach((val) =>
+        prefTags.push({ key: 'PropagationEase', value: val })
+      );
+      userPreferences.preferedPetFriendly?.forEach((val) =>
+        prefTags.push({ key: 'PetFriendly', value: val })
+      );
+      userPreferences.preferedExtras?.forEach((val) =>
+        prefTags.push({ key: 'Extras', value: val })
+      );
     }
 
-    updatePreferences(newPrefs); // triggers refetch on success
-  };
-
-  // -------------------------------------------------------------------------
-  // OPEN/CLOSE THE MODAL FOR EDITING FILTERS
-  // -------------------------------------------------------------------------
-  const handleFilterPress = () => {
-    setShowPreferencesModal(true);
-  };
-
-  // -------------------------------------------------------------------------
-  // ERROR/LOADING STATES
-  // -------------------------------------------------------------------------
-  const anyLoading = isLoading || loadingMyPlants || prefLoading;
-  const anyError = isError || errorMyPlants || prefError;
-
-  if (anyLoading) {
     return (
-      <SafeAreaProvider style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading Plants & Filters...</Text>
-      </SafeAreaProvider>
-    );
-  }
-
-  if (anyError) {
-    return (
-      <SafeAreaProvider style={styles.centerContainer}>
-        <Text style={styles.errorText}>
-          Failed to load plants or preferences.
-        </Text>
-        <TouchableOpacity
-          onPress={() => {
-            refetch();
-            refetchMyPlants();
-            refetchPreferences();
-          }}
-          style={styles.retryButton}
-        >
-          <Text style={styles.retryButtonText}>Try Again</Text>
-        </TouchableOpacity>
-      </SafeAreaProvider>
-    );
-  }
-
-  // -------------------------------------------------------------------------
-  // MAIN RENDER
-  // -------------------------------------------------------------------------
-  return (
-    <SafeAreaProvider style={styles.container}>
-      {/* Top Header with gradient */}
       <LinearGradient
         colors={[COLORS.primary, COLORS.primaryLight]}
         style={styles.headerGradient}
       >
-        {/* Header Row */}
         <View style={styles.headerTopRow}>
-          <Text style={styles.headerTitle}>Explore</Text>
+          <Text style={styles.headerTitle}>Cuttr</Text>
           <TouchableOpacity
-            onPress={handleFilterPress} // open filters modal
+            onPress={handleFilterPress}
             style={styles.headerActionButton}
             accessible
             accessibilityLabel="Filter plants"
@@ -370,63 +277,121 @@ export const SwipeScreen: React.FC = () => {
             <Ionicons name="options" size={24} color={COLORS.textLight} />
           </TouchableOpacity>
         </View>
-
-        {/* Active Filters Section */}
-        <View style={styles.activeFiltersSection}>
-          <Text style={styles.activeFiltersLabel}>Active Filters:</Text>
-          {activeFilterChips.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterChipsScroll}
-              contentContainerStyle={{ paddingHorizontal: 4 }}
-            >
-              {activeFilterChips.map((chip) => (
-                <View style={styles.filterChip} key={chip.id}>
-                  <Text style={styles.filterChipText}>{chip.text}</Text>
-                  <TouchableOpacity
-                    style={styles.removeFilterButton}
-                    onPress={() => handleRemoveFilter(chip)}
-                  >
-                    <Ionicons
-                      name="close-circle"
-                      size={18}
-                      color="#fff"
-                      style={{ marginLeft: 6 }}
-                    />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
+        <View style={styles.filterContainer}>
+        <View style={styles.filterInfoContainer}>
+          {prefTags.length > 0 ? (
+            <Text style={styles.filterInfoText}>Filters:</Text>
           ) : (
-            <Text style={styles.noFiltersText}>No filters selected</Text>
+            <Text style={styles.noFilterText}>No filters applied</Text>
           )}
         </View>
-      </LinearGradient>
-
-      {/* Cards Container */}
-      <View style={styles.cardsContainer}>
-        {localPlants.map((plant) => (
-          <SwipeableCard
-            key={plant.plantId}
-            plant={plant}
-            onSwipeLeft={handleSwipeLeft}
-            onSwipeRight={handleRightSwipeInitiation}
-          />
-        ))}
-
-        {localPlants.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No more plants to show.</Text>
-            <Text style={styles.emptyStateSubText}>
-              Try adjusting your filters or come back later.
-            </Text>
+        {prefTags.length > 0 && (
+          <View style={styles.filterRow}>
+            <FlatList
+              data={prefTags}
+              keyExtractor={(item, index) =>
+                `${item.key}-${item.value}-${index}`
+              }
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <View style={styles.tagChip}>
+                  <Text style={styles.tagChipText}>{item.value}</Text>
+                  <TouchableOpacity
+                    style={styles.removeTagButton}
+                    onPress={() =>
+                      handleRemoveSinglePreference(item.key, item.value)
+                    }
+                  >
+                    <Ionicons name="close-circle" size={16} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
           </View>
         )}
-      </View>
+        </View>
+      </LinearGradient>
+    );
+  };
 
-      {/* Bottom Action Card (Pass / Like Buttons) */}
-      {localPlants.length > 0 && (
+  // ----- MAIN CARD STACK -----
+  const renderCardStack = () => {
+    if (loadingPlants || loadingMyPlants) {
+      return (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loaderText}>Loading plants...</Text>
+        </View>
+      );
+    }
+
+    if (errorPlants || errorMyPlants) {
+      return (
+        <View style={styles.noPlantsContainer}>
+          <Text style={styles.noPlantsText}>
+            Failed to load plants or your gallery.
+          </Text>
+          <TouchableOpacity
+            style={styles.reloadButton}
+            onPress={() => {
+              refetchLikablePlants();
+              refetchMyPlants();
+            }}
+          >
+            <Text style={styles.reloadButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (!plantStack || plantStack.length === 0) {
+      return (
+        <View style={styles.noPlantsContainer}>
+          <Text style={styles.noPlantsText}>
+            No more plants to show in your area.
+          </Text>
+          <TouchableOpacity
+            style={styles.reloadButton}
+            onPress={() => refetchLikablePlants()}
+          >
+            <Text style={styles.reloadButtonText}>Reload</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Show up to 3 cards for stacked effect
+    const visibleCards = plantStack.slice(0, 3);
+    return (
+      <View style={styles.deckContainer}>
+        {visibleCards.map((plant, index) => {
+          // Calculate offset such that bottom-most card has the largest offset
+          const offset = (visibleCards.length - 1 - index) * 5;
+          // Only top card should handle swipe actions
+          const isTop = index === 0;
+          return (
+            <View
+              key={plant.plantId}
+              style={[styles.cardWrapper, { top: -offset, right: offset }]}
+            >
+              <SwipeableCard
+                plant={plant}
+                onSwipeLeft={isTop ? handleSwipeLeft : undefined}
+                onSwipeRight={isTop ? handleSwipeRight : undefined}
+              />
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {renderHeader()}
+      {renderCardStack()}
+      {plantStack && plantStack.length > 0 && (
         <View style={styles.bottomActionContainer}>
           <TouchableOpacity
             onPress={handlePassPress}
@@ -442,39 +407,33 @@ export const SwipeScreen: React.FC = () => {
               <MaterialIcons name="close" size={32} color={COLORS.textLight} />
             </LinearGradient>
           </TouchableOpacity>
-
+          <View style={styles.divider} />
           <TouchableOpacity
             onPress={handleLikePress}
             style={styles.actionButtonWrapper}
             accessibilityRole="button"
             accessibilityLabel="Like this plant"
-            accessibilityHint="Show interest and match with this plant"
+            accessibilityHint="Show interest in this plant"
           >
             <LinearGradient
               colors={[COLORS.primary, COLORS.primaryLight]}
               style={styles.actionButton}
             >
-              <MaterialIcons name="favorite" size={32} color={COLORS.textLight} />
+              <MaterialIcons
+                name="favorite"
+                size={32}
+                color={COLORS.textLight}
+              />
             </LinearGradient>
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Modal for selecting your own plants to offer */}
-      {myPlants && pendingRightSwipePlant && (
-        <SelectPlantsModal
-          visible={modalVisible}
-          onClose={handleModalClose}
-          onConfirm={handleRightSwipeConfirm}
-        />
-      )}
-
-      {/* Modal to edit user preferences/filters */}
-      <EditUserPreferencesModal
-        visible={showPreferencesModal}
-        onClose={() => setShowPreferencesModal(false)}
+      <SelectPlantsModal
+        visible={showSelectModal}
+        onConfirm={handleSelectConfirm}
+        onClose={handleSelectCancel}
       />
-    </SafeAreaProvider>
+    </SafeAreaView>
   );
 };
 
@@ -485,42 +444,42 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  loaderContainer: {
+    marginTop: 40,
     alignItems: 'center',
-    padding: 20,
   },
-  loadingText: {
+  loaderText: {
+    fontSize: 16,
     marginTop: 10,
-    fontSize: 16,
     color: COLORS.textDark,
   },
-  errorText: {
+  noPlantsContainer: {
+    marginTop: 40,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  noPlantsText: {
     fontSize: 16,
     color: COLORS.textDark,
-    marginBottom: 20,
+    marginBottom: 10,
     textAlign: 'center',
   },
-  retryButton: {
+  reloadButton: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 8,
   },
-  retryButtonText: {
-    color: COLORS.textLight,
-    fontSize: 16,
+  reloadButtonText: {
+    color: '#fff',
     fontWeight: '600',
   },
-
-  // HEADER
   headerGradient: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 15,
     paddingBottom: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 20, // Smaller corner
+    borderBottomRightRadius: 20, // Smaller corner
     marginBottom: 10,
   },
   headerTopRow: {
@@ -534,83 +493,64 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
   },
   headerActionButton: {
-    padding: 8,
+    padding: 6,
   },
-
-  // ACTIVE FILTERS
-  activeFiltersSection: {
-    marginTop: 8,
+  filterContainer: {
+    flexDirection: 'row',
   },
-  activeFiltersLabel: {
+  filterInfoContainer: {
+    marginTop: 10,
+  },
+  filterInfoText: {
     color: COLORS.textLight,
     fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
   },
-  filterChipsScroll: {
-    maxHeight: 40,
-    marginTop: 2,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    marginRight: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  filterChipText: {
-    color: '#fff',
+  noFilterText: {
+    color: COLORS.textLight,
     fontSize: 14,
-    fontWeight: '600',
   },
-  removeFilterButton: {
-    marginLeft: 4,
-    padding: 0,
-  },
-  noFiltersText: {
-    color: '#fff',
-    fontStyle: 'italic',
-    fontSize: 13,
-  },
-
-  // CARDS
-  cardsContainer: {
+  filterRow: {
+    marginTop: 10,
+    marginLeft: 5,
+    flexDirection: 'row',
     flex: 1,
   },
-
-  // EMPTY STATE
-  emptyState: {
+  tagChip: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.accent,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    marginRight: 8,
     alignItems: 'center',
-    padding: 20,
   },
-  emptyStateText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textDark,
-    marginBottom: 8,
-    textAlign: 'center',
+  tagChipText: {
+    color: '#fff',
+    marginRight: 4,
+    fontSize: 12,
+    fontWeight: '600',
   },
-  emptyStateSubText: {
-    fontSize: 16,
-    color: '#555',
-    textAlign: 'center',
-    paddingHorizontal: 10,
+  removeTagButton: {
+    paddingLeft: 2,
   },
-
-  // BOTTOM ACTION CONTAINER
+  deckContainer: {
+    marginTop: 15,
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  },
+  cardWrapper: {
+    width: width * 0.9,
+    },
   bottomActionContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    position: 'relative',
     backgroundColor: COLORS.textLight,
-    borderRadius: 40,
-    margin: 20,
-    paddingHorizontal: 40,
+    borderRadius: 20,
+    paddingHorizontal: 60,
     paddingTop: 20,
-    paddingBottom: 30,
+    paddingBottom: 20,
+    margin: 20,
+    marginHorizontal: 40,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -626,14 +566,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     flexDirection: 'row',
   },
+  divider: {
+    width: 1,
+    height: '150%',
+    backgroundColor: COLORS.border,
+  },
   actionButtonWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({

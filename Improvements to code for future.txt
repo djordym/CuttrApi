@@ -1,0 +1,29 @@
+Use useMutate for optimistic UI updates etc:
+example:
+const mutation = useMutation(
+  (data: UserPreferencesRequest) => userPreferencesService.updatePreferences(data),
+  {
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries(['userPreferences']);
+      const previousData = queryClient.getQueryData(['userPreferences']);
+      queryClient.setQueryData(['userPreferences'], newData);
+      return { previousData };
+    },
+    onError: (err, newData, context) => {
+      queryClient.setQueryData(['userPreferences'], context?.previousData);
+      Alert.alert('Error', 'Could not update preferences.');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['userPreferences']);
+    },
+    onSettled: () => {
+      // Any final steps
+    }
+  }
+);
+
+
+https://chatgpt.com/share/67862bb9-1220-8001-b912-2024b5bb0989
+
+
+When retrieving likable platns, you only need 10, find a more efficient way to procure these (as now you filter almost all of them and then get the first 10 from maybe a list of 1000s

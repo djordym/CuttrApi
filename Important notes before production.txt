@@ -26,3 +26,6 @@ app.Urls.Add("http://0.0.0.0:5020");
 check if its okay in production to have it listen to everything, well, this defintly will have to change
 
 validation of all incoming request bodys + password/email validation (check if valid and strong password)
+
+email verifaction loginflow
+

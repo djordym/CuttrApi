@@ -4,6 +4,7 @@ import SettingsScreen from '../features/main/screens/SettingsScreen';
 import SwipeScreen from '../features/main/screens/SwipeScreen';
 import { Image, StyleSheet } from 'react-native';
 import ProfileStackNavigator from './ProfileStackNavigator';
+import SwipeStackNavigator from './SwipeStackNavigator';
 
 const Tab = createBottomTabNavigator();
 
@@ -35,7 +36,7 @@ const MainNavigator = () => {
         tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen name="Swipe" component={SwipeScreen}/>
+      <Tab.Screen name="Swipe" component={SwipeStackNavigator}/>
       <Tab.Screen name="Profile" component={ProfileStackNavigator}/>
       <Tab.Screen name="Settings" component={SettingsScreen}/>
     </Tab.Navigator>

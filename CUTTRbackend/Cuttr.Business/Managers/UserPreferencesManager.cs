@@ -1,5 +1,6 @@
 ﻿using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Contracts.Outputs;
+using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Cuttr.Business.Interfaces.RepositoryInterfaces;
@@ -77,10 +78,12 @@ namespace Cuttr.Business.Managers
                 else
                 {
                     // Update existing preferences
-                    
-                    await _userPreferencesRepository.UpdateUserPreferencesAsync(ContractToBusinessMapper.MapToUserPreferences(request));
+                    // Make entity
+                    UserPreferences userpref = ContractToBusinessMapper.MapToUserPreferences(request);
+                    userpref.UserId = userId;
+                    await _userPreferencesRepository.UpdateUserPreferencesAsync(userpref);
 
-                    return BusinessToContractMapper.MapToUserPreferencesResponse(preferences);
+                    return BusinessToContractMapper.MapToUserPreferencesResponse(userpref);
                 }
             }
             catch (NotFoundException)

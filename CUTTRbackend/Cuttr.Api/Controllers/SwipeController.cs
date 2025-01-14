@@ -46,13 +46,13 @@ namespace Cuttr.Api.Controllers
 
         // New GET: api/swipes/likable-plants
         [HttpGet("me/likable-plants")]
-        public async Task<IActionResult> GetLikablePlants()
+        public async Task<IActionResult> GetLikablePlants(int maxCount = 10)
         {
             int userId = 0;
             try
             {
                 userId = User.GetUserId();  
-                var likablePlants = await _swipeManager.GetLikablePlantsAsync(userId);
+                var likablePlants = await _swipeManager.GetLikablePlantsAsync(userId, maxCount);
                 return Ok(likablePlants);
             }
             catch (BusinessException ex)

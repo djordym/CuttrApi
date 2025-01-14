@@ -105,7 +105,7 @@ namespace Cuttr.Business.Managers
             return responses;
         }
 
-        public async Task<List<PlantResponse>> GetLikablePlantsAsync(int userId)
+        public async Task<List<PlantResponse>> GetLikablePlantsAsync(int userId, int maxCount)
         {
             try
             {
@@ -205,18 +205,27 @@ namespace Cuttr.Business.Managers
                 // 7. Exclude plants that have already been swiped
                 foreach (var plant in candidatePlants)
                 {
-                    bool hasUninteractedPlant = (await Task.WhenAll(
-                        userPlants.Select(async up =>
-                            !await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId)
-                        ))
-                    ).Any(result => result);
+                    bool hasUninteractedPlant = false;
+                    foreach (var up in userPlants)
+                    {
+                        // Check if this user plant has NOT swiped on the candidate plant
+                        bool hasSwipe = await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId);
+                        if (!hasSwipe)
+                        {
+                            hasUninteractedPlant = true;
+                            break; // Found an uninteracted swipe; no need to check further for this plant
+                        }
+                    }
 
                     if (hasUninteractedPlant)
                     {
                         likablePlants.Add(BusinessToContractMapper.MapToPlantResponse(plant));
                     }
-                }
 
+                    if (likablePlants.Count >= maxCount)
+                        break; // Reached the maximum count
+
+                }
                 return likablePlants;
             }
             catch (Exception ex)

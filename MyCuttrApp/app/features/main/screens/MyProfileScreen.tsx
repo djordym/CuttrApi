@@ -29,7 +29,7 @@ import { userService } from '../../../api/userService'; // for updating the prof
 import { EditProfileModal } from '../components/EditProfileModal';
 import { ChangeLocationModal } from '../components/ChangeLocationModal';
 import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
-
+import {log} from '../../../utils/logger';
 const { width } = Dimensions.get('window');
 const COLORS = {
   primary: '#1EAE98',
@@ -175,17 +175,18 @@ const MyProfileScreen: React.FC = () => {
 
   const region = userHasLocation
     ? {
-        latitude: userProfile.locationLatitude!,
-        longitude: userProfile.locationLongitude!,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }
+      latitude: userProfile.locationLatitude!,
+      longitude: userProfile.locationLongitude!,
+      latitudeDelta: 0.05,
+      longitudeDelta: 0.05,
+    }
     : undefined;
 
   // -- PLANT CARD RENDERING --
   const renderPlantItem = (item: PlantResponse) => {
     if (!showFullSize) {
       // THUMBNAIL VIEW
+      
       return (
         <View key={item.plantId} style={styles.plantCardThumbnail}>
           {item.imageUrl ? (
@@ -208,6 +209,18 @@ const MyProfileScreen: React.FC = () => {
       );
     } else {
       // FULLSIZE VIEW
+      const alltags = [
+        item.plantStage,
+        item.plantCategory,
+        item.wateringNeed,
+        item.lightRequirement,
+        item.size,
+        item.indoorOutdoor,
+        item.propagationEase,
+        item.petFriendly,
+        ...(item.extras ?? [])
+      ].filter(Boolean);
+      log.debug('alltags', alltags);
       return (
         <View key={item.plantId} style={styles.plantCardFull}>
           <View style={styles.fullImageContainer}>
@@ -224,18 +237,18 @@ const MyProfileScreen: React.FC = () => {
             )}
             {/* Overlay for tags & description */}
             <View style={styles.fullImageOverlay}>
-              <LinearGradient 
-              colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 1)']}
-              style={styles.overlayContent}>
+              <LinearGradient
+                colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 1)']}
+                style={styles.overlayContent}>
                 <Text style={styles.fullPlantName}>{item.speciesName}</Text>
                 {/* Show tags if item.extras or other categories are present */}
-                {item.extras && item.extras.length > 0 && (
+                {alltags.length > 0 && (
                   <View style={styles.tagRow}>
-                    {item.extras.map((tag) => (
-                      <View key={tag} style={styles.tag}>
-                        <Text style={styles.tagText}>{tag}</Text>
-                      </View>
-                    ))}
+                  {alltags.map((tag) => (
+                    <View key={tag} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                    </View>
+                  ))}
                   </View>
                 )}
                 {/* description */}
@@ -728,7 +741,7 @@ const styles = StyleSheet.create({
   },
   thumbImage: {
     width: '100%',
-    aspectRatio: 3/4,
+    aspectRatio: 3 / 4,
   },
   plantPlaceholder: {
     width: '100%',
@@ -757,7 +770,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 8,
     overflow: 'hidden',
-    
+
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -777,7 +790,7 @@ const styles = StyleSheet.create({
   },
   fullImage: {
     width: '100%',
-    aspectRatio: 3/4,
+    aspectRatio: 3 / 4,
     //here I want an automatic height based on the width
   },
   fullImageOverlay: {
