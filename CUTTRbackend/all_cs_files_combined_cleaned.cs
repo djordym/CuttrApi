@@ -98,9 +98,6 @@ new string[] {}
 });
 var secretKey = builder.Configuration["Jwt:Secret"];
 var testforconfig = builder.Configuration["ConnectionStrings:CuttrDb"];
-Console.WriteLine(testforconfig);
-Console.WriteLine("secretkey on next line");
-Console.WriteLine(secretKey);
 var key = Encoding.UTF8.GetBytes(secretKey);
 builder.Services
 .AddAuthentication(options =>
@@ -639,13 +636,13 @@ return BadRequest(ex.Message);
 }
 }
 [HttpGet("me/likable-plants")]
-public async Task<IActionResult> GetLikablePlants()
+public async Task<IActionResult> GetLikablePlants(int maxCount = 10)
 {
 int userId = 0;
 try
 {
 userId = User.GetUserId();
-var likablePlants = await _swipeManager.GetLikablePlantsAsync(userId);
+var likablePlants = await _swipeManager.GetLikablePlantsAsync(userId, maxCount);
 return Ok(likablePlants);
 }
 catch (BusinessException ex)
@@ -686,7 +683,7 @@ return CreatedAtAction(nameof(GetUserById), new { userId = userResponse.UserId }
 catch (BusinessException ex)
 {
 _logger.LogError(ex, "Error registering user.");
-return BadRequest(ex.Message);
+return BadRequest(ex.InnerException.Message);
 }
 }
 [HttpGet("{userId}")]
@@ -706,6 +703,31 @@ catch (BusinessException ex)
 {
 _logger.LogError(ex, $"Error retrieving user with ID {userId}.");
 return BadRequest(ex.Message);
+}
+}
+[HttpGet("me")]
+public async Task<IActionResult> GetMeByToken()
+{
+try
+{
+var userId = User.GetUserId();
+var userResponse = await _userManager.GetUserByIdAsync(userId);
+return Ok(userResponse);
+}
+catch (NotFoundException ex)
+{
+_logger.LogWarning(ex, "User not found.");
+return NotFound(ex.Message);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Error retrieving user.");
+return BadRequest(ex.Message);
+}
+catch (AuthenticationException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
 }
 }
 [HttpPut("me")]
@@ -1044,16 +1066,16 @@ namespace Cuttr.Business.Contracts.Inputs
 public class PlantRequest
 {
 public string SpeciesName { get; set; }
-public string Description { get; set; }
+public string? Description { get; set; }
 public PlantStage PlantStage { get; set; }
-public PlantCategory PlantCategory { get; set; }
-public WateringNeed WateringNeed { get; set; }
-public LightRequirement LightRequirement { get; set; }
+public PlantCategory? PlantCategory { get; set; }
+public WateringNeed? WateringNeed { get; set; }
+public LightRequirement? LightRequirement { get; set; }
 public Size? Size { get; set; }
 public IndoorOutdoor? IndoorOutdoor { get; set; }
 public PropagationEase? PropagationEase { get; set; }
 public PetFriendly? PetFriendly { get; set; }
-public List<Extras>? Extras { get; set; }
+public List<Extras>? Extras { get; set; } = new List<Extras>();
 }
 }
 //PlantUpdateRequest
@@ -1201,11 +1223,11 @@ public class PlantResponse
 public int PlantId { get; set; }
 public int UserId { get; set; }
 public string SpeciesName { get; set; }
-public string Description { get; set; }
+public string? Description { get; set; }
 public PlantStage PlantStage { get; set; }
-public PlantCategory PlantCategory { get; set; }
-public WateringNeed WateringNeed { get; set; }
-public LightRequirement LightRequirement { get; set; }
+public PlantCategory? PlantCategory { get; set; }
+public WateringNeed? WateringNeed { get; set; }
+public LightRequirement? LightRequirement { get; set; }
 public Size? Size { get; set; }
 public IndoorOutdoor? IndoorOutdoor { get; set; }
 public PropagationEase? PropagationEase { get; set; }
@@ -1322,14 +1344,14 @@ public int UserId { get; set; }
 public string SpeciesName { get; set; }
 public string? Description { get; set; }
 public PlantStage PlantStage { get; set; }
-public PlantCategory PlantCategory { get; set; }
-public WateringNeed WateringNeed { get; set; }
-public LightRequirement LightRequirement { get; set; }
+public PlantCategory? PlantCategory { get; set; }
+public WateringNeed? WateringNeed { get; set; }
+public LightRequirement? LightRequirement { get; set; }
 public Size? Size { get; set; }
 public IndoorOutdoor? IndoorOutdoor { get; set; }
 public PropagationEase? PropagationEase { get; set; }
 public PetFriendly? PetFriendly { get; set; }
-public List<Extras>? Extras { get; set; }
+public List<Extras> Extras { get; set; }
 public string? ImageUrl { get; set; }
 public User User { get; set; }
 }
@@ -1418,8 +1440,9 @@ namespace Cuttr.Business.Enums
 {
 public enum PlantStage
 {
+Seedling,
 Cutting,
-GrownPlantTree
+Mature
 }
 public enum PlantCategory
 {
@@ -1430,7 +1453,9 @@ Orchid,
 Herb,
 Palm,
 LeafyHouseplant,
-FloweringHouseplant,
+AquaticPlant,
+ClimbingPlant,
+Tree,
 Other
 }
 public enum WateringNeed
@@ -1444,8 +1469,9 @@ VeryHighWater
 public enum LightRequirement
 {
 FullSun,
-PartialShade,
-Shade
+PartialSun,
+BrightIndirectLight,
+LowLight
 }
 public enum Size
 {
@@ -1596,7 +1622,7 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 public interface ISwipeManager
 {
 Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests, int userId);
-Task<List<PlantResponse>> GetLikablePlantsAsync(int userId);
+Task<List<PlantResponse>> GetLikablePlantsAsync(int userId, int maxCount);
 }
 }
 //IUserManager
@@ -1701,7 +1727,7 @@ public interface IUserRepository
 Task<User> CreateUserAsync(User user);
 Task<User> GetUserByIdAsync(int userId);
 Task<User> GetUserByEmailAsync(string email);
-Task UpdateUserAsync(User user);
+Task UpdateUserNameAndBioAsync(User user);
 Task DeleteUserAsync(int userId);
 Task UpdateUserLocationAsync(int userId, double latitude, double longitude);
 }
@@ -2007,6 +2033,7 @@ imageUrl = await _blobStorageService.UploadFileAsync(request.Image, PlantImagesC
 }
 var plant = ContractToBusinessMapper.MapToPlant(request.PlantDetails);
 plant.ImageUrl = imageUrl;
+plant.UserId = userId;
 var createdPlant = await _plantRepository.AddPlantAsync(plant);
 return BusinessToContractMapper.MapToPlantResponse(createdPlant);
 }
@@ -2237,7 +2264,7 @@ throw new BusinessException("Error recording swipe.", ex);
 }
 return responses;
 }
-public async Task<List<PlantResponse>> GetLikablePlantsAsync(int userId)
+public async Task<List<PlantResponse>> GetLikablePlantsAsync(int userId, int maxCount)
 {
 try
 {
@@ -2246,31 +2273,88 @@ if (user == null)
 throw new BusinessException("User not found.");
 if (user.Preferences == null)
 throw new BusinessException("User preferences not found.");
-int radius;
-if (user.Preferences.SearchRadius == null)
-{
-radius = 9999;
-} else
-{
-radius = user.Preferences.SearchRadius;
-}
 if (user.LocationLatitude == null || user.LocationLongitude == null)
 throw new BusinessException("User location not set.");
-double userLat = user.LocationLatitude.Value;
-double userLon = user.LocationLongitude.Value;
-var candidatePlants = await _plantRepository.GetPlantsWithinRadiusAsync(userLat, userLon, radius);
+int radius = user.Preferences.SearchRadius > 0
+? user.Preferences.SearchRadius
+: 10000;
+var candidatePlants = await _plantRepository.GetPlantsWithinRadiusAsync(
+user.LocationLatitude.Value,
+user.LocationLongitude.Value,
+radius);
 candidatePlants = candidatePlants.Where(p => p.UserId != userId);
+if (user.Preferences.PreferedPlantStage != null && user.Preferences.PreferedPlantStage.Any())
+{
+candidatePlants = candidatePlants
+.Where(p => user.Preferences.PreferedPlantStage.Contains(p.PlantStage));
+}
+if (user.Preferences.PreferedPlantCategory != null && user.Preferences.PreferedPlantCategory.Any())
+{
+candidatePlants = candidatePlants
+.Where(p => p.PlantCategory.HasValue
+&& user.Preferences.PreferedPlantCategory.Contains(p.PlantCategory.Value));
+}
+if (user.Preferences.PreferedWateringNeed != null && user.Preferences.PreferedWateringNeed.Any())
+{
+candidatePlants = candidatePlants
+.Where(p => p.WateringNeed.HasValue
+&& user.Preferences.PreferedWateringNeed.Contains(p.WateringNeed.Value));
+}
+if (user.Preferences.PreferedLightRequirement != null && user.Preferences.PreferedLightRequirement.Any())
+{
+candidatePlants = candidatePlants
+.Where(p => p.LightRequirement.HasValue
+&& user.Preferences.PreferedLightRequirement.Contains(p.LightRequirement.Value));
+}
+if (user.Preferences.PreferedSize != null && user.Preferences.PreferedSize.Any())
+{
+candidatePlants = candidatePlants
+.Where(p => p.Size.HasValue
+&& user.Preferences.PreferedSize.Contains(p.Size.Value));
+}
+if (user.Preferences.PreferedIndoorOutdoor != null && user.Preferences.PreferedIndoorOutdoor.Any())
+{
+candidatePlants = candidatePlants
+.Where(p => p.IndoorOutdoor.HasValue
+&& user.Preferences.PreferedIndoorOutdoor.Contains(p.IndoorOutdoor.Value));
+}
+if (user.Preferences.PreferedPropagationEase != null && user.Preferences.PreferedPropagationEase.Any())
+{
+candidatePlants = candidatePlants
+.Where(p => p.PropagationEase.HasValue
+&& user.Preferences.PreferedPropagationEase.Contains(p.PropagationEase.Value));
+}
+if (user.Preferences.PreferedPetFriendly != null && user.Preferences.PreferedPetFriendly.Any())
+{
+candidatePlants = candidatePlants
+.Where(p => p.PetFriendly.HasValue
+&& user.Preferences.PreferedPetFriendly.Contains(p.PetFriendly.Value));
+}
+if (user.Preferences.PreferedExtras != null && user.Preferences.PreferedExtras.Any())
+{
+candidatePlants = candidatePlants
+.Where(p => p.Extras != null && p.Extras.Any(e => user.Preferences.PreferedExtras.Contains(e)));
+}
 var userPlants = await _plantRepository.GetPlantsByUserIdAsync(userId);
 var likablePlants = new List<PlantResponse>();
 foreach (var plant in candidatePlants)
 {
-bool hasUninteractedPlant = (await Task.WhenAll(userPlants.Select(async up =>
-!await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId)
-))).Any(result => result);
+bool hasUninteractedPlant = false;
+foreach (var up in userPlants)
+{
+bool hasSwipe = await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId);
+if (!hasSwipe)
+{
+hasUninteractedPlant = true;
+break;
+}
+}
 if (hasUninteractedPlant)
 {
 likablePlants.Add(BusinessToContractMapper.MapToPlantResponse(plant));
 }
+if (likablePlants.Count >= maxCount)
+break;
 }
 return likablePlants;
 }
@@ -2291,13 +2375,15 @@ private readonly IUserRepository _userRepository;
 private readonly ILogger<UserManager> _logger;
 private readonly JwtTokenGenerator _jwtTokenGenerator;
 private readonly IBlobStorageService _blobStorageService;
+private readonly IUserPreferencesRepository _userPreferencesRepository;
 private const string ProfileImagesContainer = "profile-images";
-public UserManager(IUserRepository userRepository, ILogger<UserManager> logger, JwtTokenGenerator jwtTokenGenerator, IBlobStorageService blobStorageService)
+public UserManager(IUserRepository userRepository, ILogger<UserManager> logger, JwtTokenGenerator jwtTokenGenerator, IBlobStorageService blobStorageService, IUserPreferencesRepository userPreferencesRepository)
 {
 _userRepository = userRepository;
 _logger = logger;
 _jwtTokenGenerator = jwtTokenGenerator;
 _blobStorageService = blobStorageService;
+_userPreferencesRepository = userPreferencesRepository;
 }
 public async Task<UserResponse> RegisterUserAsync(UserRegistrationRequest request)
 {
@@ -2310,6 +2396,21 @@ throw new BusinessException("Email already registered.");
 var user = ContractToBusinessMapper.MapToUser(request);
 user.PasswordHash = PasswordHasher.HashPassword(user.PasswordHash);
 var createdUser = await _userRepository.CreateUserAsync(user);
+var defaultPreferences = new UserPreferences
+{
+UserId = createdUser.UserId,
+SearchRadius = 10000,
+PreferedPlantStage = new List<PlantStage>(),
+PreferedPlantCategory = new List<PlantCategory>(),
+PreferedWateringNeed = new List<WateringNeed>(),
+PreferedLightRequirement = new List<LightRequirement>(),
+PreferedSize = new List<Size>(),
+PreferedIndoorOutdoor = new List<IndoorOutdoor>(),
+PreferedPropagationEase = new List<PropagationEase>(),
+PreferedPetFriendly = new List<PetFriendly>(),
+PreferedExtras = new List<Extras>()
+};
+await _userPreferencesRepository.AddUserPreferencesAsync(defaultPreferences);
 return BusinessToContractMapper.MapToUserResponse(createdUser);
 }
 catch (Exception ex)
@@ -2349,7 +2450,7 @@ if (user == null)
 throw new NotFoundException($"User with ID {userId} not found.");
 }
 ContractToBusinessMapper.MapToUser(request, user);
-await _userRepository.UpdateUserAsync(user);
+await _userRepository.UpdateUserNameAndBioAsync(user);
 return BusinessToContractMapper.MapToUserResponse(user);
 }
 catch (NotFoundException)
@@ -2402,7 +2503,7 @@ await _blobStorageService.DeleteFileAsync(user.ProfilePictureUrl, ProfileImagesC
 }
 user.ProfilePictureUrl = imageUrl;
 }
-await _userRepository.UpdateUserAsync(user);
+await _userRepository.UpdateUserNameAndBioAsync(user);
 return BusinessToContractMapper.MapToUserResponse(user);
 }
 catch (NotFoundException)
@@ -2491,8 +2592,10 @@ return BusinessToContractMapper.MapToUserPreferencesResponse(createdPreferences)
 }
 else
 {
-await _userPreferencesRepository.UpdateUserPreferencesAsync(ContractToBusinessMapper.MapToUserPreferences(request));
-return BusinessToContractMapper.MapToUserPreferencesResponse(preferences);
+UserPreferences userpref = ContractToBusinessMapper.MapToUserPreferences(request);
+userpref.UserId = userId;
+await _userPreferencesRepository.UpdateUserPreferencesAsync(userpref);
+return BusinessToContractMapper.MapToUserPreferencesResponse(userpref);
 }
 }
 catch (NotFoundException)
@@ -2732,7 +2835,7 @@ PreferedExtras = request.PreferedExtras
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1aaf48c3d95c8b9070fc3f50519506f5ca80c9ea")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c8c7fba12c66504407d5c072b603348b48e662ce")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -2818,8 +2921,6 @@ public string GenerateToken(User user, out int expiresIn)
 {
 var tokenHandler = new JwtSecurityTokenHandler();
 var secretKey = _configuration["Jwt:Secret"];
-Console.WriteLine("secretkey on next line generateor");
-Console.WriteLine(secretKey);
 var key = Encoding.UTF8.GetBytes(secretKey);
 var tokenDescriptor = new SecurityTokenDescriptor
 {
@@ -3110,7 +3211,7 @@ public int UserId { get; set; }
 [Required]
 [MaxLength(200)]
 public string SpeciesName { get; set; }
-public string Description { get; set; }
+public string? Description { get; set; }
 [Required]
 [MaxLength(50)]
 public string PlantStage { get; set; }
@@ -3267,6 +3368,17 @@ public static UserEF MapToUserEF(User user)
 {
 if (user == null)
 return null;
+NetTopologySuite.Geometries.Point location = null;
+if (user.LocationLongitude.HasValue && user.LocationLatitude.HasValue)
+{
+location = new NetTopologySuite.Geometries.Point(
+user.LocationLongitude.Value,
+user.LocationLatitude.Value
+)
+{
+SRID = 4326
+};
+}
 return new UserEF
 {
 UserId = user.UserId,
@@ -3277,6 +3389,7 @@ ProfilePictureUrl = user.ProfilePictureUrl,
 Bio = user.Bio,
 Plants = user.Plants?.Select(MapToPlantEFWithoutUser).ToList(),
 Preferences = MapToUserPreferencesEF(user.Preferences),
+Location = location,
 };
 }
 public static PlantEF MapToPlantEF(Plant plant)
@@ -3412,18 +3525,69 @@ return new UserPreferencesEF
 {
 UserId = preferences.UserId,
 SearchRadius = preferences.SearchRadius,
+PreferedPlantStage = SerializePreferedPlantStages(preferences.PreferedPlantStage),
+PreferedPlantCategory = SerializePreferedPlantCategories(preferences.PreferedPlantCategory),
+PreferedWateringNeed = SerializePreferedWateringNeeds(preferences.PreferedWateringNeed),
+PreferedLightRequirement = SerializePreferedLightRequirements(preferences.PreferedLightRequirement),
+PreferedSize = SerializePreferedSizes(preferences.PreferedSize),
+PreferedIndoorOutdoor = SerializePreferedIndoorOutdoors(preferences.PreferedIndoorOutdoor),
+PreferedPropagationEase = SerializePreferedPropagationEases(preferences.PreferedPropagationEase),
+PreferedPetFriendly = SerializePreferedPetFriendlies(preferences.PreferedPetFriendly),
+PreferedExtras = SerializeExtras(preferences.PreferedExtras),
 };
 }
-public static string SerializeCategories(List<string> categories)
+public static string SerializePreferedPlantStages(List<PlantStage> plantStages)
 {
-if (categories == null || !categories.Any())
-return null;
-return System.Text.Json.JsonSerializer.Serialize(categories);
+if (plantStages == null || !plantStages.Any())
+return "";
+return System.Text.Json.JsonSerializer.Serialize(plantStages);
+}
+public static string SerializePreferedPlantCategories(List<PlantCategory> plantCategories)
+{
+if (plantCategories == null || !plantCategories.Any())
+return "";
+return System.Text.Json.JsonSerializer.Serialize(plantCategories);
+}
+public static string SerializePreferedWateringNeeds(List<WateringNeed> wateringNeeds)
+{
+if (wateringNeeds == null || !wateringNeeds.Any())
+return "";
+return System.Text.Json.JsonSerializer.Serialize(wateringNeeds);
+}
+public static string SerializePreferedLightRequirements(List<LightRequirement> lightRequirements)
+{
+if (lightRequirements == null || !lightRequirements.Any())
+return "";
+return System.Text.Json.JsonSerializer.Serialize(lightRequirements);
+}
+public static string SerializePreferedSizes(List<Size> sizes)
+{
+if (sizes == null || !sizes.Any())
+return "";
+return System.Text.Json.JsonSerializer.Serialize(sizes);
+}
+public static string SerializePreferedIndoorOutdoors(List<IndoorOutdoor> indoorOutdoors)
+{
+if (indoorOutdoors == null || !indoorOutdoors.Any())
+return "";
+return System.Text.Json.JsonSerializer.Serialize(indoorOutdoors);
+}
+public static string SerializePreferedPropagationEases(List<PropagationEase> propagationEases)
+{
+if (propagationEases == null || !propagationEases.Any())
+return "";
+return System.Text.Json.JsonSerializer.Serialize(propagationEases);
+}
+public static string SerializePreferedPetFriendlies(List<PetFriendly> petFriendlies)
+{
+if (petFriendlies == null || !petFriendlies.Any())
+return "";
+return System.Text.Json.JsonSerializer.Serialize(petFriendlies);
 }
 public static string SerializeExtras(List<Extras> extras)
 {
 if (extras == null || !extras.Any())
-return null;
+return "";
 return System.Text.Json.JsonSerializer.Serialize(extras);
 }
 }
@@ -3462,14 +3626,30 @@ UserId = efPlant.UserId,
 SpeciesName = efPlant.SpeciesName,
 Description = efPlant.Description,
 PlantStage = Enum.Parse<PlantStage>(efPlant.PlantStage),
-PlantCategory = Enum.Parse<PlantCategory>(efPlant.PlantCategory),
-WateringNeed = Enum.Parse<WateringNeed>(efPlant.WateringNeed),
-LightRequirement = Enum.Parse<LightRequirement>(efPlant.LightRequirement),
-Size = Enum.Parse<Size>(efPlant.Size),
-IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
-PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
-PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
-Extras = efPlant.Extras != null ? DeserializeExtras(efPlant.Extras) : null,
+PlantCategory = !string.IsNullOrWhiteSpace(efPlant.PlantCategory)
+? Enum.Parse<PlantCategory>(efPlant.PlantCategory)
+: null,
+WateringNeed = !string.IsNullOrWhiteSpace(efPlant.WateringNeed)
+? Enum.Parse<WateringNeed>(efPlant.WateringNeed)
+: null,
+LightRequirement = !string.IsNullOrWhiteSpace(efPlant.LightRequirement)
+? Enum.Parse<LightRequirement>(efPlant.LightRequirement)
+: null,
+Size = !string.IsNullOrWhiteSpace(efPlant.Size)
+? Enum.Parse<Size>(efPlant.Size)
+: null,
+IndoorOutdoor = !string.IsNullOrWhiteSpace(efPlant.IndoorOutdoor)
+? Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor)
+: null,
+PropagationEase = !string.IsNullOrWhiteSpace(efPlant.PropagationEase)
+? Enum.Parse<PropagationEase>(efPlant.PropagationEase)
+: null,
+PetFriendly = !string.IsNullOrWhiteSpace(efPlant.PetFriendly)
+? Enum.Parse<PetFriendly>(efPlant.PetFriendly)
+: null,
+Extras = efPlant.Extras != null
+? DeserializeExtras(efPlant.Extras)
+: null,
 ImageUrl = efPlant.ImageUrl,
 User = MapToUserWithoutPlants(efPlant.User),
 };
@@ -3485,14 +3665,30 @@ UserId = efPlant.UserId,
 SpeciesName = efPlant.SpeciesName,
 Description = efPlant.Description,
 PlantStage = Enum.Parse<PlantStage>(efPlant.PlantStage),
-PlantCategory = Enum.Parse<PlantCategory>(efPlant.PlantCategory),
-WateringNeed = Enum.Parse<WateringNeed>(efPlant.WateringNeed),
-LightRequirement = Enum.Parse<LightRequirement>(efPlant.LightRequirement),
-Size = Enum.Parse<Size>(efPlant.Size),
-IndoorOutdoor = Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor),
-PropagationEase = Enum.Parse<PropagationEase>(efPlant.PropagationEase),
-PetFriendly = Enum.Parse<PetFriendly>(efPlant.PetFriendly),
-Extras = DeserializeExtras(efPlant.Extras),
+PlantCategory = !string.IsNullOrWhiteSpace(efPlant.PlantCategory)
+? Enum.Parse<PlantCategory>(efPlant.PlantCategory)
+: null,
+WateringNeed = !string.IsNullOrWhiteSpace(efPlant.WateringNeed)
+? Enum.Parse<WateringNeed>(efPlant.WateringNeed)
+: null,
+LightRequirement = !string.IsNullOrWhiteSpace(efPlant.LightRequirement)
+? Enum.Parse<LightRequirement>(efPlant.LightRequirement)
+: null,
+Size = !string.IsNullOrWhiteSpace(efPlant.Size)
+? Enum.Parse<Size>(efPlant.Size)
+: null,
+IndoorOutdoor = !string.IsNullOrWhiteSpace(efPlant.IndoorOutdoor)
+? Enum.Parse<IndoorOutdoor>(efPlant.IndoorOutdoor)
+: null,
+PropagationEase = !string.IsNullOrWhiteSpace(efPlant.PropagationEase)
+? Enum.Parse<PropagationEase>(efPlant.PropagationEase)
+: null,
+PetFriendly = !string.IsNullOrWhiteSpace(efPlant.PetFriendly)
+? Enum.Parse<PetFriendly>(efPlant.PetFriendly)
+: null,
+Extras = efPlant.Extras != null
+? DeserializeExtras(efPlant.Extras)
+: null,
 ImageUrl = efPlant.ImageUrl,
 };
 }
@@ -6487,6 +6683,430 @@ b.Navigation("SentMessages");
 }
 }
 }
+//20250110130658_updatePlantEF
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+public partial class updatePlantEF : Migration
+{
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.AlterColumn<string>(
+name: "Description",
+table: "Plants",
+type: "nvarchar(max)",
+nullable: true,
+oldClrType: typeof(string),
+oldType: "nvarchar(max)");
+}
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.AlterColumn<string>(
+name: "Description",
+table: "Plants",
+type: "nvarchar(max)",
+nullable: false,
+defaultValue: "",
+oldClrType: typeof(string),
+oldType: "nvarchar(max)",
+oldNullable: true);
+}
+}
+}
+//20250110130658_updatePlantEF.Designer
+﻿
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+[DbContext(typeof(CuttrDbContext))]
+[Migration("20250110130658_updatePlantEF")]
+partial class updatePlantEF
+{
+protected override void BuildTargetModel(ModelBuilder modelBuilder)
+{
+#pragma warning disable 612, 618
+modelBuilder
+.HasAnnotation("ProductVersion", "9.0.0")
+.HasAnnotation("Relational:MaxIdentifierLength", 128);
+SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Property<int>("MatchId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("PlantId1")
+.HasColumnType("int");
+b.Property<int>("PlantId2")
+.HasColumnType("int");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.HasKey("MatchId");
+b.HasIndex("PlantId2");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.HasIndex("PlantId1", "PlantId2")
+.IsUnique();
+b.ToTable("Matches", t =>
+{
+t.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
+});
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.Property<int>("MessageId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsRead")
+.HasColumnType("bit");
+b.Property<int>("MatchId")
+.HasColumnType("int");
+b.Property<string>("MessageText")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SenderUserId")
+.HasColumnType("int");
+b.HasKey("MessageId");
+b.HasIndex("MatchId");
+b.HasIndex("SenderUserId");
+b.ToTable("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.Property<int>("PlantId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Description")
+.HasColumnType("nvarchar(max)");
+b.Property<string>("Extras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ImageUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("IndoorOutdoor")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("LightRequirement")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PetFriendly")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantCategory")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantStage")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PropagationEase")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("Size")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("SpeciesName")
+.IsRequired()
+.HasMaxLength(200)
+.HasColumnType("nvarchar(200)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("WateringNeed")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.HasKey("PlantId");
+b.HasIndex("UserId");
+b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.Property<int>("RefreshTokenId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefreshTokenId"));
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime>("ExpiresAt")
+.HasColumnType("datetime2");
+b.Property<bool>("IsRevoked")
+.HasColumnType("bit");
+b.Property<DateTime?>("RevokedAt")
+.HasColumnType("datetime2");
+b.Property<string>("TokenHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.HasKey("RefreshTokenId");
+b.HasIndex("UserId");
+b.ToTable("RefreshTokens");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.Property<int>("ReportId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportId"));
+b.Property<string>("Comments")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsResolved")
+.HasColumnType("bit");
+b.Property<string>("Reason")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("ReportedUserId")
+.HasColumnType("int");
+b.Property<int>("ReporterUserId")
+.HasColumnType("int");
+b.HasKey("ReportId");
+b.HasIndex("ReportedUserId");
+b.HasIndex("ReporterUserId");
+b.ToTable("Reports");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.Property<int>("SwipeId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SwipeId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsLike")
+.HasColumnType("bit");
+b.Property<int>("SwipedPlantId")
+.HasColumnType("int");
+b.Property<int>("SwiperPlantId")
+.HasColumnType("int");
+b.HasKey("SwipeId");
+b.HasIndex("SwipedPlantId");
+b.HasIndex("SwiperPlantId", "SwipedPlantId")
+.IsUnique();
+b.ToTable("Swipes");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Property<int>("UserId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+b.Property<string>("Bio")
+.HasMaxLength(500)
+.HasColumnType("nvarchar(500)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Email")
+.IsRequired()
+.HasMaxLength(256)
+.HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.HasColumnType("geography");
+b.Property<string>("Name")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<string>("PasswordHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ProfilePictureUrl")
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.HasKey("UserId");
+b.HasIndex("Email")
+.IsUnique();
+b.ToTable("Users");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("PreferedExtras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedIndoorOutdoor")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedLightRequirement")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPetFriendly")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantCategory")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantStage")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPropagationEase")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedSize")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedWateringNeed")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SearchRadius")
+.HasColumnType("int");
+b.HasKey("UserId");
+b.ToTable("UserPreferences");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
+.WithMany()
+.HasForeignKey("PlantId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant2")
+.WithMany()
+.HasForeignKey("PlantId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Plant1");
+b.Navigation("Plant2");
+b.Navigation("User1");
+b.Navigation("User2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.MatchEF", "Match")
+.WithMany("Messages")
+.HasForeignKey("MatchId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
+.WithMany("SentMessages")
+.HasForeignKey("SenderUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Match");
+b.Navigation("SenderUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany("Plants")
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany()
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
+.WithMany("ReportsReceived")
+.HasForeignKey("ReportedUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReporterUser")
+.WithMany("ReportsMade")
+.HasForeignKey("ReporterUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("ReportedUser");
+b.Navigation("ReporterUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwipedPlant")
+.WithMany()
+.HasForeignKey("SwipedPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
+.WithMany()
+.HasForeignKey("SwiperPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("SwipedPlant");
+b.Navigation("SwiperPlant");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithOne("Preferences")
+.HasForeignKey("Cuttr.Infrastructure.Entities.UserPreferencesEF", "UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Navigation("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Navigation("Plants");
+b.Navigation("Preferences")
+.IsRequired();
+b.Navigation("ReportsMade");
+b.Navigation("ReportsReceived");
+b.Navigation("SentMessages");
+});
+#pragma warning restore 612, 618
+}
+}
+}
 //CuttrDbContextModelSnapshot
 ﻿
 #nullable disable
@@ -6566,7 +7186,6 @@ b.Property<DateTime>("CreatedAt")
 .HasColumnType("datetime2")
 .HasDefaultValueSql("GETUTCDATE()");
 b.Property<string>("Description")
-.IsRequired()
 .HasColumnType("nvarchar(max)");
 b.Property<string>("Extras")
 .IsRequired()
@@ -6887,7 +7506,7 @@ b.Navigation("SentMessages");
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1aaf48c3d95c8b9070fc3f50519506f5ca80c9ea")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c8c7fba12c66504407d5c072b603348b48e662ce")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -6913,6 +7532,7 @@ public async Task<IEnumerable<Match>> GetMatchesByUserIdAsync(int userId)
 try
 {
 var efMatches = await _context.Matches
+.AsNoTracking()
 .Include(m => m.Plant1)
 .ThenInclude(p => p.User)
 .Include(m => m.Plant2)
@@ -6932,6 +7552,7 @@ public async Task<Match> GetMatchByIdAsync(int matchId)
 try
 {
 var efMatch = await _context.Matches
+.AsNoTracking()
 .Include(m => m.Plant1)
 .ThenInclude(p => p.User)
 .Include(m => m.Plant2)
@@ -6953,6 +7574,7 @@ var efMatch = BusinessToEFMapper.MapToMatchEF(match);
 efMatch.MatchId = 0;
 await _context.Matches.AddAsync(efMatch);
 await _context.SaveChangesAsync();
+_context.Entry(efMatch).State = EntityState.Detached;
 return EFToBusinessMapper.MapToMatch(efMatch);
 }
 catch (Exception ex)
@@ -6983,6 +7605,7 @@ var efMessage = BusinessToEFMapper.MapToMessageEF(message);
 efMessage.MessageId = 0;
 await _context.Messages.AddAsync(efMessage);
 await _context.SaveChangesAsync();
+_context.Entry(efMessage).State = EntityState.Detached;
 return EFToBusinessMapper.MapToMessage(efMessage);
 }
 catch (Exception ex)
@@ -6996,6 +7619,7 @@ public async Task<IEnumerable<Message>> GetMessagesByMatchIdAsync(int matchId)
 try
 {
 var efMessages = await _context.Messages
+.AsNoTracking()
 .Where(m => m.MatchId == matchId)
 .OrderBy(m => m.CreatedAt)
 .ToListAsync();
@@ -7026,9 +7650,9 @@ public async Task<Plant> AddPlantAsync(Plant plant)
 try
 {
 var efPlant = BusinessToEFMapper.MapToPlantEF(plant);
-efPlant.PlantId = 0;
 await _context.Plants.AddAsync(efPlant);
 await _context.SaveChangesAsync();
+_context.Entry(efPlant).State = EntityState.Detached;
 return EFToBusinessMapper.MapToPlant(efPlant);
 }
 catch (Exception ex)
@@ -7041,7 +7665,7 @@ public async Task<Plant> GetPlantByIdAsync(int plantId)
 {
 try
 {
-var efPlant = await _context.Plants
+var efPlant = await _context.Plants.AsNoTracking()
 .Include(p => p.User)
 .FirstOrDefaultAsync(p => p.PlantId == plantId);
 if (efPlant == null)
@@ -7064,6 +7688,7 @@ try
 var efPlant = BusinessToEFMapper.MapToPlantEF(plant);
 _context.Plants.Update(efPlant);
 await _context.SaveChangesAsync();
+_context.Entry(efPlant).State = EntityState.Detached;
 }
 catch (DbUpdateConcurrencyException ex)
 {
@@ -7088,6 +7713,7 @@ return;
 }
 _context.Plants.Remove(efPlant);
 await _context.SaveChangesAsync();
+_context.Entry(efPlant).State = EntityState.Detached;
 }
 catch (DbUpdateException ex)
 {
@@ -7104,7 +7730,7 @@ public async Task<IEnumerable<Plant>> GetPlantsByUserIdAsync(int userId)
 {
 try
 {
-var efPlants = await _context.Plants
+var efPlants = await _context.Plants.AsNoTracking()
 .Where(p => p.UserId == userId)
 .Include(p => p.User)
 .ToListAsync();
@@ -7120,7 +7746,7 @@ public async Task<IEnumerable<Plant>> GetAllPlantsAsync()
 {
 try
 {
-var efPlants = await _context.Plants
+var efPlants = await _context.Plants.AsNoTracking()
 .Include(p => p.User)
 .ToListAsync();
 return efPlants.Select(EFToBusinessMapper.MapToPlant);
@@ -7136,6 +7762,7 @@ public async Task<IEnumerable<Plant>> GetPlantsWithinRadiusAsync(double originLa
 double radiusMeters = radiusKm * 1000;
 var origin = new Point(originLon, originLat) { SRID = 4326 };
 var efPlants = await _context.Plants
+.AsNoTracking()
 .Include(p => p.User)
 .Where(p => p.User.Location != null && p.User.Location.Distance(origin) <= radiusMeters)
 .ToListAsync();
@@ -7170,6 +7797,7 @@ RevokedAt = token.RevokedAt
 };
 _context.RefreshTokens.Add(ef);
 await _context.SaveChangesAsync();
+_context.Entry(ef).State = EntityState.Detached;
 token.RefreshTokenId = ef.RefreshTokenId;
 return token;
 }
@@ -7183,7 +7811,7 @@ public async Task<RefreshToken> GetRefreshTokenAsync(string tokenHash)
 {
 try
 {
-var ef = await _context.RefreshTokens
+var ef = await _context.RefreshTokens.AsNoTracking()
 .FirstOrDefaultAsync(t => t.TokenHash == tokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow);
 if (ef == null)
 {
@@ -7217,6 +7845,7 @@ if (ef != null && !ef.IsRevoked)
 ef.IsRevoked = true;
 ef.RevokedAt = DateTime.UtcNow;
 await _context.SaveChangesAsync();
+_context.Entry(ef).State = EntityState.Detached;
 }
 }
 catch (Exception ex)
@@ -7261,6 +7890,7 @@ var efReport = BusinessToEFMapper.MapToReportEF(report);
 efReport.ReportId = 0;
 await _context.Reports.AddAsync(efReport);
 await _context.SaveChangesAsync();
+_context.Entry(efReport).State = EntityState.Detached;
 return EFToBusinessMapper.MapToReport(efReport);
 }
 catch (Exception ex)
@@ -7291,6 +7921,7 @@ var efSwipe = BusinessToEFMapper.MapToSwipeEF(swipe);
 efSwipe.SwipeId = 0;
 await _context.Swipes.AddAsync(efSwipe);
 await _context.SaveChangesAsync();
+_context.Entry(efSwipe).State = EntityState.Detached;
 }
 catch (Exception ex)
 {
@@ -7302,7 +7933,9 @@ public async Task<Swipe> GetSwipeAsync(int swiperPlantId, int swipedPlantId, boo
 {
 try
 {
-var efSwipe = await _context.Swipes.FirstOrDefaultAsync(s =>
+var efSwipe = await _context.Swipes
+.AsNoTracking()
+.FirstOrDefaultAsync(s =>
 s.SwiperPlantId == swiperPlantId &&
 s.SwipedPlantId == swipedPlantId &&
 s.IsLike == isLike);
@@ -7318,7 +7951,7 @@ public async Task<bool> HasSwipeAsync(int swiperPlantId, int swipedPlantId)
 {
 try
 {
-var exists = await _context.Swipes.AnyAsync(s =>
+var exists = await _context.Swipes.AsNoTracking().AnyAsync(s =>
 s.SwiperPlantId == swiperPlantId &&
 s.SwipedPlantId == swipedPlantId);
 return exists;
@@ -7347,16 +7980,7 @@ public async Task<UserPreferences> GetUserPreferencesAsync(int userId)
 {
 try
 {
-var efPreferences = await _context.UserPreferences
-.Include(up => up.PreferedPlantStage)
-.Include(up => up.PreferedPlantCategory)
-.Include(up => up.PreferedWateringNeed)
-.Include(up => up.PreferedLightRequirement)
-.Include(up => up.PreferedSize)
-.Include(up => up.PreferedIndoorOutdoor)
-.Include(up => up.PreferedPropagationEase)
-.Include(up => up.PreferedPetFriendly)
-.Include(up => up.PreferedExtras)
+var efPreferences = await _context.UserPreferences.AsNoTracking()
 .FirstOrDefaultAsync(up => up.UserId == userId);
 return EFToBusinessMapper.MapToUserPreferences(efPreferences);
 }
@@ -7373,6 +7997,7 @@ try
 var efPreferences = BusinessToEFMapper.MapToUserPreferencesEF(preferences);
 await _context.UserPreferences.AddAsync(efPreferences);
 await _context.SaveChangesAsync();
+_context.Entry(efPreferences).State = EntityState.Detached;
 return EFToBusinessMapper.MapToUserPreferences(efPreferences);
 }
 catch (Exception ex)
@@ -7388,6 +8013,7 @@ try
 var efPreferences = BusinessToEFMapper.MapToUserPreferencesEF(preferences);
 _context.UserPreferences.Update(efPreferences);
 await _context.SaveChangesAsync();
+_context.Entry(efPreferences).State = EntityState.Detached;
 }
 catch (Exception ex)
 {
@@ -7417,6 +8043,7 @@ var efUser = BusinessToEFMapper.MapToUserEF(user);
 efUser.UserId = 0;
 await _context.Users.AddAsync(efUser);
 await _context.SaveChangesAsync();
+_context.Entry(efUser).State = EntityState.Detached;
 return EFToBusinessMapper.MapToUser(efUser);
 }
 catch (Exception ex)
@@ -7429,7 +8056,7 @@ public async Task<User> GetUserByIdAsync(int userId)
 {
 try
 {
-var efUser = await _context.Users
+var efUser = await _context.Users.AsNoTracking()
 .Include(u => u.Plants)
 .Include(u => u.Preferences)
 .FirstOrDefaultAsync(u => u.UserId == userId);
@@ -7450,7 +8077,7 @@ public async Task<User> GetUserByEmailAsync(string email)
 {
 try
 {
-var efUser = await _context.Users
+var efUser = await _context.Users.AsNoTracking()
 .Include(u => u.Plants)
 .Include(u => u.Preferences)
 .FirstOrDefaultAsync(u => u.Email == email);
@@ -7467,13 +8094,14 @@ _logger.LogError(ex, $"An error occurred while retrieving user with email {email
 throw new RepositoryException("An error occurred while retrieving user.", ex);
 }
 }
-public async Task UpdateUserAsync(User user)
+public async Task UpdateUserNameAndBioAsync(User user)
 {
 try
 {
 var efUser = BusinessToEFMapper.MapToUserEF(user);
 _context.Users.Update(efUser);
 await _context.SaveChangesAsync();
+_context.Entry(efUser).State = EntityState.Detached;
 }
 catch (DbUpdateConcurrencyException ex)
 {
@@ -7498,6 +8126,7 @@ return;
 }
 _context.Users.Remove(efUser);
 await _context.SaveChangesAsync();
+_context.Entry(efUser).State = EntityState.Detached;
 }
 catch (DbUpdateException ex)
 {
@@ -7518,6 +8147,7 @@ if (efUser == null)
 throw new RepositoryException($"User with ID {userId} not found.");
 efUser.Location = point;
 await _context.SaveChangesAsync();
+_context.Entry(efUser).State = EntityState.Detached;
 }
 }
 }

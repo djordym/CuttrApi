@@ -16,7 +16,7 @@
 "android": {
 "adaptiveIcon": {
 "foregroundImage": "./assets/images/adaptive-icon.png",
-"backgroundColor": "#ffffff"
+"backgroundColor": "#00000000"
 }
 },
 "web": {
@@ -32,7 +32,7 @@
 "image": "./assets/images/splash-icon.png",
 "imageWidth": 200,
 "resizeMode": "contain",
-"backgroundColor": "#ffffff"
+"backgroundColor": "#00000000"
 }
 ],
 "expo-localization"
@@ -71,6 +71,7 @@ plugins: ['react-native-reanimated/plugin'],
 },
 "dependencies": {
 "@expo/vector-icons": "^14.0.2",
+"@react-native-community/slider": "^4.5.5",
 "@react-navigation/bottom-tabs": "^7.2.0",
 "@react-navigation/native": "^7.0.14",
 "@react-navigation/native-stack": "^7.2.0",
@@ -184,7 +185,11 @@ return (
 <QueryClientProvider client={queryClient}>
 {}
 <I18nextProvider i18n={i18nInstance}>
-<GestureHandlerRootView style={{ flex: 1 }}>
+<GestureHandlerRootView>
+<StatusBar
+style="dark"
+backgroundColor='#1EAE98'
+/>
 <AppNavigator />
 </GestureHandlerRootView>
 </I18nextProvider>
@@ -893,6 +898,15 @@ export const { logout, setInitialTokens } = authSlice.actions;
 // File: app\features\main\index.ts
 
 // File: app\features\main\components\ChangeLocationModal.tsx
+Modal,
+View,
+Text,
+StyleSheet,
+TouchableOpacity,
+ActivityIndicator,
+TextInput,
+Alert,
+} from 'react-native';
 interface ChangeLocationModalProps {
 visible: boolean;
 initialLatitude?: number;
@@ -908,9 +922,14 @@ onClose,
 onUpdated,
 }) => {
 const { t } = useTranslation();
-const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
+const [markerPosition, setMarkerPosition] = useState<{
+lat: number;
+lng: number;
+} | null>(null);
+const [region, setRegion] = useState<Region | null>(null);
 const [loading, setLoading] = useState(false);
 const [error, setError] = useState<string | null>(null);
+const [searchInput, setSearchInput] = useState('');
 const hasInitialCoords =
 typeof initialLatitude === 'number' &&
 !Number.isNaN(initialLatitude) &&
@@ -919,19 +938,37 @@ typeof initialLongitude === 'number' &&
 useEffect(() => {
 if (visible) {
 if (hasInitialCoords) {
+setRegion({
+latitude: initialLatitude!,
+longitude: initialLongitude!,
+latitudeDelta: 0.05,
+longitudeDelta: 0.05,
+});
 setMarkerPosition({ lat: initialLatitude!, lng: initialLongitude! });
 } else {
+setRegion({
+latitude: 37.78825,
+longitude: -122.4324,
+latitudeDelta: 0.05,
+longitudeDelta: 0.05,
+});
 setMarkerPosition(null);
 }
+setSearchInput('');
+setError(null);
 }
 }, [visible, hasInitialCoords, initialLatitude, initialLongitude]);
 const handleMapPress = (e: MapPressEvent) => {
 const { coordinate } = e.nativeEvent;
 setMarkerPosition({ lat: coordinate.latitude, lng: coordinate.longitude });
 };
+const handleRegionChangeComplete = (newRegion: Region) => {
+setRegion(newRegion);
+};
 const handleConfirm = async () => {
 if (!markerPosition) {
-return onClose();
+onClose();
+return;
 }
 setLoading(true);
 setError(null);
@@ -952,22 +989,68 @@ setLoading(false);
 const handleCancel = () => {
 onClose();
 };
+const handleSearch = useCallback(async () => {
+if (!searchInput) return;
+setLoading(true);
+setError(null);
+try {
+const url = `https:
+searchInput
+)}&format=json&limit=1`;
+const response = await fetch(url);
+const data = await response.json();
+if (data && data.length > 0) {
+const { lat, lon } = data[0];
+const latNum = parseFloat(lat);
+const lonNum = parseFloat(lon);
+const newRegion: Region = {
+latitude: latNum,
+longitude: lonNum,
+latitudeDelta: 0.05,
+longitudeDelta: 0.05,
+};
+setRegion(newRegion);
+setMarkerPosition({ lat: latNum, lng: lonNum });
+} else {
+setError(t('No results found for that location.'));
+}
+} catch (err) {
+console.error('Geocoding error:', err);
+setError(t('change_location_error_message'));
+} finally {
+setLoading(false);
+}
+}, [searchInput, t]);
+if (!visible) {
+return null;
+}
 return (
 <Modal visible={visible} animationType="slide" transparent>
 <View style={styles.overlay}>
 <View style={styles.modalContainer}>
 <Text style={styles.title}>{t('change_location_title')}</Text>
 <Text style={styles.subtitle}>{t('change_location_instructions')}</Text>
+{}
+<View style={styles.searchRow}>
+<TextInput
+style={styles.searchInput}
+placeholder={t('Enter a city or country...')}
+value={searchInput}
+onChangeText={setSearchInput}
+returnKeyType="search"
+onSubmitEditing={handleSearch}
+/>
+<TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+<Text style={styles.searchButtonText}>{t('Search')}</Text>
+</TouchableOpacity>
+</View>
 {error && <Text style={styles.errorText}>{error}</Text>}
 <View style={styles.mapContainer}>
+{region && (
 <MapView
 style={{ flex: 1 }}
-initialRegion={{
-latitude: hasInitialCoords ? initialLatitude! : 37.78825,
-longitude: hasInitialCoords ? initialLongitude! : -122.4324,
-latitudeDelta: 0.0922,
-longitudeDelta: 0.0421,
-}}
+region={region}
+onRegionChangeComplete={handleRegionChangeComplete}
 onPress={handleMapPress}
 >
 {markerPosition && (
@@ -979,6 +1062,7 @@ longitude: markerPosition.lng,
 />
 )}
 </MapView>
+)}
 </View>
 {loading && (
 <ActivityIndicator size="small" color="#1EAE98" style={{ marginVertical: 10 }} />
@@ -989,14 +1073,18 @@ onPress={handleCancel}
 style={styles.cancelButton}
 accessibilityRole="button"
 >
-<Text style={styles.cancelButtonText}>{t('change_location_cancel_button')}</Text>
+<Text style={styles.cancelButtonText}>
+{t('change_location_cancel_button')}
+</Text>
 </TouchableOpacity>
 <TouchableOpacity
 onPress={handleConfirm}
 style={styles.confirmButton}
 accessibilityRole="button"
 >
-<Text style={styles.confirmButtonText}>{t('change_location_confirm_button')}</Text>
+<Text style={styles.confirmButtonText}>
+{t('change_location_confirm_button')}
+</Text>
 </TouchableOpacity>
 </View>
 </View>
@@ -1029,6 +1117,30 @@ fontSize: 14,
 color: '#555',
 marginBottom: 10,
 },
+searchRow: {
+flexDirection: 'row',
+alignItems: 'center',
+marginBottom: 10,
+},
+searchInput: {
+flex: 1,
+borderWidth: 1,
+borderColor: '#ccc',
+borderRadius: 8,
+paddingHorizontal: 10,
+paddingVertical: 6,
+marginRight: 8,
+},
+searchButton: {
+backgroundColor: '#1EAE98',
+paddingHorizontal: 15,
+paddingVertical: 10,
+borderRadius: 8,
+},
+searchButtonText: {
+color: '#fff',
+fontWeight: '600',
+},
 errorText: {
 color: '#FF6B6B',
 marginBottom: 10,
@@ -1038,6 +1150,7 @@ flex: 1,
 borderRadius: 8,
 overflow: 'hidden',
 marginBottom: 10,
+backgroundColor: '#eee',
 },
 actions: {
 flexDirection: 'row',
@@ -1045,10 +1158,15 @@ justifyContent: 'flex-end',
 },
 cancelButton: {
 marginRight: 10,
+backgroundColor: '#f0f0f0',
+paddingHorizontal: 15,
+paddingVertical: 10,
+borderRadius: 8,
 },
 cancelButtonText: {
 fontSize: 16,
 color: '#333',
+fontWeight: '600',
 },
 confirmButton: {
 backgroundColor: '#1EAE98',
@@ -1189,189 +1307,125 @@ color:'#fff',
 fontWeight:'600'
 }
 });
-// File: app\features\main\components\SelectPlantsModal.tsx
-interface SelectPlantsModalProps {
-visible: boolean;
-onClose: () => void;
-onConfirm: (selectedPlantIds: number[]) => void;
+// File: app\features\main\components\MultiSelectTagGroup.tsx
+interface MultiSelectTagGroupProps<T extends string | number> {
+values: T[];
+selectedValues: T[];
+onToggle: (val: T) => void;
 }
-export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({ visible, onClose, onConfirm }) => {
-const { data: myPlants, isLoading, isError, refetch } = useMyPlants();
-const [selectedPlantIds, setSelectedPlantIds] = useState<number[]>([]);
-const toggleSelection = (id: number) => {
-setSelectedPlantIds((prev) =>
-prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
-);
-};
-const handleConfirm = () => {
-onConfirm(selectedPlantIds);
-setSelectedPlantIds([]);
-};
-const handleClose = () => {
-setSelectedPlantIds([]);
-onClose();
-};
+function MultiSelectTagGroup<T extends string | number>({
+values,
+selectedValues,
+onToggle,
+}: MultiSelectTagGroupProps<T>) {
 return (
-<Modal visible={visible} animationType="slide" transparent>
-<View style={styles.overlay}>
-<View style={styles.modalContainer}>
-<Text style={styles.title}>Select Your Plants</Text>
-<Text style={styles.subtitle}>Select the plants you want to offer for swapping.</Text>
-{isLoading && (
-<View style={styles.centerContent}>
-<ActivityIndicator size="large" color="#1EAE98" />
-</View>
-)}
-{isError && (
-<View style={styles.centerContent}>
-<Text style={styles.errorText}>Failed to load your plants.</Text>
-<TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-<Text style={styles.retryButtonText}>Try Again</Text>
-</TouchableOpacity>
-</View>
-)}
-{myPlants && (
-<ScrollView style={styles.list}>
-{myPlants.map((plant: PlantResponse) => {
-const selected = selectedPlantIds.includes(plant.plantId);
+<View style={styles.tagGroupContainer}>
+{values.map((val) => {
+const isSelected = selectedValues.includes(val);
 return (
 <TouchableOpacity
-key={plant.plantId}
-onPress={() => toggleSelection(plant.plantId)}
-style={styles.listItem}
-accessibilityRole="checkbox"
-accessibilityState={{ checked: selected }}
+key={String(val)}
+style={[
+styles.singleTag,
+isSelected && styles.singleTagSelected,
+]}
+onPress={() => onToggle(val)}
 >
-<Ionicons
-name={selected ? "checkbox-outline" : "checkbox"}
-size={24}
-color={selected ? "#1EAE98" : "#ccc"}
-style={{marginRight:10}}
-/>
-<Text style={styles.listItemText}>{plant.speciesName}</Text>
+<Text
+style={[
+styles.singleTagText,
+isSelected && styles.singleTagTextSelected,
+]}
+>
+{val}
+</Text>
 </TouchableOpacity>
 );
 })}
-</ScrollView>
-)}
-<View style={styles.actions}>
-<TouchableOpacity onPress={handleClose} style={styles.cancelButton} accessibilityRole="button" accessibilityLabel="Cancel" accessibilityHint="Close modal without changes">
-<Text style={styles.cancelButtonText}>Cancel</Text>
-</TouchableOpacity>
-<TouchableOpacity onPress={handleConfirm} style={styles.confirmButton} accessibilityRole="button" accessibilityLabel="Confirm selection" accessibilityHint="Send swipe requests for selected and non-selected plants">
-<Text style={styles.confirmButtonText}>Confirm</Text>
-</TouchableOpacity>
 </View>
-</View>
-</View>
-</Modal>
 );
-};
-const styles = StyleSheet.create({
-overlay: {
-flex:1,
-backgroundColor:'rgba(0,0,0,0.5)',
-justifyContent:'center',
-alignItems:'center'
-},
-modalContainer: {
-width:'90%',
-maxHeight:'80%',
-backgroundColor:'#fff',
-borderRadius:16,
-padding:20,
-justifyContent:'flex-start'
-},
-title:{
-fontSize:20,
-fontWeight:'700',
-color:'#333',
-marginBottom:10
-},
-subtitle:{
-fontSize:14,
-color:'#555',
-marginBottom:20
-},
-centerContent:{
-alignItems:'center',
-justifyContent:'center',
-paddingVertical:20
-},
-errorText:{
-fontSize:16,
-color:'#333',
-marginBottom:10
-},
-retryButton:{
-backgroundColor:'#1EAE98',
-paddingVertical:10,
-paddingHorizontal:20,
-borderRadius:8
-},
-retryButtonText:{
-color:'#fff',
-fontWeight:'600'
-},
-list:{
-maxHeight:300,
-marginBottom:20
-},
-listItem:{
-flexDirection:'row',
-alignItems:'center',
-paddingVertical:10,
-borderBottomWidth:1,
-borderBottomColor:'#eee'
-},
-listItemText:{
-fontSize:16,
-color:'#333'
-},
-actions:{
-flexDirection:'row',
-justifyContent:'flex-end',
-marginTop:10
-},
-cancelButton:{
-paddingHorizontal:15,
-paddingVertical:10,
-marginRight:10
-},
-cancelButtonText:{
-fontSize:16,
-color:'#333'
-},
-confirmButton:{
-backgroundColor:'#1EAE98',
-paddingHorizontal:15,
-paddingVertical:10,
-borderRadius:8
-},
-confirmButtonText:{
-fontSize:16,
-color:'#fff',
-fontWeight:'600'
 }
+export default MultiSelectTagGroup;
+const styles = StyleSheet.create({
+tagGroupContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+marginBottom: 6,
+},
+singleTag: {
+borderWidth: 1,
+borderColor: '#1EAE98',
+borderRadius: 20,
+paddingVertical: 6,
+paddingHorizontal: 12,
+marginRight: 8,
+marginBottom: 8,
+},
+singleTagSelected: {
+backgroundColor: '#1EAE98',
+},
+singleTagText: {
+fontSize: 12,
+color: '#1EAE98',
+},
+singleTagTextSelected: {
+color: '#fff',
+fontWeight: '600',
+},
 });
+// File: app\features\main\components\SelectPlantsModal.tsx
+
 // File: app\features\main\components\SwipeableCard.tsx
+StyleSheet,
+View,
+Image,
+Text,
+Dimensions,
+} from 'react-native';
 useSharedValue,
 useAnimatedGestureHandler,
 useAnimatedStyle,
 runOnJS,
-withSpring
+withSpring,
 } from 'react-native-reanimated';
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 0.25 * width;
+const COLORS = {
+primary: '#1EAE98',
+accent: '#FF6F61',
+background: '#F2F2F2',
+textDark: '#2F4F4F',
+textLight: '#FFFFFF',
+cardBg: '#FFFFFF',
+border: '#ddd',
+};
 interface SwipeableCardProps {
 plant: PlantResponse;
 onSwipeLeft: (plantId: number) => void;
 onSwipeRight: (plantId: number) => void;
 }
-export const SwipeableCard: React.FC<SwipeableCardProps> = ({ plant, onSwipeLeft, onSwipeRight }) => {
+export const SwipeableCard: React.FC<SwipeableCardProps> = ({
+plant,
+onSwipeLeft,
+onSwipeRight,
+}) => {
 const translateX = useSharedValue(0);
 const rotateZ = useSharedValue(0);
-const gestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent, { startX: number }>({
+const allTags = [
+plant.plantStage,
+plant.plantCategory,
+plant.wateringNeed,
+plant.lightRequirement,
+plant.size,
+plant.indoorOutdoor,
+plant.propagationEase,
+plant.petFriendly,
+...(plant.extras ?? [])
+].filter(Boolean);
+const gestureHandler = useAnimatedGestureHandler<
+PanGestureHandlerGestureEvent,
+{ startX: number }
+>({
 onStart: (_, ctx) => {
 ctx.startX = translateX.value;
 },
@@ -1394,92 +1448,176 @@ rotateZ.value = withSpring(0);
 }
 },
 });
-const animatedStyle = useAnimatedStyle(() => {
-return {
+const animatedStyle = useAnimatedStyle(() => ({
 transform: [
 { translateX: translateX.value },
-{ rotateZ: `${rotateZ.value}rad` }
-]
-};
-});
+{ rotateZ: `${rotateZ.value}rad` },
+],
+}));
 return (
 <PanGestureHandler onGestureEvent={gestureHandler}>
-<Animated.View style={[styles.card, animatedStyle]}>
-<View style={styles.imageContainer}>
+<Animated.View style={[styles.cardContainer, animatedStyle]}>
+<View style={styles.fullImageContainer}>
 {plant.imageUrl ? (
-<Image source={{ uri: plant.imageUrl }} style={styles.image} />
+<Image
+source={{ uri: plant.imageUrl }}
+style={styles.fullImage}
+resizeMode="contain"
+/>
 ) : (
-<View style={styles.imagePlaceholder}>
-<Text style={styles.placeholderText}>No Image</Text>
+<View style={styles.plantPlaceholder}>
+<Ionicons name="leaf" size={60} color={COLORS.primary} />
 </View>
 )}
+<View style={styles.imageOverlay}>
+<LinearGradient
+colors={['rgba(0,0,0,0)', 'rgba(0,0,0,1)']}
+style={styles.overlayContent}
+>
+</LinearGradient>
 </View>
-<View style={styles.contentContainer}>
-<Text style={styles.plantName}>{plant.speciesName}</Text>
-<Text style={styles.plantDescription} numberOfLines={3}>
+</View>
+<View style={styles.tagContainer}>
+{}
+<Text style={styles.fullPlantName} numberOfLines={1}>
+{plant.speciesName}
+</Text>
+{}
+{allTags.length > 0 && (
+<View style={styles.tagRow}>
+{allTags.map((tag) => (
+<View key={tag} style={styles.tag}>
+<Text style={styles.tagText}>{tag}</Text>
+</View>
+))}
+</View>
+)}
+{}
+{plant.description ? (
+<Text style={styles.fullDescription} numberOfLines={3}>
 {plant.description}
 </Text>
+) : null}
 </View>
+<View style={styles.underImageExtension} />
 </Animated.View>
 </PanGestureHandler>
 );
 };
 const styles = StyleSheet.create({
-card: {
-width: width * 0.9,
-backgroundColor: '#fff',
-borderRadius: 16,
-overflow: 'hidden',
+cardContainer: {
 position: 'absolute',
-alignSelf: 'center',
-top: 0,
-bottom: 0,
+width: width * 0.9,
+borderRadius: 8,
+overflow: 'hidden',
 marginVertical: 'auto',
+backgroundColor: COLORS.cardBg,
 shadowColor: '#000',
-shadowOpacity: 0.1,
-shadowRadius: 10,
-elevation: 5,
+shadowOpacity: 0.12,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 3 },
+elevation: 3,
 },
-imageContainer: {
+innerContainer: {
+flex: 1,
+borderRadius: 8,
+overflow: 'hidden',
+},
+fullImageContainer: {
 width: '100%',
-height: 300,
-backgroundColor: '#fafafa',
+position: 'relative',
+aspectRatio: 3 / 4,
 },
-image: {
-width: '100%',
-height: '100%',
-resizeMode: 'cover',
+fullImage: {
+...StyleSheet.absoluteFillObject,
 },
-imagePlaceholder: {
-flex:1,
-justifyContent:'center',
-alignItems:'center',
-backgroundColor:'#eee',
+plantPlaceholder: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+backgroundColor: '#eee',
 },
-placeholderText: {
-color:'#999'
+imageOverlay: {
+...StyleSheet.absoluteFillObject,
+justifyContent: 'flex-end',
 },
-contentContainer: {
-padding: 16,
+overlayContent: {
+position:'relative',
+bottom: 0,
+paddingTop: 200,
 },
-plantName: {
-fontSize: 20,
+underImageExtension: {
+backgroundColor: 'black',
+zIndex: -1,
+height: 50,
+},
+tagContainer: {
+padding: 5,
+position: 'absolute',
+bottom: 0,
+},
+fullPlantName: {
+fontSize: 18,
 fontWeight: '700',
-color:'#333',
-marginBottom:8
+color: '#fff',
+marginBottom: 6,
 },
-plantDescription: {
-fontSize: 16,
-lineHeight: 22,
-color:'#555'
+tagRow: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+marginBottom: 6,
+},
+tag: {
+backgroundColor: COLORS.primary,
+borderRadius: 12,
+paddingHorizontal: 8,
+paddingVertical: 4,
+marginRight: 6,
+},
+tagText: {
+color: '#fff',
+fontSize: 12,
+fontWeight: '600',
+},
+fullDescription: {
+color: '#fff',
+fontSize: 14,
+fontWeight: '400',
 },
 });
-// File: app\features\main\hooks\useMatches.ts
-export const useMyMatches = () => {
-return useQuery('myMatches', matchService.getMyMatches, {
-staleTime: 0,
-refetchOnWindowFocus: true,
-});
+// File: app\features\main\hooks\useMatchConversation.ts
+export const useMatchConversation = (matchId: number) => {
+const queryClient = useQueryClient();
+const messagesQuery = useQuery<MessageResponse[], Error>(
+['messages', matchId],
+() => messageService.getMessagesForMatch(matchId),
+{
+enabled: matchId > 0,
+staleTime: 1000 * 30,
+}
+);
+const sendMessageMutation = useMutation<
+MessageResponse,
+unknown,
+Omit<MessageRequest, 'matchId'>
+>(
+async (payload) => {
+return await messageService.sendMessage({ matchId, ...payload });
+},
+{
+onSuccess: () => {
+queryClient.invalidateQueries(['messages', matchId]);
+},
+}
+);
+return {
+messages: messagesQuery.data,
+isLoadingMessages: messagesQuery.isLoading,
+isErrorMessages: messagesQuery.isError,
+refetchMessages: messagesQuery.refetch,
+sendMessage: sendMessageMutation.mutate,
+isSending: sendMessageMutation.isLoading,
+};
 };
 // File: app\features\main\hooks\usePlants.ts
 export const useUserPlants = (userId: number) => {
@@ -1517,6 +1655,7 @@ const mutation = useMutation(
 {
 onSuccess: () => {
 queryClient.invalidateQueries(['userPreferences']);
+queryClient.invalidateQueries(['likablePlants']);
 }
 }
 );
@@ -1542,7 +1681,7 @@ const query = useQuery<PlantResponse[], Error>(
 swipeService.getLikablePlants,
 {
 staleTime: 1000 * 60 * 1,
-refetchOnWindowFocus: false,
+refetchOnWindowFocus: true,
 retry: 1,
 }
 );
@@ -1562,6 +1701,16 @@ return userService.getUser(userId);
 {
 enabled: !!userId,
 staleTime: 1000 * 60 * 5
+}
+);
+};
+// File: app\features\main\hooks\useUserMatches.ts
+export const useUserMatches = () => {
+return useQuery<MatchResponse[]>(
+'userMatches',
+() => matchService.getMyMatches(),
+{
+staleTime: 1000 * 60,
 }
 );
 };
@@ -1785,14 +1934,14 @@ return (
 colors={[COLORS.primary, COLORS.secondary]}
 style={styles.gradientBackground}
 >
-<ScrollView
-contentContainerStyle={styles.scrollContent}
-showsVerticalScrollIndicator={false}
->
 <View style={styles.headerRow}>
 <Text style={styles.headerTitle}>{t('add_plant_title')}</Text>
 <MaterialIcons name="local_florist" size={24} color="#fff" />
 </View>
+<ScrollView
+contentContainerStyle={styles.scrollContent}
+showsVerticalScrollIndicator={false}
+>
 <View style={styles.formContainer}>
 {error && <Text style={styles.errorText}>{error}</Text>}
 {}
@@ -1958,10 +2107,11 @@ gradientBackground: {
 flex: 1,
 },
 scrollContent: {
-paddingTop: 30,
+paddingTop: 0,
 paddingBottom: 30,
 },
 headerRow: {
+position: 'sticky',
 flexDirection: 'row',
 justifyContent: 'space-between',
 alignItems: 'center',
@@ -2076,7 +2226,7 @@ fontWeight: '600',
 },
 previewImage: {
 width: '100%',
-height: 250,
+aspectRatio: 3 / 4,
 borderRadius: 8,
 marginTop: 6,
 marginBottom: 10,
@@ -2119,12 +2269,381 @@ fontWeight: '600',
 },
 });
 // File: app\features\main\screens\ChatScreen.tsx
-
-// File: app\features\main\screens\HomeScreen.tsx
-
-// File: app\features\main\screens\MatchListScreen.tsx
-
-// File: app\features\main\screens\MyProfileScreen.tsx
+View,
+Text,
+StyleSheet,
+ActivityIndicator,
+TextInput,
+TouchableOpacity,
+FlatList,
+KeyboardAvoidingView,
+Platform,
+Alert,
+} from 'react-native';
+const COLORS = {
+primary: '#1EAE98',
+accent: '#FF6F61',
+textDark: '#2F4F4F',
+textLight: '#fff',
+background: '#F8F8F8',
+bubbleLeft: '#fff',
+bubbleRight: '#DCF8C6',
+};
+const ChatScreen: React.FC = () => {
+const { t } = useTranslation();
+const route = useRoute();
+const navigation = useNavigation();
+const { otherUserId } = route.params as { otherUserId: number };
+const {
+data: userProfile,
+isLoading: loadingProfile,
+isError: errorProfile,
+} = useUserProfile();
+const {
+data: myMatches,
+isLoading: loadingMatches,
+isError: errorMatches,
+} = useUserMatches();
+const relevantMatches = useMemo<MatchResponse[]>(() => {
+if (!myMatches || !userProfile) return [];
+const myUserId = userProfile.userId;
+return myMatches.filter((m) => {
+return (
+(m.user1.userId === myUserId && m.user2.userId === otherUserId) ||
+(m.user2.userId === myUserId && m.user1.userId === otherUserId)
+);
+});
+}, [myMatches, userProfile, otherUserId]);
+const [activeMatchId, setActiveMatchId] = useState<number | null>(null);
+useEffect(() => {
+if (relevantMatches.length > 0 && !activeMatchId) {
+setActiveMatchId(relevantMatches[0].matchId);
+}
+}, [relevantMatches, activeMatchId]);
+const {
+messages,
+isLoadingMessages,
+isErrorMessages,
+refetchMessages,
+sendMessage,
+isSending,
+} = useMatchConversation(activeMatchId ?? 0);
+const sortedMessages = useMemo(() => {
+if (!messages) return [];
+return [...messages].sort(
+(a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+);
+}, [messages]);
+const flatListRef = useRef<FlatList<MessageResponse>>(null);
+useEffect(() => {
+if (sortedMessages.length > 0) {
+setTimeout(() => {
+flatListRef.current?.scrollToEnd({ animated: true });
+}, 300);
+}
+}, [sortedMessages]);
+const [inputText, setInputText] = useState('');
+const handleSendMessage = useCallback(() => {
+if (!inputText.trim()) return;
+if (!activeMatchId) {
+Alert.alert('Error', 'No active match selected to send messages.');
+return;
+}
+const text = inputText.trim();
+setInputText('');
+sendMessage(
+{ messageText: text },
+{
+onError: (error) => {
+console.error('Error sending message:', error);
+Alert.alert('Error', 'Failed to send message');
+},
+onSuccess: () => {
+},
+}
+);
+}, [activeMatchId, inputText, sendMessage]);
+const renderTabs = () => {
+if (relevantMatches.length <= 1) return null;
+return (
+<View style={styles.tabContainer}>
+{relevantMatches.map((match) => {
+const isActive = match.matchId === activeMatchId;
+const p1 = match.plant1?.speciesName || 'Plant1';
+const p2 = match.plant2?.speciesName || 'Plant2';
+const label = `${p1} ↔ ${p2}`;
+return (
+<TouchableOpacity
+key={match.matchId}
+onPress={() => setActiveMatchId(match.matchId)}
+style={[styles.tabButton, isActive && styles.tabButtonActive]}
+>
+<Text
+style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}
+numberOfLines={1}
+>
+{label}
+</Text>
+</TouchableOpacity>
+);
+})}
+</View>
+);
+};
+if (loadingProfile || loadingMatches || (activeMatchId && isLoadingMessages)) {
+return (
+<SafeAreaProvider style={styles.centerContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+<Text style={styles.loadingText}>{t('chat_loading_conversation')}</Text>
+</SafeAreaProvider>
+);
+}
+if (errorProfile || errorMatches || isErrorMessages) {
+return (
+<SafeAreaProvider style={styles.centerContainer}>
+<Text style={styles.errorText}>{t('chat_error_message')}</Text>
+<TouchableOpacity style={styles.retryButton} onPress={refetchMessages}>
+<Text style={styles.retryButtonText}>{t('chat_retry_button')}</Text>
+</TouchableOpacity>
+</SafeAreaProvider>
+);
+}
+if (relevantMatches.length === 0) {
+return (
+<SafeAreaProvider style={styles.centerContainer}>
+<Text style={styles.noMessagesText}>{t('chat_no_matches_with_user')}</Text>
+</SafeAreaProvider>
+);
+}
+const hasMessages = messages && messages.length > 0;
+return (
+<SafeAreaProvider style={styles.container}>
+{}
+<View style={styles.header}>
+<TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+<Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
+</TouchableOpacity>
+<Text style={styles.headerTitle}>{t('chat_title')}</Text>
+</View>
+{}
+{renderTabs()}
+{}
+{!hasMessages ? (
+<View style={styles.emptyChatContainer}>
+<Text style={styles.noMessagesText}>{t('chat_no_messages_yet')}</Text>
+</View>
+) : (
+<FlatList
+ref={flatListRef}
+data={sortedMessages}
+keyExtractor={(item) => item.messageId.toString()}
+contentContainerStyle={styles.listContent}
+renderItem={({ item }) => {
+const isMine = item.senderUserId === userProfile?.userId;
+return <MessageBubble message={item} isMine={isMine} />;
+}}
+/>
+)}
+{}
+<KeyboardAvoidingView
+behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+keyboardVerticalOffset={10}
+>
+<View style={styles.inputContainer}>
+<TextInput
+style={styles.textInput}
+value={inputText}
+onChangeText={setInputText}
+placeholder={t('chat_message_placeholder')}
+multiline
+/>
+{isSending ? (
+<ActivityIndicator style={{ marginRight: 12 }} color={COLORS.primary} />
+) : (
+<TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
+<Ionicons name="send" size={20} color="#fff" />
+</TouchableOpacity>
+)}
+</View>
+</KeyboardAvoidingView>
+</SafeAreaProvider>
+);
+};
+interface BubbleProps {
+message: MessageResponse;
+isMine: boolean;
+}
+const MessageBubble: React.FC<BubbleProps> = ({ message, isMine }) => {
+return (
+<View
+style={[
+styles.bubbleContainer,
+isMine ? styles.bubbleRightContainer : styles.bubbleLeftContainer,
+]}
+>
+<View style={[styles.bubble, isMine ? styles.bubbleRight : styles.bubbleLeft]}>
+<Text style={styles.bubbleText}>{message.messageText}</Text>
+<Text style={styles.timestamp}>
+{new Date(message.sentAt).toLocaleTimeString([], {
+hour: '2-digit',
+minute: '2-digit',
+})}
+</Text>
+</View>
+</View>
+);
+};
+export default ChatScreen;
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+},
+centerContainer: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+paddingHorizontal: 20,
+},
+loadingText: {
+fontSize: 16,
+color: COLORS.textDark,
+marginTop: 10,
+textAlign: 'center',
+},
+errorText: {
+fontSize: 16,
+color: COLORS.textDark,
+marginBottom: 10,
+textAlign: 'center',
+},
+retryButton: {
+backgroundColor: COLORS.primary,
+borderRadius: 8,
+paddingHorizontal: 16,
+paddingVertical: 10,
+marginTop: 10,
+},
+retryButtonText: {
+color: '#fff',
+fontWeight: '600',
+},
+noMessagesText: {
+fontSize: 16,
+color: COLORS.textDark,
+textAlign: 'center',
+},
+header: {
+flexDirection: 'row',
+alignItems: 'center',
+backgroundColor: COLORS.primary,
+paddingHorizontal: 15,
+paddingVertical: 12,
+borderBottomLeftRadius: 20,
+borderBottomRightRadius: 20,
+elevation: 2,
+},
+backButton: {
+marginRight: 10,
+},
+headerTitle: {
+fontSize: 20,
+fontWeight: '700',
+color: COLORS.textLight,
+},
+tabContainer: {
+flexDirection: 'row',
+backgroundColor: '#fff',
+marginHorizontal: 10,
+marginTop: 10,
+borderRadius: 8,
+elevation: 2,
+overflow: 'hidden',
+},
+tabButton: {
+paddingHorizontal: 12,
+paddingVertical: 8,
+},
+tabButtonActive: {
+backgroundColor: COLORS.primary,
+},
+tabButtonText: {
+fontSize: 14,
+color: COLORS.primary,
+},
+tabButtonTextActive: {
+color: '#fff',
+fontWeight: '600',
+},
+emptyChatContainer: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+},
+listContent: {
+padding: 10,
+paddingBottom: 60,
+},
+bubbleContainer: {
+marginVertical: 6,
+},
+bubbleLeftContainer: {
+alignSelf: 'flex-start',
+},
+bubbleRightContainer: {
+alignSelf: 'flex-end',
+},
+bubble: {
+maxWidth: '80%',
+borderRadius: 8,
+paddingHorizontal: 12,
+paddingVertical: 8,
+},
+bubbleLeft: {
+backgroundColor: COLORS.bubbleLeft,
+borderTopLeftRadius: 0,
+},
+bubbleRight: {
+backgroundColor: COLORS.bubbleRight,
+borderTopRightRadius: 0,
+},
+bubbleText: {
+fontSize: 14,
+color: '#333',
+},
+timestamp: {
+marginTop: 5,
+fontSize: 10,
+color: '#777',
+textAlign: 'right',
+},
+inputContainer: {
+flexDirection: 'row',
+paddingVertical: 8,
+paddingHorizontal: 10,
+backgroundColor: '#fff',
+borderTopWidth: 1,
+borderTopColor: '#ddd',
+alignItems: 'flex-end',
+},
+textInput: {
+flex: 1,
+minHeight: 40,
+maxHeight: 100,
+backgroundColor: '#f2f2f2',
+borderRadius: 20,
+paddingHorizontal: 12,
+paddingVertical: 8,
+marginRight: 8,
+fontSize: 14,
+},
+sendButton: {
+backgroundColor: COLORS.primary,
+borderRadius: 20,
+padding: 10,
+},
+});
+// File: app\features\main\screens\ConnectionsScreen.tsx
 View,
 Text,
 StyleSheet,
@@ -2133,7 +2652,277 @@ TouchableOpacity,
 FlatList,
 Image,
 Dimensions,
+} from 'react-native';
+const COLORS = {
+primary: '#1EAE98',
+background: '#F8F8F8',
+textDark: '#2F4F4F',
+border: '#ddd',
+textLight: '#fff',
+accent: '#FF6F61',
+};
+const { width } = Dimensions.get('window');
+const ConnectionsScreen: React.FC = () => {
+const { t } = useTranslation();
+const navigation = useNavigation();
+const {
+data: userProfile,
+isLoading: loadingProfile,
+isError: errorProfile,
+} = useUserProfile();
+const {
+data: matches,
+isLoading: loadingMatches,
+isError: errorMatches,
+refetch: refetchMatches,
+} = useUserMatches();
+const myUserId = userProfile?.userId;
+const groupedConversations = useMemo(() => {
+if (!matches || !myUserId) return [];
+const map = new Map<number, MatchResponse[]>();
+for (const m of matches) {
+const otherUserId =
+m.user1.userId === myUserId ? m.user2.userId : m.user1.userId;
+if (!map.has(otherUserId)) {
+map.set(otherUserId, []);
+}
+map.get(otherUserId)!.push(m);
+}
+return Array.from(map.entries()).map(([otherUserId, matchList]) => ({
+otherUserId,
+matchList,
+}));
+}, [matches, myUserId]);
+const handleConversationPress = useCallback(
+(otherUserId: number) => {
+navigation.navigate('ConversationScreen' as never, { otherUserId } as never);
+},
+[navigation]
+);
+if (loadingProfile || loadingMatches) {
+return (
+<SafeAreaProvider style={styles.centerContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+<Text style={styles.loadingText}>{t('connections_loading')}</Text>
+</SafeAreaProvider>
+);
+}
+if (errorProfile || errorMatches) {
+return (
+<SafeAreaProvider style={styles.centerContainer}>
+<Text style={styles.errorText}>{t('connections_error')}</Text>
+<TouchableOpacity style={styles.retryButton} onPress={refetchMatches}>
+<Text style={styles.retryButtonText}>{t('connections_retry_button')}</Text>
+</TouchableOpacity>
+</SafeAreaProvider>
+);
+}
+const renderEmptyState = () => {
+return (
+<View style={styles.emptyStateContainer}>
+{}
+<Ionicons name="people-outline" size={64} color={COLORS.accent} style={{ marginBottom: 20 }} />
+<Text style={styles.emptyStateTitle}>{t('connections_none_title')}</Text>
+<Text style={styles.emptyStateMessage}>
+{t('connections_none_message')}
+</Text>
+<TouchableOpacity
+style={styles.emptyStateButton}
+onPress={() => {
+navigation.navigate('SwipeScreen' as never);
+}}
+>
+<Text style={styles.emptyStateButtonText}>
+{t('connections_none_action')}
+</Text>
+</TouchableOpacity>
+</View>
+);
+};
+return (
+<SafeAreaProvider style={styles.container}>
+{}
+<View style={styles.header}>
+<Text style={styles.headerTitle}>
+{t('connections_title', 'Connections')}
+</Text>
+</View>
+{}
+{(!groupedConversations || groupedConversations.length === 0) && (
+renderEmptyState()
+)}
+{}
+{groupedConversations && groupedConversations.length > 0 && (
+<FlatList
+data={groupedConversations}
+keyExtractor={(item) => item.otherUserId.toString()}
+contentContainerStyle={{ paddingBottom: 20 }}
+renderItem={({ item }) => {
+const { otherUserId, matchList } = item;
+const firstMatch = matchList[0];
+const isUser1Me = firstMatch.user1.userId === myUserId;
+const otherUser: UserResponse = isUser1Me
+? firstMatch.user2
+: firstMatch.user1;
+return (
+<TouchableOpacity
+style={styles.rowContainer}
+onPress={() => handleConversationPress(otherUserId)}
+activeOpacity={0.8}
+>
+<Image
+source={
+otherUser.profilePictureUrl
+? { uri: otherUser.profilePictureUrl }
+: require('../../../../assets/images/icon.png')
+}
+style={styles.avatar}
+/>
+<View style={styles.textSection}>
+<Text style={styles.userName}>{otherUser.name}</Text>
+<Text style={styles.matchCount}>
+{t('connections_matches_label', { count: matchList.length })}
+</Text>
+</View>
+<Ionicons
+name="chevron-forward"
+size={24}
+color={COLORS.textDark}
+/>
+</TouchableOpacity>
+);
+}}
+/>
+)}
+</SafeAreaProvider>
+);
+};
+export default ConnectionsScreen;
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+},
+centerContainer: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+},
+loadingText: {
+marginTop: 10,
+fontSize: 16,
+color: COLORS.textDark,
+},
+errorText: {
+fontSize: 16,
+color: COLORS.textDark,
+marginBottom: 10,
+textAlign: 'center',
+},
+retryButton: {
+paddingHorizontal: 16,
+paddingVertical: 10,
+backgroundColor: COLORS.primary,
+borderRadius: 8,
+},
+retryButtonText: {
+color: '#fff',
+fontWeight: '600',
+},
+header: {
+paddingHorizontal: 20,
+paddingVertical: 15,
+backgroundColor: COLORS.primary,
+borderBottomLeftRadius: 20,
+borderBottomRightRadius: 20,
+marginBottom: 10,
+elevation: 3,
+},
+headerTitle: {
+fontSize: 22,
+fontWeight: '700',
+color: COLORS.textLight,
+},
+rowContainer: {
+flexDirection: 'row',
+alignItems: 'center',
+backgroundColor: '#fff',
+marginHorizontal: 10,
+marginVertical: 6,
+borderRadius: 8,
+padding: 10,
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 2 },
+elevation: 2,
+},
+avatar: {
+width: 52,
+height: 52,
+borderRadius: 26,
+marginRight: 12,
+backgroundColor: '#eee',
+},
+textSection: {
+flex: 1,
+justifyContent: 'center',
+},
+userName: {
+fontSize: 16,
+fontWeight: '600',
+color: COLORS.textDark,
+marginBottom: 4,
+},
+matchCount: {
+fontSize: 14,
+color: '#777',
+},
+emptyStateContainer: {
+flex: 1,
+alignItems: 'center',
+justifyContent: 'center',
+paddingHorizontal: 30,
+},
+emptyStateTitle: {
+fontSize: 20,
+fontWeight: 'bold',
+color: COLORS.textDark,
+marginBottom: 8,
+textAlign: 'center',
+},
+emptyStateMessage: {
+fontSize: 14,
+color: '#555',
+textAlign: 'center',
+marginBottom: 20,
+},
+emptyStateButton: {
+backgroundColor: COLORS.accent,
+paddingHorizontal: 16,
+paddingVertical: 10,
+borderRadius: 8,
+marginTop: 10,
+},
+emptyStateButtonText: {
+color: '#fff',
+fontWeight: '600',
+fontSize: 14,
+},
+});
+// File: app\features\main\screens\HomeScreen.tsx
+
+// File: app\features\main\screens\MyProfileScreen.tsx
+View,
+Text,
+StyleSheet,
+ActivityIndicator,
+TouchableOpacity,
+Image,
+Dimensions,
 Platform,
+ScrollView,
+Alert,
 } from 'react-native';
 const { width } = Dimensions.get('window');
 const COLORS = {
@@ -2167,6 +2956,77 @@ isError: srError,
 } = useSearchRadius();
 const [editProfileVisible, setEditProfileVisible] = useState(false);
 const [changeLocationVisible, setChangeLocationVisible] = useState(false);
+const [showFullSize, setShowFullSize] = useState(false);
+const handleChangeProfilePicture = useCallback(() => {
+Alert.alert(
+t('profile_change_picture_title'),
+t('profile_change_picture_msg'),
+[
+{ text: t('profile_picture_select_library'), onPress: pickImageFromLibrary },
+{ text: t('profile_picture_take_photo'), onPress: takePictureWithCamera },
+{ text: t('profile_picture_cancel'), style: 'cancel' },
+]
+);
+}, [t]);
+const pickImageFromLibrary = async () => {
+try {
+const result = await ImagePicker.launchImageLibraryAsync({
+mediaTypes: ImagePicker.MediaTypeOptions.Images,
+allowsEditing: true,
+aspect: [1, 1],
+quality: 0.7,
+});
+if (!result.canceled && result.assets[0].uri) {
+const resized = await resizeImage(result.assets[0].uri);
+await uploadProfilePicture(resized);
+}
+} catch (err) {
+console.error('pickImageFromLibrary error:', err);
+Alert.alert('Error', 'Could not open image library.');
+}
+};
+const takePictureWithCamera = async () => {
+try {
+const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+if (!cameraPermission.granted) {
+Alert.alert('Error', 'Camera permission denied.');
+return;
+}
+const result = await ImagePicker.launchCameraAsync({
+allowsEditing: true,
+aspect: [1, 1],
+quality: 0.7,
+});
+if (!result.canceled && result.assets[0].uri) {
+const resized = await resizeImage(result.assets[0].uri);
+await uploadProfilePicture(resized);
+}
+} catch (err) {
+console.error('takePictureWithCamera error:', err);
+Alert.alert('Error', 'Could not open camera.');
+}
+};
+const resizeImage = async (uri: string) => {
+return await ImageManipulator.manipulateAsync(
+uri,
+[{ resize: { width: 800 } }],
+{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+);
+};
+const uploadProfilePicture = async (img: ImageManipulator.ImageResult) => {
+try {
+const photo = {
+uri: img.uri,
+name: 'profile.jpg',
+type: 'image/jpeg',
+} as any;
+await userService.updateProfilePicture({ image: photo });
+refetchProfile();
+} catch (err) {
+console.error('Error uploading profile picture:', err);
+Alert.alert('Error', 'Profile picture update failed.');
+}
+};
 const handleEditProfile = useCallback(() => {
 setEditProfileVisible(true);
 }, []);
@@ -2193,22 +3053,78 @@ latitudeDelta: 0.05,
 longitudeDelta: 0.05,
 }
 : undefined;
-const renderPlantItem = ({ item }: { item: PlantResponse }) => (
-<View style={styles.plantCard}>
+const renderPlantItem = (item: PlantResponse) => {
+if (!showFullSize) {
+return (
+<View key={item.plantId} style={styles.plantCardThumbnail}>
 {item.imageUrl ? (
-<Image source={{ uri: item.imageUrl }} style={styles.plantImage} />
+<Image
+source={{ uri: item.imageUrl }}
+style={styles.thumbImage}
+resizeMode="contain"
+/>
 ) : (
 <View style={styles.plantPlaceholder}>
 <Ionicons name="leaf" size={40} color={COLORS.primary} />
 </View>
 )}
-<View style={styles.plantDetails}>
-<Text style={styles.plantName} numberOfLines={1}>
+<View style={styles.thumbTextWrapper}>
+<Text style={styles.thumbPlantName} numberOfLines={1}>
 {item.speciesName}
 </Text>
 </View>
 </View>
 );
+} else {
+const alltags = [
+item.plantStage,
+item.plantCategory,
+item.wateringNeed,
+item.lightRequirement,
+item.size,
+item.indoorOutdoor,
+item.propagationEase,
+item.petFriendly,
+...(item.extras ?? [])
+].filter(Boolean);
+return (
+<View key={item.plantId} style={styles.plantCardFull}>
+<View style={styles.fullImageContainer}>
+{item.imageUrl ? (
+<Image
+source={{ uri: item.imageUrl }}
+style={styles.fullImage}
+resizeMode="contain"
+/>
+) : (
+<View style={styles.plantPlaceholder}>
+<Ionicons name="leaf" size={60} color={COLORS.primary} />
+</View>
+)}
+<View style={styles.fullImageOverlay}>
+<LinearGradient
+colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 1)']}
+style={styles.overlayContent}>
+<Text style={styles.fullPlantName}>{item.speciesName}</Text>
+{alltags.length > 0 && (
+<View style={styles.tagRow}>
+{alltags.map((tag) => (
+<View key={tag} style={styles.tag}>
+<Text style={styles.tagText}>{tag}</Text>
+</View>
+))}
+</View>
+)}
+{item.description ? (
+<Text style={styles.fullDescription}>{item.description}</Text>
+) : null}
+</LinearGradient>
+</View>
+</View>
+</View>
+);
+}
+};
 let content: JSX.Element;
 if (loadingProfile || loadingPlants || srLoading) {
 content = (
@@ -2244,23 +3160,28 @@ content = (
 );
 } else {
 content = (
-<SafeAreaView style={styles.container}>
-{}
+<SafeAreaProvider style={styles.container}>
+<ScrollView
+style={{ flex: 1 }}
+contentContainerStyle={{ paddingBottom: 40 }}>
 <LinearGradient
 colors={[COLORS.primary, '#5EE2C6']}
-style={styles.headerContainer}
->
+style={styles.headerContainer}>
 <View style={styles.headerTopRow}>
-<Text style={styles.headerTitle}>{t('profile_title')}</Text>
+<Text style={styles.headerTitle}>{userProfile.name}'s {t('profile_title')}</Text>
 <TouchableOpacity
 onPress={handleEditProfile}
 style={styles.headerActionButton}
-accessibilityLabel={t('profile_edit_button')}
->
+accessibilityLabel={t('profile_edit_button')}>
 <MaterialIcons name="edit" size={24} color={COLORS.textLight} />
 </TouchableOpacity>
 </View>
+{}
 <View style={styles.profileInfoContainer}>
+<TouchableOpacity
+onPress={handleChangeProfilePicture}
+activeOpacity={0.8}
+style={styles.profilePictureWrapper}>
 {userProfile.profilePictureUrl ? (
 <Image
 source={{ uri: userProfile.profilePictureUrl }}
@@ -2271,55 +3192,56 @@ style={styles.profilePicture}
 <Ionicons name="person-circle-outline" size={90} color="#ccc" />
 </View>
 )}
-<View style={styles.profileTextSection}>
-<Text style={styles.profileName}>{userProfile.name}</Text>
+<View style={styles.cameraIconWrapper}>
+<Ionicons name="camera" size={18} color={COLORS.textLight} />
+</View>
+</TouchableOpacity>
 {userProfile.bio ? (
-<>
-<Text style={styles.profileLabel}>
-{t('profile_bio_label')}:
-</Text>
-<Text style={styles.profileValue} numberOfLines={3}>
+<Text style={styles.bioText} numberOfLines={50}>
 {userProfile.bio}
 </Text>
-</>
-) : null}
-{}
-<View style={styles.profileLocationSection}>
-<Text style={styles.profileLabel}>
+) : (
+<Text style={styles.bioPlaceholder} numberOfLines={3}>
+{t('profile_no_bio_placeholder')}
+</Text>
+)}
+<View style={styles.locationContainer}>
+<Text style={styles.locationLabel}>
 {t('profile_location_label')}:
 </Text>
 {userHasLocation ? (
 <View style={styles.mapContainer}>
-<MapView style={styles.map} initialRegion={region}>
+<MapView
+style={styles.map}
+initialRegion={region}
+scrollEnabled={false}
+zoomEnabled={false}
+rotateEnabled={false}
+pitchEnabled={false}
+>
 <Circle
 center={{
 latitude: region.latitude,
 longitude: region.longitude,
 }}
-radius={searchRadius * 1000}
+radius={2000}
 strokeWidth={1.5}
-strokeColor="#1EAE98"
+strokeColor="rgba(30, 174, 152, 1)"
 fillColor="rgba(30, 174, 152, 0.2)"
 />
 </MapView>
 </View>
 ) : (
-<Text style={styles.profileValue}>
+<Text style={styles.noLocationText}>
 {t('profile_no_location')}
 </Text>
 )}
-</View>
 <TouchableOpacity
 onPress={handleChangeLocation}
 style={styles.locationButton}
 accessibilityRole="button"
-accessibilityLabel={t('profile_change_location_button')}
->
-<Ionicons
-name="location-outline"
-size={18}
-color={COLORS.primary}
-/>
+accessibilityLabel={t('profile_change_location_button')}>
+<Ionicons name="location-outline" size={18} color={COLORS.primary} />
 <Text style={styles.locationButtonText}>
 {t('profile_change_location_button')}
 </Text>
@@ -2327,34 +3249,63 @@ color={COLORS.primary}
 </View>
 </View>
 </LinearGradient>
-{}
 <View style={styles.plantsSectionWrapper}>
 <View style={styles.plantsSectionHeader}>
 <Text style={styles.plantsSectionTitle}>
-{t('profile_my_plants_section')}
+{userProfile.name}{t('profile_my_plants_section')}
 </Text>
 <TouchableOpacity
 onPress={handleAddPlant}
 style={styles.addPlantButton}
 accessibilityRole="button"
-accessibilityLabel={t('profile_add_plant_button')}
->
+accessibilityLabel={t('profile_add_plant_button')}>
 <Ionicons name="add-circle" size={24} color={COLORS.primary} />
 <Text style={styles.addPlantButtonText}>
 {t('profile_add_plant_button')}
 </Text>
 </TouchableOpacity>
 </View>
-<View style={styles.plantsContainer}>
+<View style={styles.viewToggleContainer}>
+<TouchableOpacity
+onPress={() => setShowFullSize(false)}
+style={[
+styles.viewToggleOption,
+!showFullSize && styles.viewToggleOptionActive,
+]}
+activeOpacity={0.9}>
+<Text
+style={[
+styles.viewToggleText,
+!showFullSize && styles.viewToggleTextActive,
+]}>
+{t('Thumbnails')}
+</Text>
+</TouchableOpacity>
+<TouchableOpacity
+onPress={() => setShowFullSize(true)}
+style={[
+styles.viewToggleOption,
+showFullSize && styles.viewToggleOptionActive,
+]}
+activeOpacity={0.9}>
+<Text
+style={[
+styles.viewToggleText,
+showFullSize && styles.viewToggleTextActive,
+]}>
+{t('Full Size')}
+</Text>
+</TouchableOpacity>
+</View>
 {myPlants && myPlants.length > 0 ? (
-<FlatList
-data={myPlants}
-keyExtractor={(item) => item.plantId.toString()}
-renderItem={renderPlantItem}
-numColumns={2}
-columnWrapperStyle={{ justifyContent: 'space-between' }}
-contentContainerStyle={styles.plantListContent}
-/>
+<View
+style={[
+showFullSize
+? styles.fullViewContainer
+: styles.thumbViewContainer,
+]}>
+{myPlants.map((plant) => renderPlantItem(plant))}
+</View>
 ) : (
 <View style={styles.noPlantsContainer}>
 <Text style={styles.noPlantsText}>
@@ -2363,8 +3314,6 @@ contentContainerStyle={styles.plantListContent}
 </View>
 )}
 </View>
-</View>
-{}
 <EditProfileModal
 visible={editProfileVisible}
 initialName={userProfile.name}
@@ -2372,7 +3321,6 @@ initialBio={userProfile.bio || ''}
 onClose={() => setEditProfileVisible(false)}
 onUpdated={handleProfileUpdated}
 />
-{}
 <ChangeLocationModal
 visible={changeLocationVisible}
 initialLatitude={userProfile.locationLatitude}
@@ -2380,7 +3328,8 @@ initialLongitude={userProfile.locationLongitude}
 onClose={() => setChangeLocationVisible(false)}
 onUpdated={handleLocationUpdated}
 />
-</SafeAreaView>
+</ScrollView>
+</SafeAreaProvider>
 );
 }
 return content;
@@ -2422,8 +3371,8 @@ fontWeight: '600',
 headerContainer: {
 paddingHorizontal: 20,
 paddingVertical: 20,
-borderBottomLeftRadius: 40,
-borderBottomRightRadius: 40,
+borderBottomLeftRadius: 20,
+borderBottomRightRadius: 20,
 marginBottom: 10,
 },
 headerTopRow: {
@@ -2440,74 +3389,92 @@ headerActionButton: {
 padding: 8,
 },
 profileInfoContainer: {
-flexDirection: 'row',
 alignItems: 'center',
 marginTop: 15,
+marginHorizontal: 20,
+},
+profilePictureWrapper: {
+position: 'relative',
+marginBottom: 10,
 },
 profilePicture: {
-width: 100,
-height: 100,
-borderRadius: 50,
+width: (width - 100) / 2,
+height: (width - 100) / 2,
+borderRadius: (width - 100) / 4,
 backgroundColor: '#eee',
-marginRight: 15,
 borderWidth: 2,
 borderColor: '#fff',
 },
 profilePlaceholder: {
-width: 100,
-height: 100,
-borderRadius: 50,
+width: (width - 100) / 2,
+height: (width - 100) / 2,
+borderRadius: (width - 100) / 4,
 backgroundColor: '#eee',
 alignItems: 'center',
 justifyContent: 'center',
-marginRight: 15,
+borderWidth: 2,
+borderColor: '#fff',
 },
-profileTextSection: {
-flexShrink: 1,
+cameraIconWrapper: {
+position: 'absolute',
+bottom: 0,
+right: 10,
+backgroundColor: COLORS.primary,
+borderRadius: 16,
+padding: 4,
 },
-profileName: {
-fontSize: 18,
-fontWeight: '700',
-color: COLORS.textLight,
-marginBottom: 6,
-},
-profileLabel: {
+bioText: {
 fontSize: 14,
+color: COLORS.textLight,
+textAlign: 'center',
+marginVertical: 10,
+lineHeight: 20,
+},
+bioPlaceholder: {
+fontSize: 14,
+color: COLORS.textLight,
+fontStyle: 'italic',
+textAlign: 'center',
+marginVertical: 10,
+lineHeight: 20,
+},
+locationContainer: {
+width: '100%',
+alignItems: 'center',
+marginTop: 15,
+},
+locationLabel: {
+fontSize: 16,
 fontWeight: '600',
-color: COLORS.textLight,
-marginBottom: 2,
-},
-profileValue: {
-fontSize: 14,
 color: COLORS.textLight,
 marginBottom: 8,
 },
-profileLocationSection: {
-marginTop: 6,
-},
 mapContainer: {
-marginTop: 6,
-width: 200,
-height: 120,
+width: '100%',
+height: (width - 40) / 2,
 borderRadius: 8,
 overflow: 'hidden',
 backgroundColor: '#ddd',
+marginBottom: 10,
 },
 map: {
-width: '100%',
-height: '100%',
+...StyleSheet.absoluteFillObject,
+},
+noLocationText: {
+fontSize: 14,
+color: COLORS.textLight,
+marginBottom: 10,
 },
 locationButton: {
 flexDirection: 'row',
 alignItems: 'center',
-marginTop: 8,
 paddingHorizontal: 10,
 paddingVertical: 6,
 borderWidth: 1,
 borderColor: COLORS.primary,
 borderRadius: 8,
-alignSelf: 'flex-start',
 backgroundColor: '#fff',
+marginTop: 10,
 },
 locationButtonText: {
 color: COLORS.primary,
@@ -2516,7 +3483,6 @@ marginLeft: 5,
 fontWeight: '600',
 },
 plantsSectionWrapper: {
-flex: 1,
 paddingHorizontal: 10,
 paddingTop: 10,
 },
@@ -2542,28 +3508,40 @@ color: COLORS.primary,
 marginLeft: 5,
 fontWeight: '600',
 },
-plantsContainer: {
-flex: 1,
+viewToggleContainer: {
+flexDirection: 'row',
+alignSelf: 'center',
+borderColor: COLORS.border,
+borderWidth: 1,
+borderRadius: 20,
+overflow: 'hidden',
+marginBottom: 12,
 },
-plantListContent: {
-paddingHorizontal: 10,
-paddingBottom: 20,
+viewToggleOption: {
+paddingVertical: 8,
+paddingHorizontal: 20,
+backgroundColor: '#fff',
 },
-noPlantsContainer: {
-flex: 1,
-justifyContent: 'center',
-alignItems: 'center',
-padding: 20,
+viewToggleOptionActive: {
+backgroundColor: COLORS.primary,
 },
-noPlantsText: {
-fontSize: 16,
-color: '#555',
-textAlign: 'center',
+viewToggleText: {
+fontSize: 14,
+color: COLORS.textDark,
+fontWeight: '600',
 },
-plantCard: {
-width: (width - 60) / 2,
+viewToggleTextActive: {
+color: '#fff',
+},
+thumbViewContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+justifyContent: 'space-between',
+},
+plantCardThumbnail: {
+width: (width - 50) / 3,
 backgroundColor: COLORS.cardBg,
-borderRadius: 15,
+borderRadius: 8,
 marginBottom: 15,
 overflow: 'hidden',
 ...Platform.select({
@@ -2577,10 +3555,9 @@ elevation: 3,
 },
 }),
 },
-plantImage: {
+thumbImage: {
 width: '100%',
-height: 120,
-resizeMode: 'cover',
+aspectRatio: 3 / 4,
 },
 plantPlaceholder: {
 width: '100%',
@@ -2589,219 +3566,1386 @@ backgroundColor: '#eee',
 justifyContent: 'center',
 alignItems: 'center',
 },
-plantDetails: {
-padding: 10,
+thumbTextWrapper: {
+padding: 8,
+alignItems: 'center',
 },
-plantName: {
+thumbPlantName: {
 fontSize: 14,
 fontWeight: '600',
 color: COLORS.textDark,
+},
+fullViewContainer: {
+width: '100%',
+},
+plantCardFull: {
+marginBottom: 15,
+width: '100%',
+borderRadius: 8,
+overflow: 'hidden',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.12,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 3 },
+},
+android: {
+elevation: 3,
+},
+}),
+},
+fullImageContainer: {
+width: '100%',
+position: 'relative',
+},
+fullImage: {
+width: '100%',
+aspectRatio: 3 / 4,
+},
+fullImageOverlay: {
+...StyleSheet.absoluteFillObject,
+justifyContent: 'flex-end',
+},
+overlayContent: {
+padding: 10,
+paddingTop: 100,
+},
+fullPlantName: {
+fontSize: 18,
+fontWeight: '700',
+color: '#fff',
+marginBottom: 6,
+},
+tagRow: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+marginBottom: 6,
+},
+tag: {
+backgroundColor: COLORS.primary,
+borderRadius: 12,
+paddingHorizontal: 8,
+paddingVertical: 4,
+marginRight: 6,
+marginBottom: 6,
+},
+tagText: {
+color: '#fff',
+fontSize: 12,
+fontWeight: '600',
+},
+fullDescription: {
+color: '#fff',
+fontSize: 14,
+fontWeight: '400',
+},
+noPlantsContainer: {
+justifyContent: 'center',
+alignItems: 'center',
+padding: 20,
+},
+noPlantsText: {
+fontSize: 16,
+color: '#555',
 textAlign: 'center',
 },
 });
 // File: app\features\main\screens\SettingsScreen.tsx
-const SettingsScreen = () => {
+View,
+Text,
+StyleSheet,
+TouchableOpacity,
+Switch,
+ScrollView,
+Alert,
+ActivityIndicator,
+TextInput,
+} from 'react-native';
+const COLORS = {
+primary: '#1EAE98',
+secondary: '#5EE2C6',
+background: '#F2F2F2',
+textLight: '#FFFFFF',
+textDark: '#333333',
+accent: '#FF6F61',
+};
+const SettingsScreen: React.FC = () => {
 const { t, i18n } = useTranslation();
+const navigation = useNavigation();
+const {
+data: userProfile,
+isLoading: userLoading,
+refetch: refetchUserProfile,
+} = useUserProfile();
+const {
+searchRadius,
+setSearchRadius,
+isLoading: srLoading,
+isError: srError,
+} = useSearchRadius();
 const [currentLang, setCurrentLang] = useState(i18n.language);
+const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState<boolean>(true);
+const [darkModeEnabled, setDarkModeEnabled] = useState<boolean>(false);
+const [newEmail, setNewEmail] = useState<string>('');
+const [newPassword, setNewPassword] = useState<string>('');
+const [isUpdatingEmail, setIsUpdatingEmail] = useState<boolean>(false);
+const [isUpdatingPassword, setIsUpdatingPassword] = useState<boolean>(false);
+const [saving, setSaving] = useState<boolean>(false);
 const handleLanguageChange = async (lang: string) => {
 await i18n.changeLanguage(lang);
 await storage.saveLanguage(lang);
 setCurrentLang(lang);
 };
+const handleChangeEmail = async () => {
+if (!newEmail.trim()) {
+Alert.alert('Validation Error', t('Please enter a valid email.'));
+return;
+}
+setSaving(true);
+try {
+await userService.updateProfile({ email: newEmail });
+Alert.alert(t('Email changed successfully!'));
+setNewEmail('');
+refetchUserProfile();
+} catch (err) {
+console.error('Failed to change email:', err);
+Alert.alert(t('Error'), t('Could not change email.'));
+} finally {
+setSaving(false);
+setIsUpdatingEmail(false);
+}
+};
+const handleChangePassword = async () => {
+if (!newPassword.trim()) {
+Alert.alert('Validation Error', t('Please enter a valid password.'));
+return;
+}
+setSaving(true);
+try {
+await userService.updateProfile({ password: newPassword });
+Alert.alert(t('Password changed successfully!'));
+setNewPassword('');
+refetchUserProfile();
+} catch (err) {
+console.error('Failed to change password:', err);
+Alert.alert(t('Error'), t('Could not change password.'));
+} finally {
+setSaving(false);
+setIsUpdatingPassword(false);
+}
+};
+const handleLogout = async () => {
+Alert.alert(
+t('Logout'),
+t('Are you sure you want to log out?'),
+[
+{ text: t('Cancel'), style: 'cancel' },
+{
+text: t('Yes'),
+style: 'destructive',
+onPress: async () => store.dispatch(logout())
+},
+]
+);
+};
+const handleDeleteAccount = async () => {
+Alert.alert(
+t('Delete Account'),
+t('This action cannot be undone. Are you sure?'),
+[
+{ text: t('Cancel'), style: 'cancel' },
+{
+text: t('Yes, Delete'),
+style: 'destructive',
+onPress: async () => {
+try {
+navigation.reset({
+index: 0,
+routes: [{ name: 'AuthNavigator' as never }],
+});
+} catch (err) {
+console.error('Failed to delete account:', err);
+Alert.alert(t('Error'), t('Could not delete account.'));
+}
+},
+},
+]
+);
+};
+const handleSaveNotificationSettings = async (value: boolean) => {
+setPushNotificationsEnabled(value);
+};
+const handleSaveDarkMode = async (value: boolean) => {
+setDarkModeEnabled(value);
+};
+const handleSearchRadiusChange = async (val: number) => {
+setSearchRadius(val);
+};
+if (userLoading || srLoading) {
 return (
-<View style={styles.container}>
-<Text style={styles.header}>Settings</Text>
-<Text style={styles.label}>Selected Language: {currentLang}</Text>
-<View style={styles.buttons}>
-<TouchableOpacity onPress={() => handleLanguageChange('en')} style={[styles.button, currentLang === 'en' && styles.selected]}>
-<Text style={styles.buttonText}>English</Text>
+<View style={styles.centered}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+</View>
+);
+}
+return (
+<SafeAreaProvider style={styles.safeArea}>
+<LinearGradient
+colors={[COLORS.primary, COLORS.secondary]}
+style={styles.gradientHeader}
+>
+<View style={styles.headerRow}>
+<Text style={styles.headerTitle}>{t('Settings')}</Text>
+<MaterialIcons name="settings" size={24} color="#fff" />
+</View>
+</LinearGradient>
+<ScrollView contentContainerStyle={styles.scrollContent}>
+{}
+<View style={styles.section}>
+<Text style={styles.sectionTitle}>{t('Account')}</Text>
+{}
+<Text style={styles.label}>{t('Email')}:</Text>
+<Text style={styles.value}>
+{userProfile?.email || t('No email found')}
+</Text>
+{isUpdatingEmail ? (
+<View style={styles.changeContainer}>
+<TextInput
+style={styles.input}
+placeholder={t('New email')}
+onChangeText={setNewEmail}
+value={newEmail}
+keyboardType="email-address"
+autoCapitalize="none"
+/>
+<View style={styles.buttonRow}>
+<TouchableOpacity
+style={[styles.smallButton, styles.cancelBtn]}
+onPress={() => {
+setIsUpdatingEmail(false);
+setNewEmail('');
+}}
+>
+<Text style={styles.smallButtonText}>{t('Cancel')}</Text>
 </TouchableOpacity>
-<TouchableOpacity onPress={() => handleLanguageChange('fr')} style={[styles.button, currentLang === 'fr' && styles.selected]}>
-<Text style={styles.buttonText}>Français</Text>
+<TouchableOpacity
+style={[styles.smallButton, styles.confirmBtn]}
+onPress={handleChangeEmail}
+disabled={saving}
+>
+{saving ? (
+<ActivityIndicator size="small" color="#fff" />
+) : (
+<Text style={styles.smallButtonText}>{t('Save')}</Text>
+)}
 </TouchableOpacity>
 </View>
 </View>
+) : (
+<TouchableOpacity
+style={styles.changeButton}
+onPress={() => setIsUpdatingEmail(true)}
+>
+<Text style={styles.changeButtonText}>{t('Change email')}</Text>
+</TouchableOpacity>
+)}
+{}
+{isUpdatingPassword ? (
+<>
+<Text style={[styles.label, { marginTop: 10 }]}>
+{t('New Password')}:
+</Text>
+<View style={styles.changeContainer}>
+<TextInput
+style={styles.input}
+placeholder={t('Enter new password')}
+onChangeText={setNewPassword}
+value={newPassword}
+secureTextEntry
+autoCapitalize="none"
+/>
+<View style={styles.buttonRow}>
+<TouchableOpacity
+style={[styles.smallButton, styles.cancelBtn]}
+onPress={() => {
+setIsUpdatingPassword(false);
+setNewPassword('');
+}}
+>
+<Text style={styles.smallButtonText}>{t('Cancel')}</Text>
+</TouchableOpacity>
+<TouchableOpacity
+style={[styles.smallButton, styles.confirmBtn]}
+onPress={handleChangePassword}
+disabled={saving}
+>
+{saving ? (
+<ActivityIndicator size="small" color="#fff" />
+) : (
+<Text style={styles.smallButtonText}>{t('Save')}</Text>
+)}
+</TouchableOpacity>
+</View>
+</View>
+</>
+) : (
+<TouchableOpacity
+style={styles.changeButton}
+onPress={() => setIsUpdatingPassword(true)}
+>
+<Text style={styles.changeButtonText}>{t('Change password')}</Text>
+</TouchableOpacity>
+)}
+{}
+<TouchableOpacity
+style={styles.logoutButton}
+onPress={handleLogout}
+>
+<Ionicons name="log-out-outline" size={18} color="#fff" />
+<Text style={styles.logoutButtonText}>{t('Log Out')}</Text>
+</TouchableOpacity>
+{}
+<TouchableOpacity
+style={styles.deleteButton}
+onPress={handleDeleteAccount}
+>
+<Ionicons name="trash-outline" size={18} color="#fff" />
+<Text style={styles.deleteButtonText}>{t('Delete Account')}</Text>
+</TouchableOpacity>
+</View>
+{}
+<View style={styles.section}>
+<Text style={styles.sectionTitle}>{t('Language')}</Text>
+<Text style={styles.label}>
+{t('Selected Language')}: {currentLang.toUpperCase()}
+</Text>
+<View style={styles.langButtons}>
+<TouchableOpacity
+onPress={() => handleLanguageChange('en')}
+style={[
+styles.langButton,
+currentLang === 'en' && styles.langButtonSelected,
+]}
+>
+<Text
+style={[
+styles.langButtonText,
+currentLang === 'en' && styles.langButtonTextSelected,
+]}
+>
+English
+</Text>
+</TouchableOpacity>
+<TouchableOpacity
+onPress={() => handleLanguageChange('fr')}
+style={[
+styles.langButton,
+currentLang === 'fr' && styles.langButtonSelected,
+]}
+>
+<Text
+style={[
+styles.langButtonText,
+currentLang === 'fr' && styles.langButtonTextSelected,
+]}
+>
+Français
+</Text>
+</TouchableOpacity>
+</View>
+</View>
+{}
+<View style={styles.section}>
+<Text style={styles.sectionTitle}>{t('Notifications')}</Text>
+<View style={styles.toggleRow}>
+<Text style={styles.toggleLabel}>{t('Push Notifications')}</Text>
+<Switch
+value={pushNotificationsEnabled}
+onValueChange={(val) => {
+setPushNotificationsEnabled(val);
+handleSaveNotificationSettings(val);
+}}
+thumbColor={pushNotificationsEnabled ? COLORS.primary : '#ccc'}
+trackColor={{ true: COLORS.primary, false: '#ddd' }}
+/>
+</View>
+{}
+</View>
+{}
+<View style={styles.section}>
+<Text style={styles.sectionTitle}>{t('Appearance')}</Text>
+<View style={styles.toggleRow}>
+<Text style={styles.toggleLabel}>{t('Dark Mode')}</Text>
+<Switch
+value={darkModeEnabled}
+onValueChange={(val) => {
+setDarkModeEnabled(val);
+handleSaveDarkMode(val);
+}}
+thumbColor={darkModeEnabled ? COLORS.primary : '#ccc'}
+trackColor={{ true: COLORS.primary, false: '#ddd' }}
+/>
+</View>
+</View>
+{}
+<View style={styles.section}>
+<Text style={styles.sectionTitle}>{t('Location & Search')}</Text>
+<TouchableOpacity
+style={styles.changeButton}
+onPress={() => {
+navigation.navigate('ChangeLocationModal' as never);
+}}
+>
+<Text style={styles.changeButtonText}>
+{t('Change Approximate Location')}
+</Text>
+</TouchableOpacity>
+<View style={{ marginTop: 10 }}>
+<Text style={styles.label}>{t('Search Radius')} (km)</Text>
+<Slider
+style={{ width: '100%', height: 40 }}
+minimumValue={1}
+maximumValue={100}
+step={1}
+value={searchRadius}
+minimumTrackTintColor={COLORS.primary}
+maximumTrackTintColor="#ccc"
+onSlidingComplete={handleSearchRadiusChange}
+/>
+<Text style={styles.value}>
+{searchRadius} {t('km')}
+</Text>
+</View>
+</View>
+{}
+{}
+{}
+<View style={{ height: 40 }} />
+</ScrollView>
+</SafeAreaProvider>
 );
 };
 export default SettingsScreen;
 const styles = StyleSheet.create({
-container: {
-flex:1,
-backgroundColor:'#fff',
-padding:20
+safeArea: {
+flex: 1,
+backgroundColor: COLORS.background,
 },
-header: {
-fontSize:24,
-fontWeight:'700',
-marginBottom:20
+gradientHeader: {
+paddingHorizontal: 20,
+paddingVertical: 16,
+borderBottomLeftRadius: 20,
+borderBottomRightRadius: 20,
+marginBottom: 10,
+},
+headerRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+alignItems: 'center',
+},
+headerTitle: {
+fontSize: 24,
+fontWeight: '700',
+color: '#fff',
+},
+scrollContent: {
+paddingBottom: 40,
+paddingHorizontal: 20,
+},
+section: {
+backgroundColor: '#fff',
+borderRadius: 12,
+padding: 16,
+marginBottom: 12,
+},
+sectionTitle: {
+fontSize: 18,
+color: COLORS.textDark,
+fontWeight: '600',
+marginBottom: 10,
 },
 label: {
-fontSize:16,
-marginBottom:20
+fontSize: 14,
+color: COLORS.textDark,
+fontWeight: '600',
+marginBottom: 4,
 },
-buttons: {
-flexDirection:'row'
+value: {
+fontSize: 14,
+color: '#555',
+marginBottom: 6,
 },
-button: {
-padding:10,
-borderRadius:8,
-borderWidth:1,
-borderColor:'#ccc',
-marginRight:10
+langButtons: {
+flexDirection: 'row',
+marginTop: 8,
 },
-selected: {
-backgroundColor:'#1EAE98',
-borderColor:'#1EAE98'
+langButton: {
+paddingVertical: 8,
+paddingHorizontal: 12,
+borderWidth: 1,
+borderColor: COLORS.primary,
+borderRadius: 20,
+marginRight: 10,
 },
-buttonText: {
-color:'#000'
-}
+langButtonSelected: {
+backgroundColor: COLORS.primary,
+},
+langButtonText: {
+fontSize: 14,
+color: COLORS.primary,
+},
+langButtonTextSelected: {
+color: '#fff',
+fontWeight: '600',
+},
+toggleRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+alignItems: 'center',
+marginVertical: 8,
+},
+toggleLabel: {
+fontSize: 14,
+color: COLORS.textDark,
+},
+changeButton: {
+borderWidth: 1,
+borderColor: COLORS.primary,
+borderRadius: 8,
+paddingVertical: 8,
+paddingHorizontal: 12,
+alignSelf: 'flex-start',
+marginTop: 6,
+},
+changeButtonText: {
+color: COLORS.primary,
+fontSize: 14,
+fontWeight: '600',
+},
+changeContainer: {
+marginVertical: 8,
+},
+input: {
+borderWidth: 1,
+borderColor: '#ccc',
+borderRadius: 8,
+paddingHorizontal: 10,
+paddingVertical: 6,
+marginBottom: 6,
+fontSize: 14,
+},
+buttonRow: {
+flexDirection: 'row',
+justifyContent: 'flex-end',
+},
+smallButton: {
+borderRadius: 8,
+paddingVertical: 8,
+paddingHorizontal: 12,
+marginLeft: 10,
+},
+cancelBtn: {
+borderWidth: 1,
+borderColor: COLORS.primary,
+},
+confirmBtn: {
+backgroundColor: COLORS.primary,
+},
+smallButtonText: {
+fontSize: 14,
+fontWeight: '600',
+color: '#fff',
+},
+logoutButton: {
+flexDirection: 'row',
+alignItems: 'center',
+backgroundColor: COLORS.primary,
+borderRadius: 8,
+paddingVertical: 8,
+paddingHorizontal: 12,
+marginTop: 12,
+},
+logoutButtonText: {
+marginLeft: 6,
+fontSize: 14,
+color: '#fff',
+fontWeight: '600',
+},
+deleteButton: {
+flexDirection: 'row',
+alignItems: 'center',
+backgroundColor: COLORS.accent,
+borderRadius: 8,
+paddingVertical: 8,
+paddingHorizontal: 12,
+marginTop: 12,
+},
+deleteButtonText: {
+marginLeft: 6,
+fontSize: 14,
+color: '#fff',
+fontWeight: '600',
+},
+centered: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+},
 });
-// File: app\features\main\screens\SwipeScreen.tsx
-const { width } = Dimensions.get('window');
-const SwipeScreen: React.FC = () => {
-const { data: plants, isLoading, isError, refetch } = useLikablePlants();
-const { data: myPlants, isLoading: loadingMyPlants, isError: errorMyPlants, refetch: refetchMyPlants } = useMyPlants();
-const [localPlants, setLocalPlants] = useState<PlantResponse[]>(plants || []);
-const [modalVisible, setModalVisible] = useState(false);
-const [pendingRightSwipePlant, setPendingRightSwipePlant] = useState<PlantResponse | null>(null);
-React.useEffect(() => {
-if (plants) {
-setLocalPlants(plants);
-}
-}, [plants]);
-const topCard = useMemo(() => {
-return localPlants && localPlants.length > 0 ? localPlants[0] : null;
-}, [localPlants]);
-const removeTopCard = (plantId: number) => {
-setLocalPlants((prev) => prev.filter((p) => p.plantId !== plantId));
-};
-const handleSwipeLeft = useCallback(async (plantId: number) => {
-if (!myPlants) {
-Alert.alert("Error", "Add some plants or cuttings if you want to start trading.");
-return;
-}
-const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
-swiperPlantId: userPlant.plantId,
-swipedPlantId: plantId,
-isLike: false
-}));
-try {
-await swipeService.sendSwipes(swipeRequests);
-} catch {
-Alert.alert("Error", "Failed to register swipe.");
-}
-removeTopCard(plantId);
-}, [myPlants]);
-const handleRightSwipeInitiation = useCallback((plantId: number) => {
-if (!myPlants) {
-Alert.alert("Error", "Add some plants or cuttings if you want to start trading.");
-return;
-}
-const plantToLike = localPlants.find(p => p.plantId === plantId);
-if (!plantToLike) return;
-setPendingRightSwipePlant(plantToLike);
-setModalVisible(true);
-}, [localPlants]);
-const handleRightSwipeConfirm = useCallback(async (selectedPlantIds: number[]) => {
-if (!pendingRightSwipePlant || !myPlants) {
-return;
-}
-const plantId = pendingRightSwipePlant.plantId;
-const swipeRequests: SwipeRequest[] = myPlants.map((userPlant) => ({
-swiperPlantId: userPlant.plantId,
-swipedPlantId: plantId,
-isLike: selectedPlantIds.includes(userPlant.plantId)
-}));
-try {
-await swipeService.sendSwipes(swipeRequests);
-} catch {
-Alert.alert("Error", "Failed to send swipe requests.");
-return;
-}
-removeTopCard(plantId);
-setPendingRightSwipePlant(null);
-setModalVisible(false);
-}, [myPlants, pendingRightSwipePlant]);
-const handleModalClose = () => {
-setPendingRightSwipePlant(null);
-setModalVisible(false);
-};
-const handlePassPress = () => {
-if (topCard) {
-handleSwipeLeft(topCard.plantId);
-}
-};
-const handleLikePress = () => {
-if (topCard) {
-handleRightSwipeInitiation(topCard.plantId);
-}
-};
-const handleFilterPress = () => {
-Alert.alert("Filters", "Filter screen or modal would appear here.");
-};
-if (isLoading || loadingMyPlants) {
+// File: app\features\main\screens\SetUserPreferencesScreen.tsx
+View,
+Text,
+StyleSheet,
+TouchableOpacity,
+ScrollView,
+ActivityIndicator,
+Platform,
+} from 'react-native';
+PlantStage,
+PlantCategory,
+WateringNeed,
+LightRequirement,
+Size,
+IndoorOutdoor,
+PropagationEase,
+PetFriendly,
+Extras,
+} from '../../../types/enums';
+const MultiSelectTagGroup = <T extends string>({
+values,
+selectedValues,
+onToggle,
+}: {
+values: T[];
+selectedValues: T[];
+onToggle: (val: T) => void;
+}) => {
 return (
-<SafeAreaView style={styles.loadingContainer}>
-<ActivityIndicator size="large" color="#1EAE98" />
-<Text style={styles.loadingText}>Loading Plants...</Text>
-</SafeAreaView>
-);
-}
-if (isError || errorMyPlants) {
+<View style={styles.tagGroupContainer}>
+{values.map((val) => {
+const isSelected = selectedValues.includes(val);
 return (
-<SafeAreaView style={styles.errorContainer}>
-<Text style={styles.errorText}>Failed to load plants or your gallery.</Text>
-<TouchableOpacity onPress={() => {refetch(); refetchMyPlants();}} style={styles.retryButton}>
-<Text style={styles.retryButtonText}>Try Again</Text>
+<TouchableOpacity
+key={String(val)}
+style={[
+styles.singleTag,
+isSelected && styles.singleTagSelected,
+]}
+onPress={() => onToggle(val)}
+>
+<Text
+style={[
+styles.singleTagText,
+isSelected && styles.singleTagTextSelected,
+]}
+>
+{val}
+</Text>
 </TouchableOpacity>
-</SafeAreaView>
-);
-}
-return (
-<SafeAreaView style={styles.container}>
-<View style={styles.header}>
-<Text style={styles.headerTitle}>Cuttr</Text>
-<TouchableOpacity onPress={handleFilterPress} style={styles.headerFilterButton} accessible accessibilityLabel="Filter plants" accessibilityHint="Opens filter options">
-<Ionicons name="options" size={24} color="#333" />
-</TouchableOpacity>
-</View>
-<View style={styles.cardsContainer}>
-{localPlants.map((plant, index) => {
-const isTopCard = index === 0;
-return (
-<SwipeableCard
-key={plant.plantId}
-plant={plant}
-onSwipeLeft={handleSwipeLeft}
-onSwipeRight={handleRightSwipeInitiation}
-/>
 );
 })}
-{localPlants.length === 0 && (
-<View style={styles.emptyState}>
-<Text style={styles.emptyStateText}>No more plants to show.</Text>
-<Text style={styles.emptyStateSubText}>Try adjusting your filters or come back later.</Text>
 </View>
-)}
+);
+};
+const SetUserPreferencesScreen: React.FC = () => {
+const navigation = useNavigation();
+const {
+data: preferences,
+isLoading,
+isError,
+updatePreferences,
+isUpdating,
+} = useUserPreferences();
+const [selectedStages, setSelectedStages] = useState<PlantStage[]>([]);
+const [selectedCategories, setSelectedCategories] = useState<PlantCategory[]>([]);
+const [selectedWatering, setSelectedWatering] = useState<WateringNeed[]>([]);
+const [selectedLightReq, setSelectedLightReq] = useState<LightRequirement[]>([]);
+const [selectedSize, setSelectedSize] = useState<Size[]>([]);
+const [selectedIndoorOutdoor, setSelectedIndoorOutdoor] = useState<IndoorOutdoor[]>([]);
+const [selectedPropagationEase, setSelectedPropagationEase] = useState<PropagationEase[]>([]);
+const [selectedPetFriendly, setSelectedPetFriendly] = useState<PetFriendly[]>([]);
+const [selectedExtras, setSelectedExtras] = useState<Extras[]>([]);
+const [error, setError] = useState<string | null>(null);
+useEffect(() => {
+if (preferences) {
+setSelectedStages(preferences.preferedPlantStage || []);
+setSelectedCategories(preferences.preferedPlantCategory || []);
+setSelectedWatering(preferences.preferedWateringNeed || []);
+setSelectedLightReq(preferences.preferedLightRequirement || []);
+setSelectedSize(preferences.preferedSize || []);
+setSelectedIndoorOutdoor(preferences.preferedIndoorOutdoor || []);
+setSelectedPropagationEase(preferences.preferedPropagationEase || []);
+setSelectedPetFriendly(preferences.preferedPetFriendly || []);
+setSelectedExtras(preferences.preferedExtras || []);
+}
+}, [preferences]);
+const handleToggle = <T extends string>(
+value: T,
+selectedList: T[],
+setList: React.Dispatch<React.SetStateAction<T[]>>
+) => {
+if (selectedList.includes(value)) {
+setList(selectedList.filter((v) => v !== value));
+} else {
+setList([...selectedList, value]);
+}
+};
+const handleCancel = () => {
+navigation.goBack();
+};
+const handleSave = async () => {
+if (!preferences) return;
+setError(null);
+const updated: UserPreferencesRequest = {
+...preferences,
+preferedPlantStage: selectedStages,
+preferedPlantCategory: selectedCategories,
+preferedWateringNeed: selectedWatering,
+preferedLightRequirement: selectedLightReq,
+preferedSize: selectedSize,
+preferedIndoorOutdoor: selectedIndoorOutdoor,
+preferedPropagationEase: selectedPropagationEase,
+preferedPetFriendly: selectedPetFriendly,
+preferedExtras: selectedExtras,
+};
+try {
+await updatePreferences(updated);
+navigation.goBack();
+} catch (err) {
+console.error('Error updating preferences:', err);
+setError('Could not update preferences.');
+}
+};
+if (isLoading) {
+return (
+<View style={styles.center}>
+<Text>Loading preferences...</Text>
 </View>
-{localPlants.length > 0 && (
-<View style={styles.actionsContainer}>
-<TouchableOpacity onPress={handlePassPress} style={[styles.actionButton, styles.passButton]} accessibilityRole="button" accessibilityLabel="Pass on this plant" accessibilityHint="Dislike and show next plant">
-<MaterialIcons name="close" size={32} color="#fff" />
-</TouchableOpacity>
-<TouchableOpacity onPress={handleLikePress} style={[styles.actionButton, styles.likeButton]} accessibilityRole="button" accessibilityLabel="Like this plant" accessibilityHint="Show interest and match with this plant">
-<MaterialIcons name="favorite" size={32} color="#fff" />
-</TouchableOpacity>
+);
+}
+if (isError || !preferences) {
+return (
+<View style={styles.center}>
+<Text>Error loading preferences</Text>
 </View>
-)}
-{myPlants && pendingRightSwipePlant && (
-<SelectPlantsModal
-visible={modalVisible}
-onClose={handleModalClose}
-onConfirm={handleRightSwipeConfirm}
+);
+}
+return (
+<View style={styles.container}>
+{}
+<LinearGradient
+colors={[LOCAL_COLORS.primary, LOCAL_COLORS.secondary]}
+style={styles.gradientBackground}
+>
+{}
+<View style={styles.headerRow}>
+<Text style={styles.headerTitle}>User Preferences</Text>
+<MaterialIcons name="settings" size={24} color="#fff" />
+</View>
+<ScrollView
+contentContainerStyle={styles.scrollContent}
+showsVerticalScrollIndicator={false}
+>
+<View style={styles.formContainer}>
+{}
+{error && <Text style={styles.errorText}>{error}</Text>}
+{}
+{}
+<Text style={styles.label}>Preferred Plant Stages:</Text>
+<MultiSelectTagGroup
+values={Object.values(PlantStage)}
+selectedValues={selectedStages}
+onToggle={(val) =>
+handleToggle(val, selectedStages, setSelectedStages)
+}
+/>
+{}
+<Text style={styles.label}>Preferred Categories:</Text>
+<MultiSelectTagGroup
+values={Object.values(PlantCategory)}
+selectedValues={selectedCategories}
+onToggle={(val) =>
+handleToggle(val, selectedCategories, setSelectedCategories)
+}
+/>
+{}
+<Text style={styles.label}>Watering Need:</Text>
+<MultiSelectTagGroup
+values={Object.values(WateringNeed)}
+selectedValues={selectedWatering}
+onToggle={(val) =>
+handleToggle(val, selectedWatering, setSelectedWatering)
+}
+/>
+{}
+<Text style={styles.label}>Light Requirement:</Text>
+<MultiSelectTagGroup
+values={Object.values(LightRequirement)}
+selectedValues={selectedLightReq}
+onToggle={(val) =>
+handleToggle(val, selectedLightReq, setSelectedLightReq)
+}
+/>
+{}
+<Text style={styles.label}>Size:</Text>
+<MultiSelectTagGroup
+values={Object.values(Size)}
+selectedValues={selectedSize}
+onToggle={(val) =>
+handleToggle(val, selectedSize, setSelectedSize)
+}
+/>
+{}
+<Text style={styles.label}>Indoor/Outdoor:</Text>
+<MultiSelectTagGroup
+values={Object.values(IndoorOutdoor)}
+selectedValues={selectedIndoorOutdoor}
+onToggle={(val) =>
+handleToggle(val, selectedIndoorOutdoor, setSelectedIndoorOutdoor)
+}
+/>
+{}
+<Text style={styles.label}>Propagation Ease:</Text>
+<MultiSelectTagGroup
+values={Object.values(PropagationEase)}
+selectedValues={selectedPropagationEase}
+onToggle={(val) =>
+handleToggle(val, selectedPropagationEase, setSelectedPropagationEase)
+}
+/>
+{}
+<Text style={styles.label}>Pet Friendly:</Text>
+<MultiSelectTagGroup
+values={Object.values(PetFriendly)}
+selectedValues={selectedPetFriendly}
+onToggle={(val) =>
+handleToggle(val, selectedPetFriendly, setSelectedPetFriendly)
+}
+/>
+{}
+<Text style={styles.label}>Extras:</Text>
+<MultiSelectTagGroup
+values={Object.values(Extras)}
+selectedValues={selectedExtras}
+onToggle={(val) =>
+handleToggle(val, selectedExtras, setSelectedExtras)
+}
+/>
+{}
+{isUpdating && (
+<ActivityIndicator
+size="small"
+color={LOCAL_COLORS.primary}
+style={{ marginVertical: 10 }}
 />
 )}
+{}
+<View style={styles.actions}>
+<TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isUpdating}>
+<Text style={styles.saveButtonText}>
+{isUpdating ? 'Saving...' : 'Save'}
+</Text>
+</TouchableOpacity>
+<TouchableOpacity
+style={styles.cancelButton}
+onPress={handleCancel}
+>
+<Text style={styles.cancelButtonText}>Cancel</Text>
+</TouchableOpacity>
+</View>
+</View>
+</ScrollView>
+</LinearGradient>
+</View>
+);
+};
+export default SetUserPreferencesScreen;
+const LOCAL_COLORS = {
+primary: '#1EAE98',
+secondary: '#5EE2C6',
+};
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+},
+gradientBackground: {
+flex: 1,
+},
+scrollContent: {
+paddingTop: 0,
+paddingBottom: 30,
+},
+headerRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+alignItems: 'center',
+marginHorizontal: 20,
+marginBottom: 10,
+},
+headerTitle: {
+fontSize: 24,
+fontWeight: 'bold',
+color: '#fff',
+},
+formContainer: {
+backgroundColor: '#fff',
+marginHorizontal: 20,
+borderRadius: 12,
+padding: 16,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 4 },
+},
+android: {
+elevation: 3,
+},
+}),
+},
+label: {
+fontSize: 14,
+fontWeight: '600',
+color: '#333',
+marginTop: 12,
+marginBottom: 6,
+},
+errorText: {
+color: '#FF6F61',
+marginBottom: 10,
+fontWeight: '600',
+},
+tagGroupContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+marginBottom: 6,
+},
+singleTag: {
+borderWidth: 1,
+borderColor: LOCAL_COLORS.primary,
+borderRadius: 20,
+paddingVertical: 6,
+paddingHorizontal: 12,
+marginRight: 8,
+marginBottom: 8,
+},
+singleTagSelected: {
+backgroundColor: LOCAL_COLORS.primary,
+},
+singleTagText: {
+fontSize: 12,
+color: LOCAL_COLORS.primary,
+fontWeight: '600',
+},
+singleTagTextSelected: {
+color: '#fff',
+},
+actions: {
+flexDirection: 'column',
+justifyContent: 'flex-end',
+marginTop: 16,
+},
+cancelButton: {
+borderWidth: 1,
+borderColor: LOCAL_COLORS.primary,
+borderRadius: 8,
+paddingVertical: 10,
+paddingHorizontal: 16,
+margin: 10,
+marginTop: 0,
+},
+cancelButtonText: {
+fontSize: 14,
+color: LOCAL_COLORS.primary,
+fontWeight: '600',
+textAlign: 'center',
+},
+saveButton: {
+backgroundColor: LOCAL_COLORS.primary,
+borderRadius: 8,
+paddingVertical: 10,
+paddingHorizontal: 16,
+margin: 10,
+},
+saveButtonText: {
+fontSize: 14,
+color: '#fff',
+fontWeight: '600',
+textAlign: 'center',
+},
+center: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+},
+});
+// File: app\features\main\screens\SwipeScreen.tsx
+StyleSheet,
+View,
+Text,
+TouchableOpacity,
+ActivityIndicator,
+Alert,
+SafeAreaView,
+FlatList,
+Dimensions,
+Platform,
+} from 'react-native';
+const { width } = Dimensions.get('window');
+const COLORS = {
+primary: '#1EAE98',
+primaryLight: '#5EE2C6',
+accent: '#FF6B6B',
+accentLight: '#FF9F9F',
+background: '#f8f8f8',
+textDark: '#333',
+textLight: '#fff',
+border: '#ddd',
+};
+interface SwipeScreenProps {}
+const SwipeScreen: React.FC<SwipeScreenProps> = () => {
+const navigation = useNavigation();
+const {
+data: likablePlants,
+isLoading: loadingPlants,
+isError: errorPlants,
+refetch: refetchLikablePlants,
+} = useLikablePlants();
+const { data: userProfile } = useUserProfile();
+const {
+data: userPreferences,
+updatePreferences,
+isUpdating: updatingPrefs,
+} = useUserPreferences();
+const {
+data: myPlants,
+isLoading: loadingMyPlants,
+isError: errorMyPlants,
+refetch: refetchMyPlants,
+} = useMyPlants();
+const [plantStack, setPlantStack] = useState<PlantResponse[]>([]);
+const [showSelectModal, setShowSelectModal] = useState(false);
+const [plantToLike, setPlantToLike] = useState<PlantResponse | null>(null);
+useEffect(() => {
+if (likablePlants) {
+log.debug('Likable plants fetched and set:', likablePlants);
+setPlantStack(likablePlants);
+}
+}, [likablePlants]);
+const handleFilterPress = useCallback(() => {
+navigation.navigate('SetUserPreferences' as never);
+}, [navigation]);
+const handleRemoveSinglePreference = useCallback(
+async (tagKey: string, valueToRemove: string) => {
+if (!userPreferences) return;
+const updatedPrefs = { ...userPreferences };
+switch (tagKey) {
+case 'Stage':
+updatedPrefs.preferedPlantStage = userPreferences.preferedPlantStage.filter(
+(val) => val !== valueToRemove
+);
+break;
+case 'Category':
+updatedPrefs.preferedPlantCategory = userPreferences.preferedPlantCategory.filter(
+(val) => val !== valueToRemove
+);
+break;
+case 'Light':
+updatedPrefs.preferedLightRequirement = userPreferences.preferedLightRequirement.filter(
+(val) => val !== valueToRemove
+);
+break;
+case 'Water':
+updatedPrefs.preferedWateringNeed = userPreferences.preferedWateringNeed.filter(
+(val) => val !== valueToRemove
+);
+break;
+case 'Size':
+updatedPrefs.preferedSize = userPreferences.preferedSize.filter(
+(val) => val !== valueToRemove
+);
+break;
+case 'IndoorOutdoor':
+updatedPrefs.preferedIndoorOutdoor = userPreferences.preferedIndoorOutdoor.filter(
+(val) => val !== valueToRemove
+);
+break;
+case 'PropagationEase':
+updatedPrefs.preferedPropagationEase = userPreferences.preferedPropagationEase.filter(
+(val) => val !== valueToRemove
+);
+break;
+case 'PetFriendly':
+updatedPrefs.preferedPetFriendly = userPreferences.preferedPetFriendly.filter(
+(val) => val !== valueToRemove
+);
+break;
+case 'Extras':
+updatedPrefs.preferedExtras = userPreferences.preferedExtras.filter(
+(val) => val !== valueToRemove
+);
+break;
+default:
+break;
+}
+try {
+await updatePreferences(updatedPrefs);
+} catch (err) {
+Alert.alert('Error', 'Could not remove preference.');
+}
+},
+[userPreferences, updatePreferences]
+);
+const handleDislike = () => {
+if (!myPlants || plantStack.length === 0) return;
+const topCard = plantStack[0];
+const requests: SwipeRequest[] = myPlants.map((myPlant) => ({
+swiperPlantId: myPlant.plantId,
+swipedPlantId: topCard.plantId,
+isLike: false,
+}));
+swipeService
+.sendSwipes(requests)
+.then(() => {
+setPlantStack((prevStack) => prevStack.slice(1));
+})
+.catch(() => {
+Alert.alert('Error', 'Failed to send swipes.');
+});
+};
+const handleLike = () => {
+if (!myPlants || plantStack.length === 0) return;
+const topCard = plantStack[0];
+setPlantToLike(topCard);
+setShowSelectModal(true);
+};
+const handleSelectConfirm = (selectedMyPlantIds: number[]) => {
+if (!plantToLike || !myPlants) return;
+const requests: SwipeRequest[] = myPlants.map((mp) => ({
+swiperPlantId: mp.plantId,
+swipedPlantId: plantToLike.plantId,
+isLike: selectedMyPlantIds.includes(mp.plantId),
+}));
+swipeService
+.sendSwipes(requests)
+.then(() => {
+setShowSelectModal(false);
+setPlantToLike(null);
+setPlantStack((prevStack) => prevStack.slice(1));
+})
+.catch(() => {
+Alert.alert('Error', 'Failed to send swipes.');
+});
+};
+const handleSelectCancel = () => {
+setShowSelectModal(false);
+setPlantToLike(null);
+};
+const handlePassPress = () => {
+handleDislike();
+};
+const handleLikePress = () => {
+handleLike();
+};
+const renderHeader = () => {
+const prefTags: Array<{ key: string; value: string }> = [];
+if (userPreferences) {
+userPreferences.preferedPlantStage?.forEach((val) =>
+prefTags.push({ key: 'Stage', value: val })
+);
+userPreferences.preferedPlantCategory?.forEach((val) =>
+prefTags.push({ key: 'Category', value: val })
+);
+userPreferences.preferedLightRequirement?.forEach((val) =>
+prefTags.push({ key: 'Light', value: val })
+);
+userPreferences.preferedWateringNeed?.forEach((val) =>
+prefTags.push({ key: 'Water', value: val })
+);
+userPreferences.preferedSize?.forEach((val) =>
+prefTags.push({ key: 'Size', value: val })
+);
+userPreferences.preferedIndoorOutdoor?.forEach((val) =>
+prefTags.push({ key: 'IndoorOutdoor', value: val })
+);
+userPreferences.preferedPropagationEase?.forEach((val) =>
+prefTags.push({ key: 'PropagationEase', value: val })
+);
+userPreferences.preferedPetFriendly?.forEach((val) =>
+prefTags.push({ key: 'PetFriendly', value: val })
+);
+userPreferences.preferedExtras?.forEach((val) =>
+prefTags.push({ key: 'Extras', value: val })
+);
+}
+return (
+<LinearGradient
+colors={[COLORS.primary, COLORS.primaryLight]}
+style={styles.headerGradient}
+>
+<View style={styles.headerTopRow}>
+<Text style={styles.headerTitle}>Explore</Text>
+<TouchableOpacity
+onPress={handleFilterPress}
+style={styles.headerActionButton}
+accessible
+accessibilityLabel="Filter plants"
+accessibilityHint="Opens filter options"
+>
+<Ionicons name="options" size={24} color={COLORS.textLight} />
+</TouchableOpacity>
+</View>
+<View style={styles.filterContainer}>
+<View style={styles.filterInfoContainer}>
+{prefTags.length > 0 ? (
+<Text style={styles.filterInfoTextColumn}>Filters:</Text>
+) : (
+<Text style={styles.noFilterText}>No filters applied</Text>
+)}
+</View>
+{prefTags.length > 0 && (
+<View style={styles.filterColumn}>
+<FlatList
+data={prefTags}
+keyExtractor={(item, index) =>
+`${item.key}-${item.value}-${index}`
+}
+horizontal
+showsHorizontalScrollIndicator={false}
+renderItem={({ item }) => (
+<View style={styles.tagChip}>
+<Text style={styles.tagChipText}>{item.value}</Text>
+<TouchableOpacity
+style={styles.removeTagButton}
+onPress={() =>
+handleRemoveSinglePreference(item.key, item.value)
+}
+>
+<Ionicons name="close-circle" size={16} color="#fff" />
+</TouchableOpacity>
+</View>
+)}
+/>
+</View>
+)}
+</View>
+</LinearGradient>
+);
+};
+const renderCardStack = () => {
+if (loadingPlants || loadingMyPlants) {
+return (
+<View style={styles.loaderContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+<Text style={styles.loaderText}>Loading plants...</Text>
+</View>
+);
+}
+if (errorPlants || errorMyPlants) {
+return (
+<View style={styles.noPlantsContainer}>
+<Text style={styles.noPlantsText}>
+Failed to load plants or your gallery.
+</Text>
+<TouchableOpacity
+style={styles.reloadButton}
+onPress={() => {
+refetchLikablePlants();
+refetchMyPlants();
+}}
+>
+<Text style={styles.reloadButtonText}>Try Again</Text>
+</TouchableOpacity>
+</View>
+);
+}
+if (!plantStack || plantStack.length === 0) {
+return (
+<View style={styles.noPlantsContainer}>
+<Text style={styles.noPlantsText}>
+No more plants to show in your area.
+</Text>
+<TouchableOpacity
+style={styles.reloadButton}
+onPress={() => refetchLikablePlants()}
+>
+<Text style={styles.reloadButtonText}>Reload</Text>
+</TouchableOpacity>
+</View>
+);
+}
+const visibleCards = plantStack.slice(0, 3);
+return (
+<View style={styles.deckContainer}>
+{visibleCards.map((plant, index) => {
+const isTopCard = index === 0;
+const offset = (visibleCards.length - 1 - index) * 5;
+return (
+<View
+key={plant.plantId}
+style={[styles.cardWrapper, { top: -offset, right: offset }]}
+>
+<SwipeableCard
+plant={plant}
+onSwipeLeft={isTopCard ? handleDislike : undefined}
+onSwipeRight={isTopCard ? handleLike : undefined}
+/>
+</View>
+);
+})}
+</View>
+);
+};
+return (
+<SafeAreaView style={styles.container}>
+{renderHeader()}
+{renderCardStack()}
+{}
+{plantStack && plantStack.length > 0 && (
+<View style={styles.bottomActionContainer}>
+<TouchableOpacity
+onPress={handlePassPress}
+style={styles.actionButtonWrapper}
+accessibilityRole="button"
+accessibilityLabel="Pass on this plant"
+accessibilityHint="Dislike and show next plant"
+>
+<LinearGradient
+colors={[COLORS.accent, COLORS.accentLight]}
+style={styles.actionButton}
+>
+<MaterialIcons name="close" size={32} color={COLORS.textLight} />
+</LinearGradient>
+</TouchableOpacity>
+<View style={styles.divider} />
+<TouchableOpacity
+onPress={handleLikePress}
+style={styles.actionButtonWrapper}
+accessibilityRole="button"
+accessibilityLabel="Like this plant"
+accessibilityHint="Show interest in this plant"
+>
+<LinearGradient
+colors={[COLORS.primary, COLORS.primaryLight]}
+style={styles.actionButton}
+>
+<MaterialIcons
+name="favorite"
+size={32}
+color={COLORS.textLight}
+/>
+</LinearGradient>
+</TouchableOpacity>
+</View>
+)}
+{}
+<SelectPlantsModal
+visible={showSelectModal}
+onConfirm={handleSelectConfirm}
+onClose={handleSelectCancel}
+/>
 </SafeAreaView>
 );
 };
@@ -2809,106 +4953,159 @@ export default SwipeScreen;
 const styles = StyleSheet.create({
 container: {
 flex: 1,
-backgroundColor:'#f8f8f8',
-alignItems:'center'
+backgroundColor: COLORS.background,
 },
-loadingContainer: {
-flex:1,
-justifyContent:'center',
-alignItems:'center'
+loaderContainer: {
+marginTop: 40,
+alignItems: 'center',
 },
-loadingText:{
-marginTop:10,
-fontSize:16,
-color:'#333'
+loaderText: {
+fontSize: 16,
+marginTop: 10,
+color: COLORS.textDark,
 },
-errorContainer: {
-flex:1,
-justifyContent:'center',
-alignItems:'center',
-padding:20
+noPlantsContainer: {
+marginTop: 40,
+alignItems: 'center',
+paddingHorizontal: 20,
 },
-errorText:{
-fontSize:18,
-color:'#333',
-marginBottom:20,
-textAlign:'center'
+noPlantsText: {
+fontSize: 16,
+color: COLORS.textDark,
+marginBottom: 10,
+textAlign: 'center',
 },
-retryButton:{
-backgroundColor:'#1EAE98',
-paddingVertical:12,
-paddingHorizontal:20,
-borderRadius:8
+reloadButton: {
+backgroundColor: COLORS.primary,
+paddingVertical: 8,
+paddingHorizontal: 16,
+borderRadius: 8,
 },
-retryButtonText:{
-color:'#fff',
-fontSize:16,
-fontWeight:'600'
+reloadButtonText: {
+color: '#fff',
+fontWeight: '600',
 },
-header: {
-width:'100%',
-flexDirection:'row',
-justifyContent:'space-between',
-alignItems:'center',
-paddingHorizontal:20,
-paddingVertical:10,
-borderBottomColor:'#ddd',
-borderBottomWidth:1,
-backgroundColor:'#fff'
+headerGradient: {
+paddingHorizontal: 16,
+paddingTop: 15,
+paddingBottom: 20,
+borderBottomLeftRadius: 20,
+borderBottomRightRadius: 20,
+marginBottom: 10,
 },
-headerTitle:{
-fontSize:24,
-fontWeight:'700',
-color:'#333'
+headerTopRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+alignItems: 'center',
 },
-headerFilterButton:{
-padding:8
+headerTitle: {
+fontSize: 26,
+fontWeight: '700',
+color: COLORS.textLight,
 },
-cardsContainer:{
-flex:1,
-width:'100%',
-justifyContent:'center',
-alignItems:'center',
-paddingTop:20
+headerActionButton: {
+padding: 6,
 },
-actionsContainer:{
-flexDirection:'row',
-justifyContent:'space-evenly',
-alignItems:'center',
-width:'100%',
-paddingVertical:20,
-backgroundColor:'#fff',
-borderTopWidth:1,
-borderTopColor:'#ddd'
+filterContainer: {
+flexDirection: 'row',
 },
-actionButton:{
-width:60,
-height:60,
-borderRadius:30,
-justifyContent:'center',
-alignItems:'center'
+filterInfoContainer: {
+marginTop: 10,
 },
-passButton:{
-backgroundColor:'#FF6B6B'
+filterInfoTextColumn: {
+color: COLORS.textLight,
+fontSize: 14,
+alignItems: 'center',
 },
-likeButton:{
-backgroundColor:'#1EAE98'
+noFilterText: {
+color: COLORS.textLight,
+fontSize: 14,
 },
-emptyState:{
-alignItems:'center',
-padding:20
+filterColumn: {
+marginLeft: 5,
+flexDirection: 'row',
+flex: 1,
+alignItems: 'center',
 },
-emptyStateText:{
-fontSize:20,
-fontWeight:'700',
-color:'#333',
-marginBottom:8
+tagChip: {
+flexDirection: 'row',
+backgroundColor: COLORS.accent,
+paddingVertical: 2,
+paddingHorizontal: 8,
+borderRadius: 16,
+marginRight: 8,
+marginTop: 10,
+alignItems: 'center',
 },
-emptyStateSubText:{
-fontSize:16,
-color:'#555',
-textAlign:'center'
-}
+tagChipText: {
+color: '#fff',
+marginRight: 4,
+fontSize: 12,
+fontWeight: '600',
+},
+removeTagButton: {
+paddingLeft: 2,
+},
+deckContainer: {
+marginTop: 15,
+flex: 1,
+justifyContent: 'flex-start',
+alignItems: 'center',
+},
+cardWrapper: {
+width: width * 0.9,
+},
+bottomActionContainer: {
+position: 'relative',
+backgroundColor: COLORS.textLight,
+borderRadius: 20,
+paddingHorizontal: 60,
+paddingTop: 20,
+paddingBottom: 20,
+margin: 20,
+marginHorizontal: 40,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.15,
+shadowRadius: 10,
+shadowOffset: { width: 0, height: -4 },
+},
+android: {
+elevation: 10,
+},
+}),
+alignItems: 'center',
+justifyContent: 'space-between',
+flexDirection: 'row',
+},
+divider: {
+width: 1,
+height: '150%',
+backgroundColor: COLORS.border,
+},
+actionButtonWrapper: {
+alignItems: 'center',
+justifyContent: 'center',
+},
+actionButton: {
+width: 50,
+height: 50,
+borderRadius: 25,
+alignItems: 'center',
+justifyContent: 'center',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.25,
+shadowRadius: 6,
+shadowOffset: { width: 0, height: 3 },
+},
+android: {
+elevation: 6,
+},
+}),
+},
 });
 // File: app\features\main\store\matchesSlice.ts
 
@@ -3328,7 +5525,7 @@ return i18n;
 "name": "Name",
 "no_account_register": "Don’t have an account? Register",
 "have_account_login": "Already have an account? Login",
-"profile_title": "My Profile",
+"profile_title": "Profile",
 "profile_loading_message": "Loading your profile...",
 "profile_error_message": "Failed to load your profile.",
 "profile_retry_button": "Try Again",
@@ -3339,7 +5536,7 @@ return i18n;
 "profile_edit_button": "Edit Profile",
 "profile_change_location_button": "Change Location",
 "profile_add_plant_button": "Add Plant",
-"profile_my_plants_section": "My Plants",
+"profile_my_plants_section": "'s Plants",
 "profile_no_plants_message": "You have no plants yet. Add one to get started!",
 "edit_profile_title": "Edit Profile",
 "edit_profile_name_label": "Name",
@@ -3434,7 +5631,15 @@ return i18n;
 "extras_variegated_foliage": "Variegated Foliage",
 "extras_climbing": "Climbing",
 "extras_ground_cover": "Ground Cover",
-"extras_rare": "Rare"
+"extras_rare": "Rare",
+"connections_loading": "Loading your connections...",
+"connections_error": "Unable to load connections. Please try again.",
+"connections_retry_button": "Retry",
+"connections_none_title": "No Connections Yet",
+"connections_none_message": "It looks like you haven't matched with anyone so far.",
+"connections_none_action": "Find Plants",
+"connections_matches_label": "{{count}} Matches",
+"connections_title": "Connections"
 }
 // File: app\i18n\locales\fr.json
 {
@@ -3593,8 +5798,9 @@ tabBarActiveTintColor: '#673ab7',
 tabBarInactiveTintColor: 'gray',
 })}
 >
-<Tab.Screen name="Swipe" component={SwipeScreen}/>
+<Tab.Screen name="Swipe" component={SwipeStackNavigator}/>
 <Tab.Screen name="Profile" component={ProfileStackNavigator}/>
+<Tab.Screen name="Connections" component={ConnectionsScreen}/>
 <Tab.Screen name="Settings" component={SettingsScreen}/>
 </Tab.Navigator>
 );
@@ -3637,6 +5843,21 @@ return (
 );
 };
 export default ProfileStackNavigator;
+// File: app\navigation\SwipeStackNavigator.tsx
+export type SwipeStackParamList = {
+SwipeHome: undefined;
+SetUserPreferences: undefined;
+};
+const Stack = createNativeStackNavigator<SwipeStackParamList>();
+const SwipeStackNavigator = () => {
+return (
+<Stack.Navigator screenOptions={{ headerShown: false }}>
+<Stack.Screen name="SwipeHome" component={SwipeScreen} />
+<Stack.Screen name="SetUserPreferences" component={SetUserPreferencesScreen} />
+</Stack.Navigator>
+);
+};
+export default SwipeStackNavigator;
 // File: app\store\hooks.ts
 export const useAppDispatch: () => AppDispatch = useDispatch;
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
@@ -3685,7 +5906,16 @@ state.message = null;
 });
 export const { setGlobalError, clearGlobalError } = globalErrorSlice.actions;
 // File: app\theme\colors.ts
-
+const COLORS = {
+primary: '#1EAE98',
+accent: '#FF6F61',
+background: '#F2F2F2',
+textDark: '#2F4F4F',
+textLight: '#FFFFFF',
+cardBg: '#FFFFFF',
+border: '#ddd',
+};
+export default COLORS;
 // File: app\theme\index.ts
 
 // File: app\theme\spacing.ts
@@ -3777,6 +6007,7 @@ plant1: PlantResponse;
 plant2: PlantResponse;
 user1: UserResponse;
 user2: UserResponse;
+isClosed: boolean;
 }
 export interface MessageResponse {
 messageId: number;

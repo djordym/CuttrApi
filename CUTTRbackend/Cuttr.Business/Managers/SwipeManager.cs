@@ -20,17 +20,20 @@ namespace Cuttr.Business.Managers
         private readonly IPlantRepository _plantRepository;
         private readonly ILogger<SwipeManager> _logger;
         private readonly IUserRepository _userRepository;
+        private readonly IMatchRepository _matchRepository;
 
         public SwipeManager(
             ISwipeRepository swipeRepository,
             IPlantRepository plantRepository,
             IUserRepository userRepository,
-            ILogger<SwipeManager> logger)
+            ILogger<SwipeManager> logger,
+        IMatchRepository matchRepository)
         {
             _swipeRepository = swipeRepository;
             _plantRepository = plantRepository;
             _logger = logger;
             _userRepository = userRepository;
+            _matchRepository = matchRepository;
         }
 
         public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests, int userId)
@@ -41,7 +44,7 @@ namespace Cuttr.Business.Managers
             {
                 try
                 {
-                    // Validate that both plants exist
+                    // 1. Validate plants and user
                     var swiperPlant = await _plantRepository.GetPlantByIdAsync(request.SwiperPlantId);
                     if (swiperPlant == null)
                         throw new NotFoundException($"Swiper plant with ID {request.SwiperPlantId} not found.");
@@ -50,33 +53,57 @@ namespace Cuttr.Business.Managers
                     if (swipedPlant == null)
                         throw new NotFoundException($"Swiped plant with ID {request.SwipedPlantId} not found.");
 
-                    // Validate that the user exists
                     var user = await _userRepository.GetUserByIdAsync(userId);
-                    // Validate that the swiper plant belongs to the user
                     if (swiperPlant.UserId != userId)
                         throw new Exceptions.UnauthorizedAccessException("Swiper plant does not belong to the user.");
 
-                    // Map request to Swipe entity
-                    var swipe = ContractToBusinessMapper.MapToSwipe(request);
+                    // 2. See if a Swipe already exists for this pair.
+                    var existingSwipe = await _swipeRepository.GetSwipeForPairAsync(
+                        request.SwiperPlantId,
+                        request.SwipedPlantId
+                    );
 
-                    await _swipeRepository.AddSwipeAsync(swipe);
+                    // 3. Only add or update if needed.
+                    if (existingSwipe == null)
+                    {
+                        // No existing record -> always insert
+                        var newSwipe = ContractToBusinessMapper.MapToSwipe(request);
+                        await _swipeRepository.AddSwipeAsync(newSwipe);
+                    }
+                    else
+                    {
+                        // There's an existing record
+                        // The only scenario we want to update is if existing is a "dislike"
+                        // and the user is now swiping "like" (i.e. from false -> true).
+                        if (!existingSwipe.IsLike && request.IsLike)
+                        {
+                            existingSwipe.IsLike = true;
+                            await _swipeRepository.UpdateSwipeAsync(existingSwipe);
+                        }
+                        // else -> do nothing in all other scenarios
+                    }
 
-                    // Check for a mutual like (match)
+                    // 4. Check for mutual like (match) only if the new/updated request is a like
+                    //    and only if we just recorded (or updated to) a like.
+                    //    So let's confirm the final state is indeed "like".
+                    bool finalIsLike = request.IsLike || // if we inserted a brand new "like"
+                                       (existingSwipe != null && existingSwipe.IsLike); // or if updated
+
                     Swipe oppositeSwipe = null;
-
-                    if (request.IsLike)
+                    if (finalIsLike)
                     {
                         oppositeSwipe = await _swipeRepository.GetSwipeAsync(
                             request.SwipedPlantId,
                             request.SwiperPlantId,
-                            true);
+                            true
+                        );
                     }
 
                     var response = new SwipeResponse { IsMatch = oppositeSwipe != null };
 
+                    // 5. If there's a match, create it
                     if (response.IsMatch)
                     {
-                        // Order plants based on UserId to ensure Plant1 belongs to User1
                         bool isSwiperUserFirst = swiperPlant.UserId < swipedPlant.UserId;
 
                         var match = new Match
@@ -87,12 +114,16 @@ namespace Cuttr.Business.Managers
                             UserId2 = isSwiperUserFirst ? swipedPlant.UserId : swiperPlant.UserId,
                             CreatedAt = DateTime.UtcNow
                         };
+
+                        var addedMatch = await _matchRepository.AddMatchAsync(match);
+                        response.Match = BusinessToContractMapper.MapToMatchResponse(addedMatch);
                     }
 
                     responses.Add(response);
                 }
                 catch (NotFoundException)
                 {
+                    // Rethrow
                     throw;
                 }
                 catch (Exception ex)
@@ -104,6 +135,7 @@ namespace Cuttr.Business.Managers
 
             return responses;
         }
+
 
         public async Task<List<PlantResponse>> GetLikablePlantsAsync(int userId, int maxCount)
         {

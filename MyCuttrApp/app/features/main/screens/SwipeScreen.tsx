@@ -1,6 +1,4 @@
-// File: SwipeScreen.tsx
-
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,33 +6,31 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  SafeAreaView,
-  FlatList,
   Dimensions,
   Platform,
+  FlatList,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // --- Hooks ---
-import { useLikablePlants } from '../hooks/useSwipe';
+import { useLikablePlants } from '../hooks/useSwipe'; // <--- NOTE the usage
 import { useUserProfile } from '../hooks/useUser';
 import { useUserPreferences } from '../hooks/usePreferences';
 import { useMyPlants } from '../hooks/usePlants';
 
 // --- Components & Services ---
-import { SwipeableCard } from '../components/SwipeableCard';
+import { SwipeableCard, SwipeableCardRef } from '../components/SwipeableCard';
 import { SelectPlantsModal } from '../components/SelectPlantsModal';
-import { swipeService } from '../../../api/swipeService';
 
 // --- Types ---
 import { PlantResponse, SwipeRequest } from '../../../types/apiTypes';
+import { log } from '../../../utils/logger';
 
-// Screen dimensions for layout references
 const { width } = Dimensions.get('window');
 
-// Feel free to tweak or unify these colors with your own theme.
 const COLORS = {
   primary: '#1EAE98',
   primaryLight: '#5EE2C6',
@@ -51,12 +47,14 @@ interface SwipeScreenProps {}
 const SwipeScreen: React.FC<SwipeScreenProps> = () => {
   const navigation = useNavigation();
 
-  // ----- Data Fetching Hooks -----
+  // Data hooks
   const {
     data: likablePlants,
     isLoading: loadingPlants,
     isError: errorPlants,
     refetch: refetchLikablePlants,
+    sendSwipes,         // <-- from the custom hook
+    isSending: sendingSwipes,
   } = useLikablePlants();
 
   const { data: userProfile } = useUserProfile();
@@ -73,14 +71,20 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
     refetch: refetchMyPlants,
   } = useMyPlants();
 
-  // ----- Local State -----
+  // The main card stack
   const [plantStack, setPlantStack] = useState<PlantResponse[]>([]);
+
+  // Modal / "like" flow
   const [showSelectModal, setShowSelectModal] = useState(false);
   const [plantToLike, setPlantToLike] = useState<PlantResponse | null>(null);
 
-  // Initialize plant stack when likablePlants change
+  // Reference to the top card so we can reset or finalize the right-swipe
+  const topCardRef = useRef<SwipeableCardRef>(null);
+
+  // Initialize stack on fetch
   useEffect(() => {
     if (likablePlants) {
+      log.debug('Likable plants fetched:', likablePlants);
       setPlantStack(likablePlants);
     }
   }, [likablePlants]);
@@ -90,7 +94,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
     navigation.navigate('SetUserPreferences' as never);
   }, [navigation]);
 
-  // ----- Removing Single Preference Tag -----
+  // ----- Single preference removal -----
   const handleRemoveSinglePreference = useCallback(
     async (tagKey: string, valueToRemove: string) => {
       if (!userPreferences) return;
@@ -157,79 +161,115 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
   );
 
   // ----- SWIPE ACTIONS -----
-  const handleSwipeLeft = (swipedPlantId: number) => {
+
+  /**
+   * Dislike / Swipe Left (called from onSwipeLeft)
+   * Removes the top card from the stack
+   */
+  const handleDislike = (plantId: number) => {
+    // Immediately remove the card from the UI
+    setPlantStack((prev) => prev.slice(1));
     if (!myPlants) return;
+
+    // Build the request
+    const topCard = likablePlants?.find((p) => p.plantId === plantId);
+    if (!topCard) return;
+
     const requests: SwipeRequest[] = myPlants.map((myPlant) => ({
       swiperPlantId: myPlant.plantId,
-      swipedPlantId,
+      swipedPlantId: topCard.plantId,
       isLike: false,
     }));
 
-    swipeService
-      .sendSwipes(requests)
-      .then(() => {
-        // Remove the top card from the stack
-        setPlantStack((prevStack) => prevStack.slice(1));
-      })
-      .catch(() => {
+    // Use sendSwipes from our custom hook
+    sendSwipes(requests, {
+      onError: () => {
         Alert.alert('Error', 'Failed to send swipes.');
-      });
+      },
+    });
   };
 
-  const handleSwipeRight = (swipedPlantId: number) => {
-    const foundPlant = plantStack.find((p) => p.plantId === swipedPlantId) ?? null;
-    if (foundPlant) {
-      setPlantToLike(foundPlant);
-      setShowSelectModal(true);
-    }
+  /**
+   * Final "Right-swipe" removal (called after the card animates off screen).
+   */
+  const handleSwipeRight = (plantId: number) => {
+    // Remove from deck
+    setPlantStack((prev) => prev.slice(1));
+    // The like operation is already sent in handleSelectConfirm.
   };
 
+  /**
+   * Called the moment the user crosses the right threshold in the gesture handler.
+   * We "pause" the card and open the modal. The card is not fully removed yet.
+   */
+  const handleLikeGestureBegin = (plant: PlantResponse) => {
+    setPlantToLike(plant);
+    setShowSelectModal(true);
+  };
+
+  /**
+   * If user picks which of their local plants they want to use to "like" the card,
+   * we send that to the API, then animate the card fully off-screen (flyOffRight).
+   */
   const handleSelectConfirm = (selectedMyPlantIds: number[]) => {
     if (!plantToLike || !myPlants) return;
-    const selectedSet = new Set(selectedMyPlantIds);
 
+    // Build requests
     const requests: SwipeRequest[] = myPlants.map((mp) => ({
       swiperPlantId: mp.plantId,
       swipedPlantId: plantToLike.plantId,
-      isLike: selectedSet.has(mp.plantId),
+      isLike: selectedMyPlantIds.includes(mp.plantId), // user-chosen
     }));
 
-    swipeService
-      .sendSwipes(requests)
-      .then(() => {
+    sendSwipes(requests, {
+      onSuccess: () => {
+        // After successful API call, animate card off-screen
+        topCardRef.current?.flyOffRight();
+      },
+      onError: () => {
+        Alert.alert('Error', 'Failed to send swipes.');
+      },
+      onSettled: () => {
+        // Hide the modal
         setShowSelectModal(false);
         setPlantToLike(null);
-        // Remove the top card after successful like
-        setPlantStack((prevStack) => prevStack.slice(1));
-      })
-      .catch(() => {
-        Alert.alert('Error', 'Failed to send swipes.');
-      });
+      },
+    });
   };
 
+  /**
+   * If user cancels, we snap the card back to center (so it remains on top).
+   */
   const handleSelectCancel = () => {
+    topCardRef.current?.resetPosition();
     setShowSelectModal(false);
     setPlantToLike(null);
   };
 
+  // Bottom action buttons
   const handlePassPress = () => {
+    if (!plantStack.length) return;
     const topCard = plantStack[0];
-    if (topCard) {
-      handleSwipeLeft(topCard.plantId);
-    }
+    handleDislike(topCard.plantId);
   };
 
+  /**
+   * If the user taps "Like" button (not physically swiping),
+   * do the same approach: partially move the card and open the modal.
+   */
   const handleLikePress = () => {
+    if (!plantStack.length) return;
     const topCard = plantStack[0];
-    if (topCard) {
-      handleSwipeRight(topCard.plantId);
-    }
+    // Move the card partially, open the modal
+    topCardRef.current?.resetPosition();
+    setTimeout(() => {
+      handleLikeGestureBegin(topCard);
+    }, 10);
   };
 
-  // ----- RENDERING THE HEADER WITH FILTER TAGS -----
+  // ----- Header with filters -----
   const renderHeader = () => {
     const prefTags: Array<{ key: string; value: string }> = [];
-
     if (userPreferences) {
       userPreferences.preferedPlantStage?.forEach((val) =>
         prefTags.push({ key: 'Stage', value: val })
@@ -266,56 +306,53 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
         style={styles.headerGradient}
       >
         <View style={styles.headerTopRow}>
-          <Text style={styles.headerTitle}>Cuttr</Text>
+          <Text style={styles.headerTitle}>Explore</Text>
           <TouchableOpacity
             onPress={handleFilterPress}
             style={styles.headerActionButton}
-            accessible
-            accessibilityLabel="Filter plants"
-            accessibilityHint="Opens filter options"
           >
             <Ionicons name="options" size={24} color={COLORS.textLight} />
           </TouchableOpacity>
         </View>
         <View style={styles.filterContainer}>
-        <View style={styles.filterInfoContainer}>
-          {prefTags.length > 0 ? (
-            <Text style={styles.filterInfoText}>Filters:</Text>
-          ) : (
-            <Text style={styles.noFilterText}>No filters applied</Text>
-          )}
-        </View>
-        {prefTags.length > 0 && (
-          <View style={styles.filterRow}>
-            <FlatList
-              data={prefTags}
-              keyExtractor={(item, index) =>
-                `${item.key}-${item.value}-${index}`
-              }
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <View style={styles.tagChip}>
-                  <Text style={styles.tagChipText}>{item.value}</Text>
-                  <TouchableOpacity
-                    style={styles.removeTagButton}
-                    onPress={() =>
-                      handleRemoveSinglePreference(item.key, item.value)
-                    }
-                  >
-                    <Ionicons name="close-circle" size={16} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
+          <View style={styles.filterInfoContainer}>
+            {prefTags.length > 0 ? (
+              <Text style={styles.filterInfoTextColumn}>Filters:</Text>
+            ) : (
+              <Text style={styles.noFilterText}>No filters applied</Text>
+            )}
           </View>
-        )}
+          {prefTags.length > 0 && (
+            <View style={styles.filterColumn}>
+              <FlatList
+                data={prefTags}
+                keyExtractor={(item, index) =>
+                  `${item.key}-${item.value}-${index}`
+                }
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <View style={styles.tagChip}>
+                    <Text style={styles.tagChipText}>{item.value}</Text>
+                    <TouchableOpacity
+                      style={styles.removeTagButton}
+                      onPress={() =>
+                        handleRemoveSinglePreference(item.key, item.value)
+                      }
+                    >
+                      <Ionicons name="close-circle" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            </View>
+          )}
         </View>
       </LinearGradient>
     );
   };
 
-  // ----- MAIN CARD STACK -----
+  // ----- Main deck rendering -----
   const renderCardStack = () => {
     if (loadingPlants || loadingMyPlants) {
       return (
@@ -361,44 +398,48 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       );
     }
 
-    // Show up to 3 cards for stacked effect
+    // Show up to 3 for stacking
     const visibleCards = plantStack.slice(0, 3);
     return (
       <View style={styles.deckContainer}>
-        {visibleCards.map((plant, index) => {
-          // Calculate offset such that bottom-most card has the largest offset
-          const offset = (visibleCards.length - 1 - index) * 5;
-          // Only top card should handle swipe actions
-          const isTop = index === 0;
-          return (
-            <View
-              key={plant.plantId}
-              style={[styles.cardWrapper, { top: -offset, right: offset }]}
-            >
-              <SwipeableCard
-                plant={plant}
-                onSwipeLeft={isTop ? handleSwipeLeft : undefined}
-                onSwipeRight={isTop ? handleSwipeRight : undefined}
-              />
-            </View>
-          );
-        })}
+        {visibleCards
+          .map((plant, index) => {
+            const isTopCard = index === 0;
+            // a small offset for the “layered” look
+            const offset = (visibleCards.length - 1 - index) * 5;
+
+            return (
+              <View
+                key={plant.plantId}
+                style={[styles.cardWrapper, { top: offset, left: offset }]}
+              >
+                <SwipeableCard
+                  ref={isTopCard ? topCardRef : null}
+                  plant={plant}
+                  onSwipeLeft={handleDislike}
+                  onSwipeRight={handleSwipeRight}
+                  onLikeGestureBegin={handleLikeGestureBegin}
+                />
+              </View>
+            );
+          })
+          .reverse()}
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaProvider style={styles.container}>
       {renderHeader()}
       {renderCardStack()}
+
+      {/* Bottom Action Buttons */}
       {plantStack && plantStack.length > 0 && (
         <View style={styles.bottomActionContainer}>
           <TouchableOpacity
             onPress={handlePassPress}
             style={styles.actionButtonWrapper}
-            accessibilityRole="button"
-            accessibilityLabel="Pass on this plant"
-            accessibilityHint="Dislike and show next plant"
+            disabled={sendingSwipes} // optionally disable while swipes are sending
           >
             <LinearGradient
               colors={[COLORS.accent, COLORS.accentLight]}
@@ -407,13 +448,13 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
               <MaterialIcons name="close" size={32} color={COLORS.textLight} />
             </LinearGradient>
           </TouchableOpacity>
+
           <View style={styles.divider} />
+
           <TouchableOpacity
             onPress={handleLikePress}
             style={styles.actionButtonWrapper}
-            accessibilityRole="button"
-            accessibilityLabel="Like this plant"
-            accessibilityHint="Show interest in this plant"
+            disabled={sendingSwipes} // optionally disable while swipes are sending
           >
             <LinearGradient
               colors={[COLORS.primary, COLORS.primaryLight]}
@@ -426,14 +467,16 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
               />
             </LinearGradient>
           </TouchableOpacity>
+
+          {/* Modal for selecting your local plants to “like” with */}
+          <SelectPlantsModal
+            visible={showSelectModal}
+            onConfirm={handleSelectConfirm}
+            onClose={handleSelectCancel}
+          />
         </View>
       )}
-      <SelectPlantsModal
-        visible={showSelectModal}
-        onConfirm={handleSelectConfirm}
-        onClose={handleSelectCancel}
-      />
-    </SafeAreaView>
+    </SafeAreaProvider>
   );
 };
 
@@ -478,8 +521,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 15,
     paddingBottom: 20,
-    borderBottomLeftRadius: 20, // Smaller corner
-    borderBottomRightRadius: 20, // Smaller corner
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     marginBottom: 10,
   },
   headerTopRow: {
@@ -501,7 +544,7 @@ const styles = StyleSheet.create({
   filterInfoContainer: {
     marginTop: 10,
   },
-  filterInfoText: {
+  filterInfoTextColumn: {
     color: COLORS.textLight,
     fontSize: 14,
   },
@@ -509,19 +552,20 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     fontSize: 14,
   },
-  filterRow: {
-    marginTop: 10,
+  filterColumn: {
     marginLeft: 5,
     flexDirection: 'row',
     flex: 1,
+    alignItems: 'center',
   },
   tagChip: {
     flexDirection: 'row',
     backgroundColor: COLORS.accent,
-    paddingVertical: 4,
+    paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 16,
     marginRight: 8,
+    marginTop: 10,
     alignItems: 'center',
   },
   tagChipText: {
@@ -534,16 +578,16 @@ const styles = StyleSheet.create({
     paddingLeft: 2,
   },
   deckContainer: {
-    marginTop: 15,
+    marginBottom: 10,
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
+    right: 0,
   },
   cardWrapper: {
     width: width * 0.9,
-    },
+  },
   bottomActionContainer: {
-    position: 'relative',
     backgroundColor: COLORS.textLight,
     borderRadius: 20,
     paddingHorizontal: 60,

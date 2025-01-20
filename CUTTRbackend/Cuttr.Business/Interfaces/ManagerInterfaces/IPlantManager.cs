@@ -16,5 +16,6 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
         Task<PlantResponse> UpdatePlantAsync(int plantId, int userId, PlantRequest request);
         Task DeletePlantAsync(int plantId, int userId);
         Task<IEnumerable<PlantResponse>> GetPlantsByUserIdAsync(int userId);
+        Task SeedPlantAsync(SeedPlantRequest plant);
     }
 }

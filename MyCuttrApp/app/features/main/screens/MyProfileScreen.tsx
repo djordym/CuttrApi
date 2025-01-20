@@ -28,8 +28,8 @@ import { PlantResponse } from '../../../types/apiTypes';
 import { userService } from '../../../api/userService'; // for updating the profile picture
 import { EditProfileModal } from '../components/EditProfileModal';
 import { ChangeLocationModal } from '../components/ChangeLocationModal';
-import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
-import {log} from '../../../utils/logger';
+import { log } from '../../../utils/logger';
+
 const { width } = Dimensions.get('window');
 const COLORS = {
   primary: '#1EAE98',
@@ -90,7 +90,7 @@ const MyProfileScreen: React.FC = () => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [1, 1], // for a square/circle profile
+        aspect: [1, 1],
         quality: 0.7,
       });
       if (!result.canceled && result.assets[0].uri) {
@@ -141,7 +141,7 @@ const MyProfileScreen: React.FC = () => {
         type: 'image/jpeg',
       } as any;
       await userService.updateProfilePicture({ image: photo });
-      refetchProfile(); // refresh the user data to show updated pfp
+      refetchProfile();
     } catch (err) {
       console.error('Error uploading profile picture:', err);
       Alert.alert('Error', 'Profile picture update failed.');
@@ -168,7 +168,6 @@ const MyProfileScreen: React.FC = () => {
     navigation.navigate('AddPlant' as never);
   }, [navigation]);
 
-  // Check if user has location
   const userHasLocation =
     userProfile?.locationLatitude !== undefined &&
     userProfile?.locationLongitude !== undefined;
@@ -182,11 +181,8 @@ const MyProfileScreen: React.FC = () => {
     }
     : undefined;
 
-  // -- PLANT CARD RENDERING --
   const renderPlantItem = (item: PlantResponse) => {
     if (!showFullSize) {
-      // THUMBNAIL VIEW
-      
       return (
         <View key={item.plantId} style={styles.plantCardThumbnail}>
           {item.imageUrl ? (
@@ -208,7 +204,6 @@ const MyProfileScreen: React.FC = () => {
         </View>
       );
     } else {
-      // FULLSIZE VIEW
       const alltags = [
         item.plantStage,
         item.plantCategory,
@@ -220,7 +215,6 @@ const MyProfileScreen: React.FC = () => {
         item.petFriendly,
         ...(item.extras ?? [])
       ].filter(Boolean);
-      log.debug('alltags', alltags);
       return (
         <View key={item.plantId} style={styles.plantCardFull}>
           <View style={styles.fullImageContainer}>
@@ -235,23 +229,20 @@ const MyProfileScreen: React.FC = () => {
                 <Ionicons name="leaf" size={60} color={COLORS.primary} />
               </View>
             )}
-            {/* Overlay for tags & description */}
             <View style={styles.fullImageOverlay}>
               <LinearGradient
                 colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 1)']}
                 style={styles.overlayContent}>
                 <Text style={styles.fullPlantName}>{item.speciesName}</Text>
-                {/* Show tags if item.extras or other categories are present */}
                 {alltags.length > 0 && (
                   <View style={styles.tagRow}>
-                  {alltags.map((tag) => (
-                    <View key={tag} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
+                    {alltags.map((tag) => (
+                      <View key={tag} style={styles.tag}>
+                        <Text style={styles.tagText}>{tag}</Text>
+                      </View>
+                    ))}
                   </View>
                 )}
-                {/* description */}
                 {item.description ? (
                   <Text style={styles.fullDescription}>{item.description}</Text>
                 ) : null}
@@ -262,13 +253,10 @@ const MyProfileScreen: React.FC = () => {
       );
     }
   };
-  // -- END RENDERING --
 
-  // Decide main content
   let content: JSX.Element;
 
   if (loadingProfile || loadingPlants || srLoading) {
-    // Loading
     content = (
       <SafeAreaView style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -276,7 +264,6 @@ const MyProfileScreen: React.FC = () => {
       </SafeAreaView>
     );
   } else if (errorProfile || errorPlants || srError) {
-    // Error
     content = (
       <SafeAreaView style={styles.centerContainer}>
         <Text style={styles.errorText}>{t('profile_error_message')}</Text>
@@ -294,7 +281,6 @@ const MyProfileScreen: React.FC = () => {
       </SafeAreaView>
     );
   } else if (!userProfile) {
-    // No profile
     content = (
       <SafeAreaView style={styles.centerContainer}>
         <Text style={styles.errorText}>
@@ -303,37 +289,30 @@ const MyProfileScreen: React.FC = () => {
       </SafeAreaView>
     );
   } else {
-    // Normal UI
     content = (
       <SafeAreaProvider style={styles.container}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 40 }}
-        >
-          {/* HEADER: GRADIENT */}
+          contentContainerStyle={{ paddingBottom: 40 }}>
           <LinearGradient
             colors={[COLORS.primary, '#5EE2C6']}
-            style={styles.headerContainer}
-          >
+            style={styles.headerContainer}>
             <View style={styles.headerTopRow}>
-              <Text style={styles.headerTitle}>{t('profile_title')}</Text>
+              <Text style={styles.headerTitle}>{userProfile.name}'s {t('profile_title')}</Text>
               <TouchableOpacity
                 onPress={handleEditProfile}
                 style={styles.headerActionButton}
-                accessibilityLabel={t('profile_edit_button')}
-              >
+                accessibilityLabel={t('profile_edit_button')}>
                 <MaterialIcons name="edit" size={24} color={COLORS.textLight} />
               </TouchableOpacity>
             </View>
 
-            {/* PROFILE INFO */}
+            {/* Redesigned Profile Info Section */}
             <View style={styles.profileInfoContainer}>
-              {/* Tap on pfp or "Edit" icon to change profile picture */}
               <TouchableOpacity
                 onPress={handleChangeProfilePicture}
                 activeOpacity={0.8}
-                style={styles.profilePictureWrapper}
-              >
+                style={styles.profilePictureWrapper}>
                 {userProfile.profilePictureUrl ? (
                   <Image
                     source={{ uri: userProfile.profilePictureUrl }}
@@ -349,57 +328,53 @@ const MyProfileScreen: React.FC = () => {
                 </View>
               </TouchableOpacity>
 
-              <View style={styles.profileTextSection}>
-                <Text style={styles.profileName}>{userProfile.name}</Text>
-                {userProfile.bio ? (
-                  <>
-                    <Text style={styles.profileLabel}>
-                      {t('profile_bio_label')}:
-                    </Text>
-                    <Text style={styles.profileValue} numberOfLines={3}>
-                      {userProfile.bio}
-                    </Text>
-                  </>
-                ) : null}
+              {userProfile.bio ? (
+                <Text style={styles.bioText} numberOfLines={50}>
+                  {userProfile.bio}
+                </Text>
+              ) : (
+                <Text style={styles.bioPlaceholder} numberOfLines={3}>
+                  {t('profile_no_bio_placeholder')}
+                </Text>
+              )}
 
-                {/* LOCATION */}
-                <View style={styles.profileLocationSection}>
-                  <Text style={styles.profileLabel}>
-                    {t('profile_location_label')}:
+              <View style={styles.locationContainer}>
+                <Text style={styles.locationLabel}>
+                  {t('profile_location_label')}:
+                </Text>
+                {userHasLocation ? (
+                  <View style={styles.mapContainer}>
+                    <MapView
+                      style={styles.map}
+                      initialRegion={region}
+                      scrollEnabled={false}
+                      zoomEnabled={false}
+                      rotateEnabled={false}
+                      pitchEnabled={false}
+                      >  
+                      <Circle
+                      center={{
+                        latitude: region.latitude,
+                        longitude: region.longitude,
+                      }}
+                      radius={2000} // 5km in meters
+                      strokeWidth={1.5}
+                      strokeColor="rgba(30, 174, 152, 1)" // solid blue border
+                      fillColor="rgba(30, 174, 152, 0.2)"   // translucent blue fill
+                      /> 
+                    </MapView>
+                  </View>
+                ) : (
+                  <Text style={styles.noLocationText}>
+                    {t('profile_no_location')}
                   </Text>
-                  {userHasLocation ? (
-                    <View style={styles.mapContainer}>
-                      <MapView style={styles.map} initialRegion={region}>
-                        <Circle
-                          center={{
-                            latitude: region.latitude,
-                            longitude: region.longitude,
-                          }}
-                          radius={searchRadius * 1000} // searchRadius in km -> convert to meters
-                          strokeWidth={1.5}
-                          strokeColor="#1EAE98"
-                          fillColor="rgba(30, 174, 152, 0.2)"
-                        />
-                      </MapView>
-                    </View>
-                  ) : (
-                    <Text style={styles.profileValue}>
-                      {t('profile_no_location')}
-                    </Text>
-                  )}
-                </View>
-
+                )}
                 <TouchableOpacity
                   onPress={handleChangeLocation}
                   style={styles.locationButton}
                   accessibilityRole="button"
-                  accessibilityLabel={t('profile_change_location_button')}
-                >
-                  <Ionicons
-                    name="location-outline"
-                    size={18}
-                    color={COLORS.primary}
-                  />
+                  accessibilityLabel={t('profile_change_location_button')}>
+                  <Ionicons name="location-outline" size={18} color={COLORS.primary} />
                   <Text style={styles.locationButtonText}>
                     {t('profile_change_location_button')}
                   </Text>
@@ -408,18 +383,16 @@ const MyProfileScreen: React.FC = () => {
             </View>
           </LinearGradient>
 
-          {/* MY PLANTS SECTION */}
           <View style={styles.plantsSectionWrapper}>
             <View style={styles.plantsSectionHeader}>
               <Text style={styles.plantsSectionTitle}>
-                {t('profile_my_plants_section')}
+                {userProfile.name}{t('profile_my_plants_section')}
               </Text>
               <TouchableOpacity
                 onPress={handleAddPlant}
                 style={styles.addPlantButton}
                 accessibilityRole="button"
-                accessibilityLabel={t('profile_add_plant_button')}
-              >
+                accessibilityLabel={t('profile_add_plant_button')}>
                 <Ionicons name="add-circle" size={24} color={COLORS.primary} />
                 <Text style={styles.addPlantButtonText}>
                   {t('profile_add_plant_button')}
@@ -427,7 +400,6 @@ const MyProfileScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            {/* CUSTOM TOGGLE (instead of Switch) */}
             <View style={styles.viewToggleContainer}>
               <TouchableOpacity
                 onPress={() => setShowFullSize(false)}
@@ -435,14 +407,12 @@ const MyProfileScreen: React.FC = () => {
                   styles.viewToggleOption,
                   !showFullSize && styles.viewToggleOptionActive,
                 ]}
-                activeOpacity={0.9}
-              >
+                activeOpacity={0.9}>
                 <Text
                   style={[
                     styles.viewToggleText,
                     !showFullSize && styles.viewToggleTextActive,
-                  ]}
-                >
+                  ]}>
                   {t('Thumbnails')}
                 </Text>
               </TouchableOpacity>
@@ -453,28 +423,24 @@ const MyProfileScreen: React.FC = () => {
                   styles.viewToggleOption,
                   showFullSize && styles.viewToggleOptionActive,
                 ]}
-                activeOpacity={0.9}
-              >
+                activeOpacity={0.9}>
                 <Text
                   style={[
                     styles.viewToggleText,
                     showFullSize && styles.viewToggleTextActive,
-                  ]}
-                >
+                  ]}>
                   {t('Full Size')}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* PLANTS DISPLAY */}
             {myPlants && myPlants.length > 0 ? (
               <View
                 style={[
                   showFullSize
                     ? styles.fullViewContainer
                     : styles.thumbViewContainer,
-                ]}
-              >
+                ]}>
                 {myPlants.map((plant) => renderPlantItem(plant))}
               </View>
             ) : (
@@ -486,7 +452,6 @@ const MyProfileScreen: React.FC = () => {
             )}
           </View>
 
-          {/* MODALS */}
           <EditProfileModal
             visible={editProfileVisible}
             initialName={userProfile.name}
@@ -501,6 +466,7 @@ const MyProfileScreen: React.FC = () => {
             onClose={() => setChangeLocationVisible(false)}
             onUpdated={handleLocationUpdated}
           />
+
         </ScrollView>
       </SafeAreaProvider>
     );
@@ -544,8 +510,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  // HEADER
   headerContainer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
@@ -566,29 +530,27 @@ const styles = StyleSheet.create({
   headerActionButton: {
     padding: 8,
   },
-
-  // PROFILE INFO
   profileInfoContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     marginTop: 15,
+    marginHorizontal: 20,
   },
   profilePictureWrapper: {
     position: 'relative',
-    marginRight: 15,
+    marginBottom: 10,
   },
   profilePicture: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: (width - 100) / 2,
+    height: (width - 100) / 2,
+    borderRadius: (width - 100) / 4,
     backgroundColor: '#eee',
     borderWidth: 2,
     borderColor: '#fff',
   },
   profilePlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: (width - 100) / 2,
+    height: (width - 100) / 2,
+    borderRadius: (width - 100) / 4,
     backgroundColor: '#eee',
     alignItems: 'center',
     justifyContent: 'center',
@@ -598,61 +560,64 @@ const styles = StyleSheet.create({
   cameraIconWrapper: {
     position: 'absolute',
     bottom: 0,
-    right: 0,
+    right: 10,
     backgroundColor: COLORS.primary,
     borderRadius: 16,
     padding: 4,
   },
-  profileTextSection: {
-    flexShrink: 1,
-  },
-  profileName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textLight,
-    marginBottom: 6,
-  },
-  profileLabel: {
+  bioText: {
     fontSize: 14,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    marginVertical: 10,
+    lineHeight: 20,
+  },
+  bioPlaceholder: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginVertical: 10,
+    lineHeight: 20,
+  },
+
+  locationContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  locationLabel: {
+    fontSize: 16,
     fontWeight: '600',
-    color: COLORS.textLight,
-    marginBottom: 2,
-  },
-  profileValue: {
-    fontSize: 14,
     color: COLORS.textLight,
     marginBottom: 8,
   },
-  profileLocationSection: {
-    marginTop: 6,
-  },
-
-  // MAP
   mapContainer: {
-    marginTop: 6,
-    width: 200,
-    height: 120,
+    width: '100%',
+    height: (width - 40) / 2,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#ddd',
+    marginBottom: 10,
   },
   map: {
-    width: '100%',
-    height: '100%',
+    ...StyleSheet.absoluteFillObject,
   },
-
-  // CHANGE LOCATION BUTTON
+  noLocationText: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    marginBottom: 10,
+  },
   locationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
     borderColor: COLORS.primary,
     borderRadius: 8,
-    alignSelf: 'flex-start',
     backgroundColor: '#fff',
+    marginTop: 10,
   },
   locationButtonText: {
     color: COLORS.primary,
@@ -660,8 +625,6 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontWeight: '600',
   },
-
-  // PLANTS SECTION
   plantsSectionWrapper: {
     paddingHorizontal: 10,
     paddingTop: 10,
@@ -688,8 +651,6 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontWeight: '600',
   },
-
-  // CUSTOM TOGGLE
   viewToggleContainer: {
     flexDirection: 'row',
     alignSelf: 'center',
@@ -715,18 +676,18 @@ const styles = StyleSheet.create({
   viewToggleTextActive: {
     color: '#fff',
   },
-
-  // THUMBNAIL VIEW
   thumbViewContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+
+
   },
   plantCardThumbnail: {
-    width: (width - 50) / 3,
+    width: (width - 80) / 3,
     backgroundColor: COLORS.cardBg,
     borderRadius: 8,
-    marginBottom: 15,
+    margin: 8,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -759,10 +720,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textDark,
   },
-
-  // FULL-SIZE VIEW
   fullViewContainer: {
-    // a simple vertical stack
     width: '100%',
   },
   plantCardFull: {
@@ -770,7 +728,6 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 8,
     overflow: 'hidden',
-
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -785,13 +742,11 @@ const styles = StyleSheet.create({
   },
   fullImageContainer: {
     width: '100%',
-    // remove forced aspect ratio so the image can keep its own ratio via "contain"
     position: 'relative',
   },
   fullImage: {
     width: '100%',
     aspectRatio: 3 / 4,
-    //here I want an automatic height based on the width
   },
   fullImageOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -830,8 +785,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
   },
-
-  // NO PLANTS
   noPlantsContainer: {
     justifyContent: 'center',
     alignItems: 'center',

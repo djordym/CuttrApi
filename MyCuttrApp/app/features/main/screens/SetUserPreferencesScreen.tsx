@@ -5,10 +5,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useUserPreferences } from '../hooks/usePreferences';
+
 import {
   PlantStage,
   PlantCategory,
@@ -21,12 +25,52 @@ import {
   Extras,
 } from '../../../types/enums';
 import COLORS from '../../../theme/colors';
-import { useNavigation } from '@react-navigation/native';
-import { log } from '../../../utils/logger';
+import { UserPreferencesRequest } from '../../../types/apiTypes';
 
 /** 
- * A simple multi-select component for your enums.
- * Toggle selected state in local state, then persist with updatePreferences.
+ * Simple multi-select tag group 
+ */
+const MultiSelectTagGroup = <T extends string>({
+  values,
+  selectedValues,
+  onToggle,
+}: {
+  values: T[];
+  selectedValues: T[];
+  onToggle: (val: T) => void;
+}) => {
+  return (
+    <View style={styles.tagGroupContainer}>
+      {values.map((val) => {
+        const isSelected = selectedValues.includes(val);
+        return (
+          <TouchableOpacity
+            key={String(val)}
+            style={[
+              styles.singleTag,
+              isSelected && styles.singleTagSelected,
+            ]}
+            onPress={() => onToggle(val)}
+          >
+            <Text
+              style={[
+                styles.singleTagText,
+                isSelected && styles.singleTagTextSelected,
+              ]}
+            >
+              {val}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
+
+/**
+ * Redesigned screen to set user preferences
+ * - Styled similarly to AddPlantScreen
+ * - Multi-select tags for each preference category
  */
 const SetUserPreferencesScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -38,33 +82,36 @@ const SetUserPreferencesScreen: React.FC = () => {
     isUpdating,
   } = useUserPreferences();
 
-  // local states for each array
+  // Local states for multi-select preferences
   const [selectedStages, setSelectedStages] = useState<PlantStage[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<PlantCategory[]>([]);
-  const [selectedLightReq, setSelectedLightReq] = useState<LightRequirement[]>([]);
   const [selectedWatering, setSelectedWatering] = useState<WateringNeed[]>([]);
+  const [selectedLightReq, setSelectedLightReq] = useState<LightRequirement[]>([]);
   const [selectedSize, setSelectedSize] = useState<Size[]>([]);
   const [selectedIndoorOutdoor, setSelectedIndoorOutdoor] = useState<IndoorOutdoor[]>([]);
   const [selectedPropagationEase, setSelectedPropagationEase] = useState<PropagationEase[]>([]);
   const [selectedPetFriendly, setSelectedPetFriendly] = useState<PetFriendly[]>([]);
   const [selectedExtras, setSelectedExtras] = useState<Extras[]>([]);
 
+  const [error, setError] = useState<string | null>(null);
+
+  // Load existing preferences
   useEffect(() => {
     if (preferences) {
       setSelectedStages(preferences.preferedPlantStage || []);
       setSelectedCategories(preferences.preferedPlantCategory || []);
-      setSelectedLightReq(preferences.preferedLightRequirement || []);
       setSelectedWatering(preferences.preferedWateringNeed || []);
+      setSelectedLightReq(preferences.preferedLightRequirement || []);
       setSelectedSize(preferences.preferedSize || []);
       setSelectedIndoorOutdoor(preferences.preferedIndoorOutdoor || []);
       setSelectedPropagationEase(preferences.preferedPropagationEase || []);
       setSelectedPetFriendly(preferences.preferedPetFriendly || []);
       setSelectedExtras(preferences.preferedExtras || []);
     }
-
   }, [preferences]);
 
-  const toggleSelection = <T extends string>(
+  // Multi-select toggle helper
+  const handleToggle = <T extends string>(
     value: T,
     selectedList: T[],
     setList: React.Dispatch<React.SetStateAction<T[]>>
@@ -76,28 +123,38 @@ const SetUserPreferencesScreen: React.FC = () => {
     }
   };
 
+  const handleCancel = () => {
+    navigation.goBack();
+  };
+
   const handleSave = async () => {
     if (!preferences) return;
-    const updated = {
+    setError(null);
+
+    // Construct the updated preferences request without search radius
+    const updated: UserPreferencesRequest = {
       ...preferences,
       preferedPlantStage: selectedStages,
       preferedPlantCategory: selectedCategories,
-      preferedLightRequirement: selectedLightReq,
       preferedWateringNeed: selectedWatering,
+      preferedLightRequirement: selectedLightReq,
       preferedSize: selectedSize,
       preferedIndoorOutdoor: selectedIndoorOutdoor,
       preferedPropagationEase: selectedPropagationEase,
       preferedPetFriendly: selectedPetFriendly,
       preferedExtras: selectedExtras,
     };
+
     try {
-      updatePreferences(updated);
+      await updatePreferences(updated);
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', 'Could not update preferences.');
+      console.error('Error updating preferences:', err);
+      setError('Could not update preferences.');
     }
   };
 
+  // Loading/ Error states
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -116,224 +173,266 @@ const SetUserPreferencesScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.title}>Set Preferences</Text>
+      {/* Full Screen Gradient */}
+      <LinearGradient
+        colors={[LOCAL_COLORS.primary, LOCAL_COLORS.secondary]}
+        style={styles.gradientBackground}
+      >
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>User Preferences</Text>
+          <MaterialIcons name="settings" size={24} color="#fff" />
+        </View>
 
-        {/* Example for selecting PlantStage */}
-        <Text style={styles.label}>Preferred Plant Stage</Text>
-        <View style={styles.multiRow}>
-          {Object.values(PlantStage).map((stg) => {
-            const selected = selectedStages.includes(stg);
-            return (
-              <TouchableOpacity
-                key={stg}
-                style={[styles.tag, selected && styles.tagSelected]}
-                onPress={() => toggleSelection(stg, selectedStages, setSelectedStages)}
-              >
-                <Text style={[styles.tagText, selected && styles.tagTextSelected]}>
-                  {stg}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.formContainer}>
+            {/* Error */}
+            {error && <Text style={styles.errorText}>{error}</Text>}
+
+            {/* PREFERENCES MULTI-SELECT SECTIONS */}
+            {/* Plant Stages */}
+            <Text style={styles.label}>Preferred Plant Stages:</Text>
+            <MultiSelectTagGroup
+              values={Object.values(PlantStage)}
+              selectedValues={selectedStages}
+              onToggle={(val) =>
+                handleToggle(val, selectedStages, setSelectedStages)
+              }
+            />
+
+            {/* Plant Categories */}
+            <Text style={styles.label}>Preferred Categories:</Text>
+            <MultiSelectTagGroup
+              values={Object.values(PlantCategory)}
+              selectedValues={selectedCategories}
+              onToggle={(val) =>
+                handleToggle(val, selectedCategories, setSelectedCategories)
+              }
+            />
+
+            {/* Watering Need */}
+            <Text style={styles.label}>Watering Need:</Text>
+            <MultiSelectTagGroup
+              values={Object.values(WateringNeed)}
+              selectedValues={selectedWatering}
+              onToggle={(val) =>
+                handleToggle(val, selectedWatering, setSelectedWatering)
+              }
+            />
+
+            {/* Light Requirement */}
+            <Text style={styles.label}>Light Requirement:</Text>
+            <MultiSelectTagGroup
+              values={Object.values(LightRequirement)}
+              selectedValues={selectedLightReq}
+              onToggle={(val) =>
+                handleToggle(val, selectedLightReq, setSelectedLightReq)
+              }
+            />
+
+            {/* Size */}
+            <Text style={styles.label}>Size:</Text>
+            <MultiSelectTagGroup
+              values={Object.values(Size)}
+              selectedValues={selectedSize}
+              onToggle={(val) =>
+                handleToggle(val, selectedSize, setSelectedSize)
+              }
+            />
+
+            {/* Indoor/Outdoor */}
+            <Text style={styles.label}>Indoor/Outdoor:</Text>
+            <MultiSelectTagGroup
+              values={Object.values(IndoorOutdoor)}
+              selectedValues={selectedIndoorOutdoor}
+              onToggle={(val) =>
+                handleToggle(val, selectedIndoorOutdoor, setSelectedIndoorOutdoor)
+              }
+            />
+
+            {/* Propagation Ease */}
+            <Text style={styles.label}>Propagation Ease:</Text>
+            <MultiSelectTagGroup
+              values={Object.values(PropagationEase)}
+              selectedValues={selectedPropagationEase}
+              onToggle={(val) =>
+                handleToggle(val, selectedPropagationEase, setSelectedPropagationEase)
+              }
+            />
+
+            {/* Pet Friendly */}
+            <Text style={styles.label}>Pet Friendly:</Text>
+            <MultiSelectTagGroup
+              values={Object.values(PetFriendly)}
+              selectedValues={selectedPetFriendly}
+              onToggle={(val) =>
+                handleToggle(val, selectedPetFriendly, setSelectedPetFriendly)
+              }
+            />
+
+            {/* Extras */}
+            <Text style={styles.label}>Extras:</Text>
+            <MultiSelectTagGroup
+              values={Object.values(Extras)}
+              selectedValues={selectedExtras}
+              onToggle={(val) =>
+                handleToggle(val, selectedExtras, setSelectedExtras)
+              }
+            />
+
+            {/* LOADING INDICATOR */}
+            {isUpdating && (
+              <ActivityIndicator
+                size="small"
+                color={LOCAL_COLORS.primary}
+                style={{ marginVertical: 10 }}
+              />
+            )}
+
+            {/* ACTIONS */}
+            <View style={styles.actions}>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isUpdating}>
+                <Text style={styles.saveButtonText}>
+                  {isUpdating ? 'Saving...' : 'Save'}
                 </Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Light Requirement */}
-        <Text style={styles.label}>Light Requirement</Text>
-        <View style={styles.multiRow}>
-          {Object.values(LightRequirement).map((lreq) => {
-            const selected = selectedLightReq.includes(lreq);
-            return (
               <TouchableOpacity
-                key={lreq}
-                style={[styles.tag, selected && styles.tagSelected]}
-                onPress={() => toggleSelection(lreq, selectedLightReq, setSelectedLightReq)}
+                style={styles.cancelButton}
+                onPress={handleCancel}
               >
-                <Text style={[styles.tagText, selected && styles.tagTextSelected]}>{lreq}</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Watering */}
-        <Text style={styles.label}>Watering Need</Text>
-        <View style={styles.multiRow}>
-          {Object.values(WateringNeed).map((wn) => {
-            const selected = selectedWatering.includes(wn);
-            return (
-              <TouchableOpacity
-                key={wn}
-                style={[styles.tag, selected && styles.tagSelected]}
-                onPress={() => toggleSelection(wn, selectedWatering, setSelectedWatering)}
-              >
-                <Text style={[styles.tagText, selected && styles.tagTextSelected]}>{wn}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Size */}
-        <Text style={styles.label}>Size</Text>
-        <View style={styles.multiRow}>
-          {Object.values(Size).map((sz) => {
-            const selected = selectedSize.includes(sz);
-            return (
-              <TouchableOpacity
-                key={sz}
-                style={[styles.tag, selected && styles.tagSelected]}
-                onPress={() => toggleSelection(sz, selectedSize, setSelectedSize)}
-              >
-                <Text style={[styles.tagText, selected && styles.tagTextSelected]}>{sz}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        
-        {/* Indoor/Outdoor */}
-        <Text style={styles.label}>Indoor/Outdoor</Text>
-        <View style={styles.multiRow}>
-          {Object.values(IndoorOutdoor).map((io) => {
-            const selected = selectedIndoorOutdoor.includes(io);
-            return (
-              <TouchableOpacity
-                key={io}
-                style={[styles.tag, selected && styles.tagSelected]}
-                onPress={() => toggleSelection(io, selectedIndoorOutdoor, setSelectedIndoorOutdoor)}
-              >
-                <Text style={[styles.tagText, selected && styles.tagTextSelected]}>{io}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Propagation Ease */}
-        <Text style={styles.label}>Propagation Ease</Text>
-        <View style={styles.multiRow}>
-          {Object.values(PropagationEase).map((pe) => {
-            const selected = selectedPropagationEase.includes(pe);
-            return (
-              <TouchableOpacity
-                key={pe}
-                style={[styles.tag, selected && styles.tagSelected]}
-                onPress={() => toggleSelection(pe, selectedPropagationEase, setSelectedPropagationEase)}
-              >
-                <Text style={[styles.tagText, selected && styles.tagTextSelected]}>{pe}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        
-        {/* Pet Friendly */}
-        <Text style={styles.label}>Pet Friendly</Text>
-        <View style={styles.multiRow}>
-          {Object.values(PetFriendly).map((pf) => {
-            const selected = selectedPetFriendly.includes(pf);
-            return (
-              <TouchableOpacity
-                key={pf}
-                style={[styles.tag, selected && styles.tagSelected]}
-                onPress={() => toggleSelection(pf, selectedPetFriendly, setSelectedPetFriendly)}
-              >
-                <Text style={[styles.tagText, selected && styles.tagTextSelected]}>{pf}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Extras */}
-        <Text style={styles.label}>Extras</Text>
-        <View style={styles.multiRow}>
-          {Object.values(Extras).map((ex) => {
-            const selected = selectedExtras.includes(ex);
-            return (
-              <TouchableOpacity
-                key={ex}
-                style={[styles.tag, selected && styles.tagSelected]}
-                onPress={() => toggleSelection(ex, selectedExtras, setSelectedExtras)}
-              >
-                <Text style={[styles.tagText, selected && styles.tagTextSelected]}>{ex}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.saveButton, isUpdating && { opacity: 0.5 }]}
-          onPress={handleSave}
-          disabled={isUpdating}
-        >
-          <Text style={styles.saveButtonText}>
-            {isUpdating ? 'Saving...' : 'Save Preferences'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+            </View>
+          </View>
+        </ScrollView>
+      </LinearGradient>
     </View>
   );
 };
 
 export default SetUserPreferencesScreen;
 
+const LOCAL_COLORS = {
+  primary: '#1EAE98',
+  secondary: '#5EE2C6',
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
-  scrollContainer: {
+  gradientBackground: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 0,
+    paddingBottom: 30,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 10,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  formContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    borderRadius: 12,
     padding: 16,
-    paddingBottom: 40,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  errorText: {
+    color: '#FF6F61',
+    marginBottom: 10,
+    fontWeight: '600',
+  },
+  tagGroupContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 6,
+  },
+  singleTag: {
+    borderWidth: 1,
+    borderColor: LOCAL_COLORS.primary,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  singleTagSelected: {
+    backgroundColor: LOCAL_COLORS.primary,
+  },
+  singleTagText: {
+    fontSize: 12,
+    color: LOCAL_COLORS.primary,
+    fontWeight: '600',
+  },
+  singleTagTextSelected: {
+    color: '#fff',
+  },
+  actions: {
+    flexDirection: 'column',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  cancelButton: {
+    borderWidth: 1,
+    borderColor: LOCAL_COLORS.primary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    margin: 10,
+    marginTop: 0,
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    color: LOCAL_COLORS.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  saveButton: {
+    backgroundColor: LOCAL_COLORS.primary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    margin: 10,
+  },
+  saveButtonText: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textDark,
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  multiRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 8,
-  },
-  tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  tagSelected: {
-    backgroundColor: COLORS.primary,
-  },
-  tagText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  tagTextSelected: {
-    color: '#fff',
-  },
-  saveButton: {
-    backgroundColor: COLORS.primary,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '700',
   },
 });

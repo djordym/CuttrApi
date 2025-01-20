@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef, useImperativeHandle } from 'react';
 import {
   StyleSheet,
   View,
@@ -31,91 +31,140 @@ const COLORS = {
   border: '#ddd',
 };
 
-interface SwipeableCardProps {
-  plant: PlantResponse;
-  onSwipeLeft: (plantId: number) => void;
-  onSwipeRight: (plantId: number) => void;
+/**
+ * Methods the parent can call on this card
+ * e.g. to finalize a right-swipe or reset it to center.
+ */
+export interface SwipeableCardRef {
+  /** Animate the card flying off to the right, then call onSwipeRight. */
+  flyOffRight: () => void;
+
+  /** Reset the card back to center if user cancels. */
+  resetPosition: () => void;
 }
 
-export const SwipeableCard: React.FC<SwipeableCardProps> = ({
-  plant,
-  onSwipeLeft,
-  onSwipeRight,
-}) => {
-  const translateX = useSharedValue(0);
-  const rotateZ = useSharedValue(0);
+interface SwipeableCardProps {
+  plant: PlantResponse;
 
-  // Compute all tags from various plant properties and extras
-  const allTags = [
-    plant.plantStage,
-    plant.plantCategory,
-    plant.wateringNeed,
-    plant.lightRequirement,
-    plant.size,
-    plant.indoorOutdoor,
-    plant.propagationEase,
-    plant.petFriendly,
-    ...(plant.extras ?? [])
-  ].filter(Boolean);
+  /** Called when the card is actually removed to the left. */
+  onSwipeLeft: (plantId: number) => void;
 
-  const gestureHandler = useAnimatedGestureHandler<
-    PanGestureHandlerGestureEvent,
-    { startX: number }
-  >({
-    onStart: (_, ctx) => {
-      ctx.startX = translateX.value;
-    },
-    onActive: (event, ctx) => {
-      translateX.value = ctx.startX + event.translationX;
-      rotateZ.value = (event.translationX / width) * 0.15;
-    },
-    onEnd: (event) => {
-      if (event.translationX > SWIPE_THRESHOLD) {
+  /** Called when the card has fully flown off the right side. */
+  onSwipeRight: (plantId: number) => void;
+
+  /**
+   * Called as soon as the user crosses the swipe threshold on the right.
+   * This is where you open the "SelectPlantsModal" without waiting.
+   */
+  onLikeGestureBegin: (plant: PlantResponse) => void;
+}
+
+/**
+ * forwardRef so the parent can call flyOffRight or resetPosition
+ */
+export const SwipeableCard = forwardRef<SwipeableCardRef, SwipeableCardProps>(
+  ({ plant, onSwipeLeft, onSwipeRight, onLikeGestureBegin }, ref) => {
+    const translateX = useSharedValue(0);
+    const rotateZ = useSharedValue(0);
+
+    /**
+     * Expose some methods to the parent, so it can:
+     *  - finish the right-swipe
+     *  - reset the card position
+     */
+    useImperativeHandle(ref, () => ({
+      flyOffRight: () => {
+        'worklet';
+        // Animate card fully to the right, then call onSwipeRight
         translateX.value = withSpring(width * 1.5, {}, (finished) => {
-          if (finished) runOnJS(onSwipeRight)(plant.plantId);
+          if (finished) {
+            runOnJS(onSwipeRight)(plant.plantId);
+          }
         });
-      } else if (event.translationX < -SWIPE_THRESHOLD) {
-        translateX.value = withSpring(-width * 1.5, {}, (finished) => {
-          if (finished) runOnJS(onSwipeLeft)(plant.plantId);
-        });
-      } else {
+      },
+      resetPosition: () => {
+        'worklet';
         translateX.value = withSpring(0);
         rotateZ.value = withSpring(0);
-      }
-    },
-  });
+      },
+    }));
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { rotateZ: `${rotateZ.value}rad` },
-    ],
-  }));
+    const gestureHandler = useAnimatedGestureHandler<
+      PanGestureHandlerGestureEvent,
+      { startX: number }
+    >({
+      onStart: (_, ctx) => {
+        ctx.startX = translateX.value;
+      },
+      onActive: (event, ctx) => {
+        translateX.value = ctx.startX + event.translationX;
+        rotateZ.value = (event.translationX / width) * 0.15;
+      },
+      onEnd: (event) => {
+        if (event.translationX > SWIPE_THRESHOLD) {
+          // DO NOT fly off yet. Instead, partially move it aside
+          // and immediately open the modal (parent triggers it).
+          translateX.value = withSpring(150);
+          runOnJS(onLikeGestureBegin)(plant);
+        } else if (event.translationX < -SWIPE_THRESHOLD) {
+          // Dislike: animate off to the left
+          translateX.value = withSpring(-width * 1.5, {}, (finished) => {
+            if (finished) {
+              runOnJS(onSwipeLeft)(plant.plantId);
+            }
+          });
+        } else {
+          // Snap back to center
+          translateX.value = withSpring(0);
+          rotateZ.value = withSpring(0);
+        }
+      },
+    });
 
-  return (
-    <PanGestureHandler onGestureEvent={gestureHandler}>
-      <Animated.View style={[styles.cardContainer, animatedStyle]}>
-        <View style={styles.fullImageContainer}>
-          {plant.imageUrl ? (
-            <Image
-              source={{ uri: plant.imageUrl }}
-              style={styles.fullImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.plantPlaceholder}>
-              <Ionicons name="leaf" size={60} color={COLORS.primary} />
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        { translateX: translateX.value },
+        { rotateZ: `${rotateZ.value}rad` },
+      ],
+    }));
+
+    // Compute all tags from various properties
+    const allTags = [
+      plant.plantStage,
+      plant.plantCategory,
+      plant.wateringNeed,
+      plant.lightRequirement,
+      plant.size,
+      plant.indoorOutdoor,
+      plant.propagationEase,
+      plant.petFriendly,
+      ...(plant.extras ?? []),
+    ].filter(Boolean);
+
+    return (
+      <PanGestureHandler onGestureEvent={gestureHandler}>
+        <Animated.View style={[styles.cardContainer, animatedStyle]}>
+          <View style={styles.fullImageContainer}>
+            {plant.imageUrl ? (
+              <Image
+                source={{ uri: plant.imageUrl }}
+                style={styles.fullImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={styles.plantPlaceholder}>
+                <Ionicons name="leaf" size={60} color={COLORS.primary} />
+              </View>
+            )}
+            <View style={styles.imageOverlay}>
+              <LinearGradient
+                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,1)']}
+                style={styles.overlayContent}
+              />
             </View>
-          )}
-        <View style={styles.imageOverlay}>
-          <LinearGradient
-            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,1)']}
-            style={styles.overlayContent}
-          >
-          </LinearGradient>
-        </View>
-        </View>
-        <View style={styles.tagContainer}>
+          </View>
+
+          <View style={styles.tagContainer}>
             {/* Plant Name */}
             <Text style={styles.fullPlantName} numberOfLines={1}>
               {plant.speciesName}
@@ -138,24 +187,23 @@ export const SwipeableCard: React.FC<SwipeableCardProps> = ({
                 {plant.description}
               </Text>
             ) : null}
-        </View>
-        <View style={styles.underImageExtension} />
-      </Animated.View>
-    </PanGestureHandler>
-  );
-};
+          </View>
+
+          <View style={styles.underImageExtension} />
+        </Animated.View>
+      </PanGestureHandler>
+    );
+  }
+);
 
 const styles = StyleSheet.create({
-  // Overall card container: animated for the swipe
   cardContainer: {
     position: 'absolute',
     width: width * 0.9,
     borderRadius: 8,
     overflow: 'hidden',
-  
     marginVertical: 'auto',
 
-    // Shadows
     backgroundColor: COLORS.cardBg,
     shadowColor: '#000',
     shadowOpacity: 0.12,
@@ -163,18 +211,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-
-  innerContainer: {
-    flex: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-
-  // Full-size style from MyProfileScreen
   fullImageContainer: {
     width: '100%',
     position: 'relative',
-    // Maintain aspect ratio
     aspectRatio: 3 / 4,
   },
   fullImage: {
@@ -186,34 +225,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#eee',
   },
-
-  // Overlay at bottom of card
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
   },
   overlayContent: {
-    position:'relative',
+    position: 'relative',
     bottom: 0,
-    paddingTop: 200, // So the gradient starts higher
+    paddingTop: 200,
   },
-
-  // Extension below the image
   underImageExtension: {
     backgroundColor: 'black',
     zIndex: -1,
     height: 50,
-    
   },
-
-  // Tags & description
   tagContainer: {
-    padding: 10,
+    padding: 5,
     position: 'absolute',
     bottom: 0,
   },
-
-  // Title, tags, etc.
   fullPlantName: {
     fontSize: 18,
     fontWeight: '700',
@@ -231,7 +261,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     marginRight: 6,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   tagText: {
     color: '#fff',

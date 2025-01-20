@@ -5,6 +5,8 @@ import SwipeScreen from '../features/main/screens/SwipeScreen';
 import { Image, StyleSheet } from 'react-native';
 import ProfileStackNavigator from './ProfileStackNavigator';
 import SwipeStackNavigator from './SwipeStackNavigator';
+import ConnectionsScreen from '../features/main/screens/ConnectionsScreen';
+import ConnectionStackNavigator from './ConnectionStackNavigator';
 
 const Tab = createBottomTabNavigator();
 
@@ -38,6 +40,7 @@ const MainNavigator = () => {
     >
       <Tab.Screen name="Swipe" component={SwipeStackNavigator}/>
       <Tab.Screen name="Profile" component={ProfileStackNavigator}/>
+      <Tab.Screen name="Connections" component={ConnectionStackNavigator}/>
       <Tab.Screen name="Settings" component={SettingsScreen}/>
     </Tab.Navigator>
   );

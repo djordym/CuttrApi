@@ -30,9 +30,9 @@ namespace Cuttr.Infrastructure.Repositories
                 var efMatches = await _context.Matches
                     .AsNoTracking()
                     .Include(m => m.Plant1)
-                        .ThenInclude(p => p.User)
                     .Include(m => m.Plant2)
-                        .ThenInclude(p => p.User)
+                    .Include(m => m.User1)
+                    .Include(m => m.User2)
                     .Where(m => m.UserId1 == userId || m.UserId2 == userId)
                     .ToListAsync();
 
@@ -52,9 +52,9 @@ namespace Cuttr.Infrastructure.Repositories
                 var efMatch = await _context.Matches
                     .AsNoTracking()
                     .Include(m => m.Plant1)
-                        .ThenInclude(p => p.User)
                     .Include(m => m.Plant2)
-                        .ThenInclude(p => p.User)
+                    .Include(m => m.User1)
+                    .Include(m => m.User2)
                     .FirstOrDefaultAsync(m => m.MatchId == matchId);
 
                 return EFToBusinessMapper.MapToMatch(efMatch);
@@ -70,11 +70,11 @@ namespace Cuttr.Infrastructure.Repositories
             try
             {
                 var efMatch = BusinessToEFMapper.MapToMatchEF(match);
-                efMatch.MatchId = 0; // Ensure the ID is unset for new entities
 
                 await _context.Matches.AddAsync(efMatch);
                 await _context.SaveChangesAsync();
                 _context.Entry(efMatch).State = EntityState.Detached;
+                
                 return EFToBusinessMapper.MapToMatch(efMatch);
             }
             catch (Exception ex)

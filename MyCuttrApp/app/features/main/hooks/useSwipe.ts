@@ -1,8 +1,10 @@
 import { useQuery } from 'react-query';
 import { swipeService } from '../../../api/swipeService';
-import { PlantResponse } from '../../../types/apiTypes';
-
+import { PlantResponse, SwipeRequest } from '../../../types/apiTypes';
+import { useMutation, useQueryClient } from 'react-query';
 export const useLikablePlants = () => {
+  const queryClient = useQueryClient();
+
   const query = useQuery<PlantResponse[], Error>(
     ['likablePlants'],
     swipeService.getLikablePlants,
@@ -12,5 +14,21 @@ export const useLikablePlants = () => {
       retry: 1,
     }
   );
-  return query;
+
+  const mutation = useMutation( 
+    (data: SwipeRequest[]) => swipeService.sendSwipes(data),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['userMatches']);
+      }
+    }
+  );
+
+  return {
+    ...query,
+    sendSwipes: mutation.mutate,
+    isSending: mutation.isLoading
+  };
 };
+
+

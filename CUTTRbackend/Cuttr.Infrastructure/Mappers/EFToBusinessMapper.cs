@@ -154,7 +154,6 @@ namespace Cuttr.Infrastructure.Mappers
             {
                 UserId = efUser.UserId,
                 Email = efUser.Email,
-                PasswordHash = efUser.PasswordHash,
                 Name = efUser.Name,
                 ProfilePictureUrl = efUser.ProfilePictureUrl,
                 Bio = efUser.Bio,

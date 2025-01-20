@@ -14,17 +14,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider} from 'react-native-safe-area-context';
 import { storage } from '../../../utils/storage';
 // Suppose you have some hooks/services:
 import { userService } from '../../../api/userService';
 import { useUserProfile } from '../hooks/useUser';
-import { useSearchRadius } from '../hooks/useSearchRadius';
 import { useNavigation } from '@react-navigation/native';
-// If you have a custom slider component for your search radius:
-import Slider from '@react-native-community/slider'; // Example. Or use your own custom slider.
 import { logout } from '../../auth/store/authSlice';
 import { store } from '../../../store';
+import { QueryClient } from 'react-query';
 
 const COLORS = {
   primary: '#1EAE98',
@@ -46,16 +44,12 @@ const SettingsScreen: React.FC = () => {
     refetch: refetchUserProfile,
   } = useUserProfile();
 
-  // For search radius or other user preferences (if you have them):
-  const {
-    searchRadius,
-    setSearchRadius,
-    isLoading: srLoading,
-    isError: srError,
-  } = useSearchRadius();
+//query client
+const queryClient = new QueryClient();
 
   // Language management
   const [currentLang, setCurrentLang] = useState(i18n.language);
+
 
   // Toggles for push notifications, dark mode, etc.
   const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState<boolean>(true); 
@@ -135,7 +129,10 @@ const SettingsScreen: React.FC = () => {
         {
           text: t('Yes'),
           style: 'destructive',
-          onPress: async () => store.dispatch(logout())
+          onPress: async () => {
+            queryClient.clear();
+            store.dispatch(logout());
+          }
         },
       ]
     );
@@ -179,13 +176,8 @@ const SettingsScreen: React.FC = () => {
     setDarkModeEnabled(value);
   };
 
-  // Save search radius
-  const handleSearchRadiusChange = async (val: number) => {
-    // e.g. userPreferencesService.updateSearchRadius(val)
-    setSearchRadius(val);
-  };
 
-  if (userLoading || srLoading) {
+  if (userLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -194,7 +186,7 @@ const SettingsScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaProvider style={styles.safeArea}>
       <LinearGradient
         colors={[COLORS.primary, COLORS.secondary]}
         style={styles.gradientHeader}
@@ -401,38 +393,7 @@ const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* LOCATION & SEARCH PREFERENCES SECTION (EXAMPLE) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('Location & Search')}</Text>
-          <TouchableOpacity
-            style={styles.changeButton}
-            onPress={() => {
-              // Possibly open a "ChangeLocation" modal or screen
-              navigation.navigate('ChangeLocationModal' as never);
-            }}
-          >
-            <Text style={styles.changeButtonText}>
-              {t('Change Approximate Location')}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={{ marginTop: 10 }}>
-            <Text style={styles.label}>{t('Search Radius')} (km)</Text>
-            <Slider
-              style={{ width: '100%', height: 40 }}
-              minimumValue={1}
-              maximumValue={100}
-              step={1}
-              value={searchRadius}
-              minimumTrackTintColor={COLORS.primary}
-              maximumTrackTintColor="#ccc"
-              onSlidingComplete={handleSearchRadiusChange}
-            />
-            <Text style={styles.value}>
-              {searchRadius} {t('km')}
-            </Text>
-          </View>
-        </View>
+        
 
         {/* ANY ADDITIONAL SETTINGS SECTIONS, E.G. PREFERENCES, ETC. */}
         {/* For example, manage advanced filters, e.g., prefered categories, watering needs, etc. */}
@@ -440,7 +401,7 @@ const SettingsScreen: React.FC = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaProvider>
   );
 };
 
@@ -454,8 +415,8 @@ const styles = StyleSheet.create({
   gradientHeader: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     marginBottom: 10,
   },
   headerRow: {

@@ -1,5 +1,0 @@
-[2024-12-06 15:35:29 INF] HTTP Request Information: PUT /api/users/1  {
-  "locationLatitude": 0,
-  "locationLongitude": 0
-}
-[2024-12-06 15:35:29 INF] HTTP Response Information: 400 {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.","status":400,"errors":{"Bio":["The Bio field is required."],"Name":["The Name field is required."],"ProfilePictureUrl":["The ProfilePictureUrl field is required."]},"traceId":"00-8ea85c0617a0f59f3b4e07d06fc3402d-4c19df50995d585f-00"}

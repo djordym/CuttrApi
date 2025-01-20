@@ -177,5 +177,28 @@ namespace Cuttr.Business.Managers
                 throw new BusinessException("Error retrieving plants.", ex);
             }
         }
+
+        public async Task SeedPlantAsync(SeedPlantRequest request)
+        {
+            //map to plant entity
+            var plant = new Plant
+            {
+                UserId = request.UserId,
+                SpeciesName = request.SpeciesName,
+                Description = request.Description,
+                PlantStage = request.PlantStage,
+                WateringNeed = request.WateringNeed,
+                LightRequirement = request.LightRequirement,
+                Size = request.Size,
+                IndoorOutdoor = request.IndoorOutdoor,
+                PropagationEase = request.PropagationEase,
+                PetFriendly = request.PetFriendly,
+                Extras = request.Extras,
+                ImageUrl = request.ImageUrl
+
+            };
+            await _plantRepository.AddPlantAsync(plant);
+            return;
+        }
     }
 }

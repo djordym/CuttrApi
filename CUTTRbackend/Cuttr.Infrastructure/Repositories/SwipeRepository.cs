@@ -77,5 +77,40 @@ namespace Cuttr.Infrastructure.Repositories
                 throw new RepositoryException("An error occurred while checking swipe existence.", ex);
             }
         }
+
+        public async Task<Swipe> GetSwipeForPairAsync(int swiperPlantId, int swipedPlantId)
+        {
+            try
+            {
+                var efSwipe = await _context.Swipes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s =>
+                        s.SwiperPlantId == swiperPlantId &&
+                        s.SwipedPlantId == swipedPlantId);
+
+                return EFToBusinessMapper.MapToSwipe(efSwipe);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving a swipe for pair.");
+                throw new RepositoryException("An error occurred while retrieving a swipe for pair.", ex);
+            }
+        }
+
+        public async Task UpdateSwipeAsync(Swipe swipe)
+        {
+            try
+            {
+                var efSwipe = BusinessToEFMapper.MapToSwipeEF(swipe);
+                _context.Swipes.Update(efSwipe);
+                await _context.SaveChangesAsync();
+                _context.Entry(efSwipe).State = EntityState.Detached;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating a swipe.");
+                throw new RepositoryException("An error occurred while updating a swipe.", ex);
+            }
+        }
     }
 }

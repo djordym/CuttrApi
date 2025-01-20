@@ -8,7 +8,7 @@
   "name": "Name",
   "no_account_register": "Don’t have an account? Register",
   "have_account_login": "Already have an account? Login",
-  "profile_title": "My Profile",
+  "profile_title": "Profile",
   "profile_loading_message": "Loading your profile...",
   "profile_error_message": "Failed to load your profile.",
   "profile_retry_button": "Try Again",
@@ -19,7 +19,7 @@
   "profile_edit_button": "Edit Profile",
   "profile_change_location_button": "Change Location",
   "profile_add_plant_button": "Add Plant",
-  "profile_my_plants_section": "My Plants",
+  "profile_my_plants_section": "'s Plants",
   "profile_no_plants_message": "You have no plants yet. Add one to get started!",
   "edit_profile_title": "Edit Profile",
   "edit_profile_name_label": "Name",
@@ -114,5 +114,13 @@
   "extras_variegated_foliage": "Variegated Foliage",
   "extras_climbing": "Climbing",
   "extras_ground_cover": "Ground Cover",
-  "extras_rare": "Rare"
+  "extras_rare": "Rare",
+  "connections_loading": "Loading your connections...",
+  "connections_error": "Unable to load connections. Please try again.",
+  "connections_retry_button": "Retry",
+  "connections_none_title": "No Connections Yet",
+  "connections_none_message": "It looks like you haven't matched with anyone so far.",
+  "connections_none_action": "Find Plants",
+  "connections_matches_label": "{{count}} Matches",
+  "connections_title": "Connections"
 }

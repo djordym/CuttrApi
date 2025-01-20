@@ -98,6 +98,7 @@ export interface MatchResponse {
     plant2: PlantResponse;
     user1: UserResponse;
     user2: UserResponse;
+    isClosed: boolean;    
 }
 
 export interface MessageResponse {
