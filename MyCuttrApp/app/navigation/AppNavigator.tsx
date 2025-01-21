@@ -4,7 +4,7 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import AuthNavigator from './AuthNavigator';
-import MainNavigator from './MainNavigator';
+import MainTabNavigator from './MainTabNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
 import { useUserProfile } from '../features/main/hooks/useUser';
 import { storage } from '../utils/storage';
@@ -12,6 +12,7 @@ import { setInitialTokens } from '../features/auth/store/authSlice';
 import { userService } from '../api/userService';
 import { logout } from '../features/auth/store/authSlice';
 import { store } from '../store';
+import MainRootStackNavigator from './MainRootStackNavigator';
 
 const AppNavigator = () => {
   const dispatch = useDispatch();
@@ -86,7 +87,7 @@ useEffect(() => {
   }
 
   // 4. Otherwise, user has location -> show main app
-  return <MainNavigator />;
+  return <MainRootStackNavigator />;
 };
 
 export default AppNavigator;

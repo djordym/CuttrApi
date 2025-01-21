@@ -34,3 +34,6 @@ Search Functionality (City/Country Input):
 A TextInput (searchInput) allows the user to enter a place name.
 The handleSearch function calls OpenStreetMap’s Nominatim endpoint to geocode the input string, and then updates the map region and markerPosition.
 You could replace the fetch call with a more robust geocoding library (like react-native-geocoding + Google Places API) if desired.
+
+
+in setuserpreferences: slider bug oplossen + hook gebruiken voor ophalen vorige waarde

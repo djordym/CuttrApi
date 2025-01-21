@@ -29,17 +29,10 @@ import { userService } from '../../../api/userService'; // for updating the prof
 import { EditProfileModal } from '../components/EditProfileModal';
 import { ChangeLocationModal } from '../components/ChangeLocationModal';
 import { log } from '../../../utils/logger';
+import { COLORS } from '../../../theme/colors';
 
 const { width } = Dimensions.get('window');
-const COLORS = {
-  primary: '#1EAE98',
-  accent: '#FF6F61',
-  background: '#F2F2F2',
-  textDark: '#2F4F4F',
-  textLight: '#FFFFFF',
-  cardBg: '#FFFFFF',
-  border: '#ddd',
-};
+
 
 const MyProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -295,7 +288,7 @@ const MyProfileScreen: React.FC = () => {
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 40 }}>
           <LinearGradient
-            colors={[COLORS.primary, '#5EE2C6']}
+            colors={[COLORS.primary, COLORS.secondary]}
             style={styles.headerContainer}>
             <View style={styles.headerTopRow}>
               <Text style={styles.headerTitle}>{userProfile.name}'s {t('profile_title')}</Text>

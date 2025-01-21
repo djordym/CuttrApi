@@ -22,16 +22,8 @@ import { useUserProfile } from '../hooks/useUser';
 
 // Types
 import { MatchResponse, UserResponse } from '../../../types/apiTypes';
+import { COLORS } from '../../../theme/colors';
 
-// Example branding colors
-const COLORS = {
-  primary: '#1EAE98',
-  background: '#F8F8F8',
-  textDark: '#2F4F4F',
-  border: '#ddd',
-  textLight: '#fff',
-  accent: '#FF6F61',
-};
 
 const { width } = Dimensions.get('window');
 

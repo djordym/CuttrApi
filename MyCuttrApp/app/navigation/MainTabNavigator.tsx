@@ -7,6 +7,7 @@ import ProfileStackNavigator from './ProfileStackNavigator';
 import SwipeStackNavigator from './SwipeStackNavigator';
 import ConnectionsScreen from '../features/main/screens/ConnectionsScreen';
 import ConnectionStackNavigator from './ConnectionStackNavigator';
+import MyProfileScreen from '../features/main/screens/MyProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -16,7 +17,7 @@ const icons: Record<string, number> = {
   Settings: require('../../assets/images/settings.png'),
 };
 
-const MainNavigator = () => {
+const MainTabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -38,15 +39,15 @@ const MainNavigator = () => {
         tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen name="Swipe" component={SwipeStackNavigator}/>
-      <Tab.Screen name="Profile" component={ProfileStackNavigator}/>
-      <Tab.Screen name="Connections" component={ConnectionStackNavigator}/>
+      <Tab.Screen name="Swipe" component={SwipeScreen}/>
+      <Tab.Screen name="Profile" component={MyProfileScreen}/>
+      <Tab.Screen name="Connections" component={ConnectionsScreen}/>
       <Tab.Screen name="Settings" component={SettingsScreen}/>
     </Tab.Navigator>
   );
 };
 
-export default MainNavigator;
+export default MainTabNavigator;
 
 const styles = StyleSheet.create({
   icon: {

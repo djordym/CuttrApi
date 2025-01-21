@@ -1374,7 +1374,304 @@ fontWeight: '600',
 },
 });
 // File: app\features\main\components\SelectPlantsModal.tsx
-
+Modal,
+View,
+Text,
+StyleSheet,
+TouchableOpacity,
+ScrollView,
+Image,
+ActivityIndicator,
+Platform,
+Dimensions,
+} from 'react-native';
+interface SelectPlantsModalProps {
+visible: boolean;
+onConfirm: (selectedPlantIds: number[]) => void;
+onClose: () => void;
+}
+const { width } = Dimensions.get('window');
+export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
+visible,
+onConfirm,
+onClose,
+}) => {
+const {
+data: myPlants,
+isLoading,
+isError,
+refetch,
+} = useMyPlants();
+const [selectedPlantIds, setSelectedPlantIds] = useState<number[]>([]);
+useEffect(() => {
+if (visible) {
+setSelectedPlantIds([]);
+refetch();
+}
+}, [visible, refetch]);
+const handleToggleSelect = (plantId: number) => {
+setSelectedPlantIds((prev) => {
+if (prev.includes(plantId)) {
+return prev.filter((id) => id !== plantId);
+} else {
+return [...prev, plantId];
+}
+});
+};
+const handleConfirm = () => {
+onConfirm(selectedPlantIds);
+};
+if (!visible) {
+return null;
+}
+return (
+<Modal visible={visible} transparent animationType="slide">
+<View style={styles.modalContainer}>
+<View style={styles.modalContent}>
+<Text style={styles.modalTitle}>Select Plants</Text>
+{isLoading && (
+<View style={styles.loadingContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+<Text style={styles.loadingText}>Loading your plants...</Text>
+</View>
+)}
+{isError && (
+<View style={styles.errorContainer}>
+<Text style={styles.errorText}>
+Could not load your plants. Please try again.
+</Text>
+<TouchableOpacity style={styles.retryButton} onPress={refetch}>
+<Text style={styles.retryButtonText}>Retry</Text>
+</TouchableOpacity>
+</View>
+)}
+{!isLoading && !isError && myPlants && (
+<>
+{myPlants.length === 0 ? (
+<View style={styles.emptyStateContainer}>
+<Text style={styles.emptyStateText}>
+You have no plants in your collection yet.
+</Text>
+</View>
+) : (
+<ScrollView style={styles.scrollArea}>
+<Text style={styles.titleText}>
+Select the plants you want to trade for. Tap on a plant to select it.
+</Text>
+<View style={styles.gridContainer}>
+{myPlants.map((plant: PlantResponse) => {
+const isSelected = selectedPlantIds.includes(plant.plantId);
+return (
+<TouchableOpacity
+key={plant.plantId}
+onPress={() => handleToggleSelect(plant.plantId)}
+activeOpacity={0.9}
+style={[
+styles.plantCardThumbnail,
+isSelected && styles.plantCardThumbnailSelected,
+]}
+>
+{plant.imageUrl ? (
+<Image
+source={{ uri: plant.imageUrl }}
+style={styles.thumbImage}
+resizeMode="contain"
+/>
+) : (
+<View style={styles.plantPlaceholder}>
+<Ionicons name="leaf" size={40} color={COLORS.primary} />
+</View>
+)}
+<View style={styles.thumbTextWrapper}>
+<Text style={styles.thumbPlantName} numberOfLines={1}>
+{plant.speciesName}
+</Text>
+</View>
+</TouchableOpacity>
+);
+})}
+</View>
+</ScrollView>
+)}
+</>
+)}
+<View style={styles.buttonRow}>
+<TouchableOpacity
+style={[styles.actionButton, styles.confirmButton]}
+onPress={handleConfirm}
+disabled={selectedPlantIds.length === 0}
+>
+<Text style={styles.confirmButtonText}>Confirm</Text>
+</TouchableOpacity>
+<TouchableOpacity
+style={[styles.actionButton, styles.cancelButton]}
+onPress={onClose}
+>
+<Text style={styles.cancelButtonText}>Cancel</Text>
+</TouchableOpacity>
+</View>
+</View>
+</View>
+</Modal>
+);
+};
+const styles = StyleSheet.create({
+modalContainer: {
+flex: 1,
+backgroundColor: 'rgba(0,0,0,0.5)',
+justifyContent: 'flex-end',
+},
+modalContent: {
+backgroundColor: COLORS.textLight,
+borderTopLeftRadius: 16,
+borderTopRightRadius: 16,
+paddingTop: 20,
+paddingBottom: 10,
+paddingHorizontal: 16,
+maxHeight: '85%',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.15,
+shadowRadius: 10,
+shadowOffset: { width: 0, height: -4 },
+},
+android: {
+elevation: 10,
+},
+}),
+},
+modalTitle: {
+fontSize: 18,
+fontWeight: '700',
+color: COLORS.textDark,
+marginBottom: 12,
+textAlign: 'center',
+},
+titleText: {
+fontSize: 14,
+color: COLORS.textDark,
+marginBottom: 10,
+textAlign: 'center',
+},
+loadingContainer: {
+alignItems: 'center',
+marginVertical: 20,
+},
+loadingText: {
+marginTop: 10,
+fontSize: 14,
+color: COLORS.textDark,
+},
+errorContainer: {
+alignItems: 'center',
+marginVertical: 20,
+},
+errorText: {
+fontSize: 14,
+color: COLORS.accent,
+marginBottom: 10,
+textAlign: 'center',
+},
+retryButton: {
+backgroundColor: COLORS.primary,
+borderRadius: 6,
+paddingHorizontal: 16,
+paddingVertical: 8,
+},
+retryButtonText: {
+color: '#fff',
+fontWeight: '600',
+},
+emptyStateContainer: {
+alignItems: 'center',
+marginVertical: 20,
+},
+emptyStateText: {
+fontSize: 14,
+color: COLORS.textDark,
+textAlign: 'center',
+},
+scrollArea: {
+marginVertical: 10,
+},
+gridContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+justifyContent: 'center',
+},
+plantCardThumbnail: {
+width: (width - 70) / 3,
+backgroundColor: COLORS.cardBg,
+borderRadius: 8,
+marginBottom: 15,
+marginRight: 10,
+overflow: 'hidden',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+},
+android: {
+elevation: 3,
+},
+}),
+},
+plantCardThumbnailSelected: {
+borderWidth: 2,
+borderColor: COLORS.primary,
+},
+thumbImage: {
+width: '100%',
+aspectRatio: 3 / 4,
+},
+plantPlaceholder: {
+width: '100%',
+height: 120,
+backgroundColor: '#eee',
+justifyContent: 'center',
+alignItems: 'center',
+},
+thumbTextWrapper: {
+padding: 8,
+alignItems: 'center',
+},
+thumbPlantName: {
+fontSize: 14,
+fontWeight: '600',
+color: COLORS.textDark,
+},
+buttonRow: {
+flexDirection: 'column',
+justifyContent: 'flex-end',
+marginTop: 8,
+},
+actionButton: {
+borderRadius: 8,
+paddingVertical: 10,
+paddingHorizontal: 16,
+margin: 4,
+},
+cancelButton: {
+backgroundColor: '#fff',
+borderWidth: 1,
+borderColor: COLORS.primary,
+},
+cancelButtonText: {
+color: COLORS.primary,
+fontWeight: '600',
+textAlign: 'center',
+},
+confirmButton: {
+backgroundColor: COLORS.primary,
+},
+confirmButtonText: {
+color: '#fff',
+fontWeight: '600',
+textAlign: 'center',
+},
+});
 // File: app\features\main\components\SwipeableCard.tsx
 StyleSheet,
 View,
@@ -1390,38 +1687,35 @@ withSpring,
 } from 'react-native-reanimated';
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 0.25 * width;
-const COLORS = {
-primary: '#1EAE98',
-accent: '#FF6F61',
-background: '#F2F2F2',
-textDark: '#2F4F4F',
-textLight: '#FFFFFF',
-cardBg: '#FFFFFF',
-border: '#ddd',
-};
+export interface SwipeableCardRef {
+flyOffRight: () => void;
+resetPosition: () => void;
+}
 interface SwipeableCardProps {
 plant: PlantResponse;
 onSwipeLeft: (plantId: number) => void;
 onSwipeRight: (plantId: number) => void;
+onLikeGestureBegin: (plant: PlantResponse) => void;
 }
-export const SwipeableCard: React.FC<SwipeableCardProps> = ({
-plant,
-onSwipeLeft,
-onSwipeRight,
-}) => {
+export const SwipeableCard = forwardRef<SwipeableCardRef, SwipeableCardProps>(
+({ plant, onSwipeLeft, onSwipeRight, onLikeGestureBegin }, ref) => {
 const translateX = useSharedValue(0);
 const rotateZ = useSharedValue(0);
-const allTags = [
-plant.plantStage,
-plant.plantCategory,
-plant.wateringNeed,
-plant.lightRequirement,
-plant.size,
-plant.indoorOutdoor,
-plant.propagationEase,
-plant.petFriendly,
-...(plant.extras ?? [])
-].filter(Boolean);
+useImperativeHandle(ref, () => ({
+flyOffRight: () => {
+'worklet';
+translateX.value = withSpring(width * 1.5, {}, (finished) => {
+if (finished) {
+runOnJS(onSwipeRight)(plant.plantId);
+}
+});
+},
+resetPosition: () => {
+'worklet';
+translateX.value = withSpring(0);
+rotateZ.value = withSpring(0);
+},
+}));
 const gestureHandler = useAnimatedGestureHandler<
 PanGestureHandlerGestureEvent,
 { startX: number }
@@ -1435,12 +1729,13 @@ rotateZ.value = (event.translationX / width) * 0.15;
 },
 onEnd: (event) => {
 if (event.translationX > SWIPE_THRESHOLD) {
-translateX.value = withSpring(width * 1.5, {}, (finished) => {
-if (finished) runOnJS(onSwipeRight)(plant.plantId);
-});
+translateX.value = withSpring(150);
+runOnJS(onLikeGestureBegin)(plant);
 } else if (event.translationX < -SWIPE_THRESHOLD) {
 translateX.value = withSpring(-width * 1.5, {}, (finished) => {
-if (finished) runOnJS(onSwipeLeft)(plant.plantId);
+if (finished) {
+runOnJS(onSwipeLeft)(plant.plantId);
+}
 });
 } else {
 translateX.value = withSpring(0);
@@ -1454,6 +1749,17 @@ transform: [
 { rotateZ: `${rotateZ.value}rad` },
 ],
 }));
+const allTags = [
+plant.plantStage,
+plant.plantCategory,
+plant.wateringNeed,
+plant.lightRequirement,
+plant.size,
+plant.indoorOutdoor,
+plant.propagationEase,
+plant.petFriendly,
+...(plant.extras ?? []),
+].filter(Boolean);
 return (
 <PanGestureHandler onGestureEvent={gestureHandler}>
 <Animated.View style={[styles.cardContainer, animatedStyle]}>
@@ -1473,8 +1779,7 @@ resizeMode="contain"
 <LinearGradient
 colors={['rgba(0,0,0,0)', 'rgba(0,0,0,1)']}
 style={styles.overlayContent}
->
-</LinearGradient>
+/>
 </View>
 </View>
 <View style={styles.tagContainer}>
@@ -1503,7 +1808,8 @@ style={styles.overlayContent}
 </Animated.View>
 </PanGestureHandler>
 );
-};
+}
+);
 const styles = StyleSheet.create({
 cardContainer: {
 position: 'absolute',
@@ -1517,11 +1823,6 @@ shadowOpacity: 0.12,
 shadowRadius: 5,
 shadowOffset: { width: 0, height: 3 },
 elevation: 3,
-},
-innerContainer: {
-flex: 1,
-borderRadius: 8,
-overflow: 'hidden',
 },
 fullImageContainer: {
 width: '100%',
@@ -1542,7 +1843,7 @@ imageOverlay: {
 justifyContent: 'flex-end',
 },
 overlayContent: {
-position:'relative',
+position: 'relative',
 bottom: 0,
 paddingTop: 200,
 },
@@ -1573,6 +1874,7 @@ borderRadius: 12,
 paddingHorizontal: 8,
 paddingVertical: 4,
 marginRight: 6,
+marginBottom: 4,
 },
 tagText: {
 color: '#fff',
@@ -1655,7 +1957,6 @@ const mutation = useMutation(
 {
 onSuccess: () => {
 queryClient.invalidateQueries(['userPreferences']);
-queryClient.invalidateQueries(['likablePlants']);
 }
 }
 );
@@ -1676,6 +1977,7 @@ isError,
 };
 // File: app\features\main\hooks\useSwipe.ts
 export const useLikablePlants = () => {
+const queryClient = useQueryClient();
 const query = useQuery<PlantResponse[], Error>(
 ['likablePlants'],
 swipeService.getLikablePlants,
@@ -1685,7 +1987,19 @@ refetchOnWindowFocus: true,
 retry: 1,
 }
 );
-return query;
+const mutation = useMutation(
+(data: SwipeRequest[]) => swipeService.sendSwipes(data),
+{
+onSuccess: () => {
+queryClient.invalidateQueries(['userMatches']);
+}
+}
+);
+return {
+...query,
+sendSwipes: mutation.mutate,
+isSending: mutation.isLoading
+};
 };
 // File: app\features\main\hooks\useUser.ts
 export const useUserProfile = () => {
@@ -2091,14 +2405,6 @@ onPress={handleCancel}
 );
 };
 export default AddPlantScreen;
-const COLORS = {
-primary: '#1EAE98',
-secondary: '#5EE2C6',
-accent: '#FF6F61',
-textLight: '#fff',
-textDark: '#333',
-background: '#f8f8f8',
-};
 const styles = StyleSheet.create({
 container: {
 flex: 1,
@@ -2280,15 +2586,6 @@ KeyboardAvoidingView,
 Platform,
 Alert,
 } from 'react-native';
-const COLORS = {
-primary: '#1EAE98',
-accent: '#FF6F61',
-textDark: '#2F4F4F',
-textLight: '#fff',
-background: '#F8F8F8',
-bubbleLeft: '#fff',
-bubbleRight: '#DCF8C6',
-};
 const ChatScreen: React.FC = () => {
 const { t } = useTranslation();
 const route = useRoute();
@@ -2653,14 +2950,6 @@ FlatList,
 Image,
 Dimensions,
 } from 'react-native';
-const COLORS = {
-primary: '#1EAE98',
-background: '#F8F8F8',
-textDark: '#2F4F4F',
-border: '#ddd',
-textLight: '#fff',
-accent: '#FF6F61',
-};
 const { width } = Dimensions.get('window');
 const ConnectionsScreen: React.FC = () => {
 const { t } = useTranslation();
@@ -2676,7 +2965,15 @@ isLoading: loadingMatches,
 isError: errorMatches,
 refetch: refetchMatches,
 } = useUserMatches();
-const myUserId = userProfile?.userId;
+if (!userProfile) {
+return (
+<SafeAreaProvider style={styles.centerContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+<Text style={styles.loadingText}>{t('connections_loading')}</Text>
+</SafeAreaProvider>
+);
+}
+const myUserId = userProfile.userId;
 const groupedConversations = useMemo(() => {
 if (!matches || !myUserId) return [];
 const map = new Map<number, MatchResponse[]>();
@@ -2695,7 +2992,7 @@ matchList,
 }, [matches, myUserId]);
 const handleConversationPress = useCallback(
 (otherUserId: number) => {
-navigation.navigate('ConversationScreen' as never, { otherUserId } as never);
+navigation.navigate('Chat' as never, { otherUserId } as never);
 },
 [navigation]
 );
@@ -2925,15 +3222,6 @@ ScrollView,
 Alert,
 } from 'react-native';
 const { width } = Dimensions.get('window');
-const COLORS = {
-primary: '#1EAE98',
-accent: '#FF6F61',
-background: '#F2F2F2',
-textDark: '#2F4F4F',
-textLight: '#FFFFFF',
-cardBg: '#FFFFFF',
-border: '#ddd',
-};
 const MyProfileScreen: React.FC = () => {
 const { t } = useTranslation();
 const navigation = useNavigation();
@@ -3165,7 +3453,7 @@ content = (
 style={{ flex: 1 }}
 contentContainerStyle={{ paddingBottom: 40 }}>
 <LinearGradient
-colors={[COLORS.primary, '#5EE2C6']}
+colors={[COLORS.primary, COLORS.secondary]}
 style={styles.headerContainer}>
 <View style={styles.headerTopRow}>
 <Text style={styles.headerTitle}>{userProfile.name}'s {t('profile_title')}</Text>
@@ -3536,13 +3824,13 @@ color: '#fff',
 thumbViewContainer: {
 flexDirection: 'row',
 flexWrap: 'wrap',
-justifyContent: 'space-between',
+justifyContent: 'center',
 },
 plantCardThumbnail: {
-width: (width - 50) / 3,
+width: (width - 80) / 3,
 backgroundColor: COLORS.cardBg,
 borderRadius: 8,
-marginBottom: 15,
+margin: 8,
 overflow: 'hidden',
 ...Platform.select({
 ios: {
@@ -3662,14 +3950,6 @@ Alert,
 ActivityIndicator,
 TextInput,
 } from 'react-native';
-const COLORS = {
-primary: '#1EAE98',
-secondary: '#5EE2C6',
-background: '#F2F2F2',
-textLight: '#FFFFFF',
-textDark: '#333333',
-accent: '#FF6F61',
-};
 const SettingsScreen: React.FC = () => {
 const { t, i18n } = useTranslation();
 const navigation = useNavigation();
@@ -3678,12 +3958,7 @@ data: userProfile,
 isLoading: userLoading,
 refetch: refetchUserProfile,
 } = useUserProfile();
-const {
-searchRadius,
-setSearchRadius,
-isLoading: srLoading,
-isError: srError,
-} = useSearchRadius();
+const queryClient = new QueryClient();
 const [currentLang, setCurrentLang] = useState(i18n.language);
 const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState<boolean>(true);
 const [darkModeEnabled, setDarkModeEnabled] = useState<boolean>(false);
@@ -3744,7 +4019,10 @@ t('Are you sure you want to log out?'),
 {
 text: t('Yes'),
 style: 'destructive',
-onPress: async () => store.dispatch(logout())
+onPress: async () => {
+queryClient.clear();
+store.dispatch(logout());
+}
 },
 ]
 );
@@ -3779,10 +4057,7 @@ setPushNotificationsEnabled(value);
 const handleSaveDarkMode = async (value: boolean) => {
 setDarkModeEnabled(value);
 };
-const handleSearchRadiusChange = async (val: number) => {
-setSearchRadius(val);
-};
-if (userLoading || srLoading) {
+if (userLoading) {
 return (
 <View style={styles.centered}>
 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -3986,36 +4261,6 @@ handleSaveDarkMode(val);
 thumbColor={darkModeEnabled ? COLORS.primary : '#ccc'}
 trackColor={{ true: COLORS.primary, false: '#ddd' }}
 />
-</View>
-</View>
-{}
-<View style={styles.section}>
-<Text style={styles.sectionTitle}>{t('Location & Search')}</Text>
-<TouchableOpacity
-style={styles.changeButton}
-onPress={() => {
-navigation.navigate('ChangeLocationModal' as never);
-}}
->
-<Text style={styles.changeButtonText}>
-{t('Change Approximate Location')}
-</Text>
-</TouchableOpacity>
-<View style={{ marginTop: 10 }}>
-<Text style={styles.label}>{t('Search Radius')} (km)</Text>
-<Slider
-style={{ width: '100%', height: 40 }}
-minimumValue={1}
-maximumValue={100}
-step={1}
-value={searchRadius}
-minimumTrackTintColor={COLORS.primary}
-maximumTrackTintColor="#ccc"
-onSlidingComplete={handleSearchRadiusChange}
-/>
-<Text style={styles.value}>
-{searchRadius} {t('km')}
-</Text>
 </View>
 </View>
 {}
@@ -4335,7 +4580,7 @@ return (
 <View style={styles.container}>
 {}
 <LinearGradient
-colors={[LOCAL_COLORS.primary, LOCAL_COLORS.secondary]}
+colors={[COLORS.primary, COLORS.secondary]}
 style={styles.gradientBackground}
 >
 {}
@@ -4436,7 +4681,7 @@ handleToggle(val, selectedExtras, setSelectedExtras)
 {isUpdating && (
 <ActivityIndicator
 size="small"
-color={LOCAL_COLORS.primary}
+color={COLORS.primary}
 style={{ marginVertical: 10 }}
 />
 )}
@@ -4461,10 +4706,6 @@ onPress={handleCancel}
 );
 };
 export default SetUserPreferencesScreen;
-const LOCAL_COLORS = {
-primary: '#1EAE98',
-secondary: '#5EE2C6',
-};
 const styles = StyleSheet.create({
 container: {
 flex: 1,
@@ -4524,7 +4765,7 @@ marginBottom: 6,
 },
 singleTag: {
 borderWidth: 1,
-borderColor: LOCAL_COLORS.primary,
+borderColor: COLORS.primary,
 borderRadius: 20,
 paddingVertical: 6,
 paddingHorizontal: 12,
@@ -4532,11 +4773,11 @@ marginRight: 8,
 marginBottom: 8,
 },
 singleTagSelected: {
-backgroundColor: LOCAL_COLORS.primary,
+backgroundColor: COLORS.primary,
 },
 singleTagText: {
 fontSize: 12,
-color: LOCAL_COLORS.primary,
+color: COLORS.primary,
 fontWeight: '600',
 },
 singleTagTextSelected: {
@@ -4549,7 +4790,7 @@ marginTop: 16,
 },
 cancelButton: {
 borderWidth: 1,
-borderColor: LOCAL_COLORS.primary,
+borderColor: COLORS.primary,
 borderRadius: 8,
 paddingVertical: 10,
 paddingHorizontal: 16,
@@ -4558,12 +4799,12 @@ marginTop: 0,
 },
 cancelButtonText: {
 fontSize: 14,
-color: LOCAL_COLORS.primary,
+color: COLORS.primary,
 fontWeight: '600',
 textAlign: 'center',
 },
 saveButton: {
-backgroundColor: LOCAL_COLORS.primary,
+backgroundColor: COLORS.primary,
 borderRadius: 8,
 paddingVertical: 10,
 paddingHorizontal: 16,
@@ -4588,10 +4829,9 @@ Text,
 TouchableOpacity,
 ActivityIndicator,
 Alert,
-SafeAreaView,
-FlatList,
 Dimensions,
 Platform,
+FlatList,
 } from 'react-native';
 const { width } = Dimensions.get('window');
 const COLORS = {
@@ -4612,6 +4852,8 @@ data: likablePlants,
 isLoading: loadingPlants,
 isError: errorPlants,
 refetch: refetchLikablePlants,
+sendSwipes,
+isSending: sendingSwipes,
 } = useLikablePlants();
 const { data: userProfile } = useUserProfile();
 const {
@@ -4628,9 +4870,10 @@ refetch: refetchMyPlants,
 const [plantStack, setPlantStack] = useState<PlantResponse[]>([]);
 const [showSelectModal, setShowSelectModal] = useState(false);
 const [plantToLike, setPlantToLike] = useState<PlantResponse | null>(null);
+const topCardRef = useRef<SwipeableCardRef>(null);
 useEffect(() => {
 if (likablePlants) {
-log.debug('Likable plants fetched and set:', likablePlants);
+log.debug('Likable plants fetched:', likablePlants);
 setPlantStack(likablePlants);
 }
 }, [likablePlants]);
@@ -4698,27 +4941,27 @@ Alert.alert('Error', 'Could not remove preference.');
 },
 [userPreferences, updatePreferences]
 );
-const handleDislike = () => {
-if (!myPlants || plantStack.length === 0) return;
-const topCard = plantStack[0];
+const handleDislike = (plantId: number) => {
+setPlantStack((prev) => prev.slice(1));
+if (!myPlants) return;
+const topCard = likablePlants?.find((p) => p.plantId === plantId);
+if (!topCard) return;
 const requests: SwipeRequest[] = myPlants.map((myPlant) => ({
 swiperPlantId: myPlant.plantId,
 swipedPlantId: topCard.plantId,
 isLike: false,
 }));
-swipeService
-.sendSwipes(requests)
-.then(() => {
-setPlantStack((prevStack) => prevStack.slice(1));
-})
-.catch(() => {
+sendSwipes(requests, {
+onError: () => {
 Alert.alert('Error', 'Failed to send swipes.');
+},
 });
 };
-const handleLike = () => {
-if (!myPlants || plantStack.length === 0) return;
-const topCard = plantStack[0];
-setPlantToLike(topCard);
+const handleSwipeRight = (plantId: number) => {
+setPlantStack((prev) => prev.slice(1));
+};
+const handleLikeGestureBegin = (plant: PlantResponse) => {
+setPlantToLike(plant);
 setShowSelectModal(true);
 };
 const handleSelectConfirm = (selectedMyPlantIds: number[]) => {
@@ -4728,26 +4971,36 @@ swiperPlantId: mp.plantId,
 swipedPlantId: plantToLike.plantId,
 isLike: selectedMyPlantIds.includes(mp.plantId),
 }));
-swipeService
-.sendSwipes(requests)
-.then(() => {
+sendSwipes(requests, {
+onSuccess: () => {
+topCardRef.current?.flyOffRight();
+},
+onError: () => {
+Alert.alert('Error', 'Failed to send swipes.');
+},
+onSettled: () => {
 setShowSelectModal(false);
 setPlantToLike(null);
-setPlantStack((prevStack) => prevStack.slice(1));
-})
-.catch(() => {
-Alert.alert('Error', 'Failed to send swipes.');
+},
 });
 };
 const handleSelectCancel = () => {
+topCardRef.current?.resetPosition();
 setShowSelectModal(false);
 setPlantToLike(null);
 };
 const handlePassPress = () => {
-handleDislike();
+if (!plantStack.length) return;
+const topCard = plantStack[0];
+handleDislike(topCard.plantId);
 };
 const handleLikePress = () => {
-handleLike();
+if (!plantStack.length) return;
+const topCard = plantStack[0];
+topCardRef.current?.resetPosition();
+setTimeout(() => {
+handleLikeGestureBegin(topCard);
+}, 10);
 };
 const renderHeader = () => {
 const prefTags: Array<{ key: string; value: string }> = [];
@@ -4790,9 +5043,6 @@ style={styles.headerGradient}
 <TouchableOpacity
 onPress={handleFilterPress}
 style={styles.headerActionButton}
-accessible
-accessibilityLabel="Filter plants"
-accessibilityHint="Opens filter options"
 >
 <Ionicons name="options" size={24} color={COLORS.textLight} />
 </TouchableOpacity>
@@ -4879,27 +5129,31 @@ onPress={() => refetchLikablePlants()}
 const visibleCards = plantStack.slice(0, 3);
 return (
 <View style={styles.deckContainer}>
-{visibleCards.map((plant, index) => {
+{visibleCards
+.map((plant, index) => {
 const isTopCard = index === 0;
 const offset = (visibleCards.length - 1 - index) * 5;
 return (
 <View
 key={plant.plantId}
-style={[styles.cardWrapper, { top: -offset, right: offset }]}
+style={[styles.cardWrapper, { top: offset, left: offset }]}
 >
 <SwipeableCard
+ref={isTopCard ? topCardRef : null}
 plant={plant}
-onSwipeLeft={isTopCard ? handleDislike : undefined}
-onSwipeRight={isTopCard ? handleLike : undefined}
+onSwipeLeft={handleDislike}
+onSwipeRight={handleSwipeRight}
+onLikeGestureBegin={handleLikeGestureBegin}
 />
 </View>
 );
-})}
+})
+.reverse()}
 </View>
 );
 };
 return (
-<SafeAreaView style={styles.container}>
+<SafeAreaProvider style={styles.container}>
 {renderHeader()}
 {renderCardStack()}
 {}
@@ -4908,9 +5162,7 @@ return (
 <TouchableOpacity
 onPress={handlePassPress}
 style={styles.actionButtonWrapper}
-accessibilityRole="button"
-accessibilityLabel="Pass on this plant"
-accessibilityHint="Dislike and show next plant"
+disabled={sendingSwipes}
 >
 <LinearGradient
 colors={[COLORS.accent, COLORS.accentLight]}
@@ -4923,9 +5175,7 @@ style={styles.actionButton}
 <TouchableOpacity
 onPress={handleLikePress}
 style={styles.actionButtonWrapper}
-accessibilityRole="button"
-accessibilityLabel="Like this plant"
-accessibilityHint="Show interest in this plant"
+disabled={sendingSwipes}
 >
 <LinearGradient
 colors={[COLORS.primary, COLORS.primaryLight]}
@@ -4938,15 +5188,15 @@ color={COLORS.textLight}
 />
 </LinearGradient>
 </TouchableOpacity>
-</View>
-)}
 {}
 <SelectPlantsModal
 visible={showSelectModal}
 onConfirm={handleSelectConfirm}
 onClose={handleSelectCancel}
 />
-</SafeAreaView>
+</View>
+)}
+</SafeAreaProvider>
 );
 };
 export default SwipeScreen;
@@ -5015,7 +5265,6 @@ marginTop: 10,
 filterInfoTextColumn: {
 color: COLORS.textLight,
 fontSize: 14,
-alignItems: 'center',
 },
 noFilterText: {
 color: COLORS.textLight,
@@ -5047,16 +5296,16 @@ removeTagButton: {
 paddingLeft: 2,
 },
 deckContainer: {
-marginTop: 15,
+marginBottom: 10,
 flex: 1,
 justifyContent: 'flex-start',
 alignItems: 'center',
+right: 0,
 },
 cardWrapper: {
 width: width * 0.9,
 },
 bottomActionContainer: {
-position: 'relative',
 backgroundColor: COLORS.textLight,
 borderRadius: 20,
 paddingHorizontal: 60,
@@ -5748,7 +5997,7 @@ return (
 if (!userProfile?.locationLatitude || !userProfile?.locationLongitude) {
 return <OnboardingNavigator />;
 }
-return <MainNavigator />;
+return <MainRootStackNavigator />;
 };
 export default AppNavigator;
 const styles = StyleSheet.create({
@@ -5769,14 +6018,54 @@ return (
 );
 };
 export default AuthNavigator;
-// File: app\navigation\MainNavigator.tsx
+// File: app\navigation\ConnectionStackNavigator.tsx
+export type ConnectionStackParamList = {
+Connections: undefined;
+Chat: undefined;
+};
+const Stack = createNativeStackNavigator<ConnectionStackParamList>();
+const ConnectionStackNavigator = () => {
+return (
+<Stack.Navigator screenOptions={{ headerShown: false }}>
+<Stack.Screen name="Connections" component={ConnectionsScreen} />
+<Stack.Screen name="Chat" component={ChatScreen} />
+</Stack.Navigator>
+);
+}
+export default ConnectionStackNavigator;
+// File: app\navigation\MainRootStackNavigator.tsx
+const RootStack = createNativeStackNavigator();
+const MainRootStackNavigator = () => (
+<RootStack.Navigator screenOptions={{ headerShown: false }}>
+{}
+<RootStack.Screen name="MainTabs" component={MainTabNavigator} />
+{}
+<RootStack.Screen
+name="SetUserPreferences"
+component={SetUserPreferencesScreen}
+options={{ presentation: 'modal' }}
+/>
+<RootStack.Screen
+name="Chat"
+component={ChatScreen}
+options={{ presentation: 'modal' }}
+/>
+<RootStack.Screen
+name="AddPlant"
+component={AddPlantScreen}
+options={{ presentation: 'modal' }}
+/>
+</RootStack.Navigator>
+);
+export default MainRootStackNavigator;
+// File: app\navigation\MainTabNavigator.tsx
 const Tab = createBottomTabNavigator();
 const icons: Record<string, number> = {
 Swipe: require('../../assets/images/swiping.png'),
 Profile: require('../../assets/images/profile.png'),
 Settings: require('../../assets/images/settings.png'),
 };
-const MainNavigator = () => {
+const MainTabNavigator = () => {
 return (
 <Tab.Navigator
 screenOptions={({ route }) => ({
@@ -5798,14 +6087,14 @@ tabBarActiveTintColor: '#673ab7',
 tabBarInactiveTintColor: 'gray',
 })}
 >
-<Tab.Screen name="Swipe" component={SwipeStackNavigator}/>
-<Tab.Screen name="Profile" component={ProfileStackNavigator}/>
+<Tab.Screen name="Swipe" component={SwipeScreen}/>
+<Tab.Screen name="Profile" component={MyProfileScreen}/>
 <Tab.Screen name="Connections" component={ConnectionsScreen}/>
 <Tab.Screen name="Settings" component={SettingsScreen}/>
 </Tab.Navigator>
 );
 };
-export default MainNavigator;
+export default MainTabNavigator;
 const styles = StyleSheet.create({
 icon: {
 width: 24,
@@ -5906,16 +6195,30 @@ state.message = null;
 });
 export const { setGlobalError, clearGlobalError } = globalErrorSlice.actions;
 // File: app\theme\colors.ts
-const COLORS = {
+export const COLORS = {
 primary: '#1EAE98',
+secondary:'#5EE2C6',
+accent: '#FF6B6B',
+background: '#F2F2F2',
+textDark: '#2F4F4F',
+textLight: '#FFFFFF',
+cardBg: '#FFFFFF',
+border: '#ddd',
+bubbleLeft: '#fff',
+bubbleRight: '#DCF8C6',
+};
+export const COLORS2 = {
+primary: '#95d0bd',
+secondary:'#6ab6a3',
 accent: '#FF6F61',
 background: '#F2F2F2',
 textDark: '#2F4F4F',
 textLight: '#FFFFFF',
 cardBg: '#FFFFFF',
 border: '#ddd',
+bubbleLeft: '#fff',
+bubbleRight: '#DCF8C6',
 };
-export default COLORS;
 // File: app\theme\index.ts
 
 // File: app\theme\spacing.ts

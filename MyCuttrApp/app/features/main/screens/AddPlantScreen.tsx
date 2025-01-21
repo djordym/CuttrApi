@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { COLORS } from '../../../theme/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -472,16 +473,6 @@ const AddPlantScreen: React.FC = () => {
 };
 
 export default AddPlantScreen;
-
-/** Theming & Styles */
-const COLORS = {
-  primary: '#1EAE98',
-  secondary: '#5EE2C6',
-  accent: '#FF6F61',
-  textLight: '#fff',
-  textDark: '#333',
-  background: '#f8f8f8',
-};
 
 const styles = StyleSheet.create({
   container: {

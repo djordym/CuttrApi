@@ -23,15 +23,7 @@ import { useNavigation } from '@react-navigation/native';
 import { logout } from '../../auth/store/authSlice';
 import { store } from '../../../store';
 import { QueryClient } from 'react-query';
-
-const COLORS = {
-  primary: '#1EAE98',
-  secondary: '#5EE2C6',
-  background: '#F2F2F2',
-  textLight: '#FFFFFF',
-  textDark: '#333333',
-  accent: '#FF6F61',
-};
+import { COLORS } from '../../../theme/colors';
 
 const SettingsScreen: React.FC = () => {
   const { t, i18n } = useTranslation();

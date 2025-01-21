@@ -24,7 +24,7 @@ import {
   PetFriendly,
   Extras,
 } from '../../../types/enums';
-import COLORS from '../../../theme/colors';
+import { COLORS } from '../../../theme/colors';
 import { UserPreferencesRequest } from '../../../types/apiTypes';
 
 /** 
@@ -175,7 +175,7 @@ const SetUserPreferencesScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Full Screen Gradient */}
       <LinearGradient
-        colors={[LOCAL_COLORS.primary, LOCAL_COLORS.secondary]}
+        colors={[COLORS.primary, COLORS.secondary]}
         style={styles.gradientBackground}
       >
         {/* Header */}
@@ -287,7 +287,7 @@ const SetUserPreferencesScreen: React.FC = () => {
             {isUpdating && (
               <ActivityIndicator
                 size="small"
-                color={LOCAL_COLORS.primary}
+                color={COLORS.primary}
                 style={{ marginVertical: 10 }}
               />
             )}
@@ -314,11 +314,6 @@ const SetUserPreferencesScreen: React.FC = () => {
 };
 
 export default SetUserPreferencesScreen;
-
-const LOCAL_COLORS = {
-  primary: '#1EAE98',
-  secondary: '#5EE2C6',
-};
 
 const styles = StyleSheet.create({
   container: {
@@ -379,7 +374,7 @@ const styles = StyleSheet.create({
   },
   singleTag: {
     borderWidth: 1,
-    borderColor: LOCAL_COLORS.primary,
+    borderColor: COLORS.primary,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -387,11 +382,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   singleTagSelected: {
-    backgroundColor: LOCAL_COLORS.primary,
+    backgroundColor: COLORS.primary,
   },
   singleTagText: {
     fontSize: 12,
-    color: LOCAL_COLORS.primary,
+    color: COLORS.primary,
     fontWeight: '600',
   },
   singleTagTextSelected: {
@@ -404,7 +399,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     borderWidth: 1,
-    borderColor: LOCAL_COLORS.primary,
+    borderColor: COLORS.primary,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -413,12 +408,12 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 14,
-    color: LOCAL_COLORS.primary,
+    color: COLORS.primary,
     fontWeight: '600',
     textAlign: 'center',
   },
   saveButton: {
-    backgroundColor: LOCAL_COLORS.primary,
+    backgroundColor: COLORS.primary,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,

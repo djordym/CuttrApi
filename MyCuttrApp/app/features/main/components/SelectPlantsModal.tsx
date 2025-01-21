@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMyPlants } from '../hooks/usePlants'; // Adjust import path if necessary
 import { PlantResponse } from '../../../types/apiTypes';
 import { t } from 'i18next';
+import { COLORS } from '../../../theme/colors';
 
 interface SelectPlantsModalProps {
   visible: boolean;
@@ -30,19 +31,6 @@ interface SelectPlantsModalProps {
 }
 
 const { width } = Dimensions.get('window');
-
-/** Adapted color palette (same references as your other screens). */
-const COLORS = {
-  primary: '#1EAE98',
-  primaryLight: '#5EE2C6',
-  accent: '#FF6B6B',
-  accentLight: '#FF9F9F',
-  cardBg: '#FFFFFF',
-  background: '#f8f8f8',
-  textDark: '#333',
-  textLight: '#fff',
-  border: '#ddd',
-};
 
 export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
   visible,

@@ -22,19 +22,9 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useUserProfile } from '../hooks/useUser';
 import { useUserMatches } from '../hooks/useUserMatches';
 import { useMatchConversation } from '../hooks/useMatchConversation';
-
+import { COLORS } from '../../../theme/colors';
 // Types
 import { MatchResponse, MessageResponse } from '../../../types/apiTypes';
-
-const COLORS = {
-  primary: '#1EAE98',
-  accent: '#FF6F61',
-  textDark: '#2F4F4F',
-  textLight: '#fff',
-  background: '#F8F8F8',
-  bubbleLeft: '#fff',
-  bubbleRight: '#DCF8C6',
-};
 
 const ChatScreen: React.FC = () => {
   const { t } = useTranslation();

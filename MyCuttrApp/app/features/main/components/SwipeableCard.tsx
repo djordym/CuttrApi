@@ -17,19 +17,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PlantResponse } from '../../../types/apiTypes';
+import { COLORS } from '../../../theme/colors';
 
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 0.25 * width;
-
-const COLORS = {
-  primary: '#1EAE98',
-  accent: '#FF6F61',
-  background: '#F2F2F2',
-  textDark: '#2F4F4F',
-  textLight: '#FFFFFF',
-  cardBg: '#FFFFFF',
-  border: '#ddd',
-};
 
 /**
  * Methods the parent can call on this card
