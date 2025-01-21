@@ -19,11 +19,20 @@ import { useNavigation } from '@react-navigation/native';
 // Hooks
 import { useUserMatches } from '../hooks/useUserMatches';
 import { useUserProfile } from '../hooks/useUser';
-
+import { COLORS } from '../../../theme/colors';
 // Types
 import { MatchResponse, UserResponse } from '../../../types/apiTypes';
-import { COLORS } from '../../../theme/colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
+// Example branding colors
+// const COLORS = {
+//   primary: '#1EAE98',
+//   background: '#F8F8F8',
+//   textDark: '#2F4F4F',
+//   border: '#ddd',
+//   textLight: '#fff',
+//   accent: '#FF6F61',
+// };
 
 const { width } = Dimensions.get('window');
 
@@ -142,11 +151,11 @@ const ConnectionsScreen: React.FC = () => {
   return (
     <SafeAreaProvider style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient style={styles.header} colors={[COLORS.primary, COLORS.secondary]}>
         <Text style={styles.headerTitle}>
           {t('connections_title', 'Connections')}
         </Text>
-      </View>
+      </LinearGradient>
 
       {/* If no matches or empty grouping, show empty state */}
       {(!groupedConversations || groupedConversations.length === 0) && (

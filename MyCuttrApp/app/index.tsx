@@ -11,6 +11,7 @@ import { initI18n } from './i18n';
 import { log } from './utils/logger';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { COLORS } from './theme/colors';
 
 const queryClient = new QueryClient();
 
@@ -45,7 +46,7 @@ export default function App() {
             <GestureHandlerRootView>
                 <StatusBar
                   style="dark"
-                  backgroundColor='#1EAE98' // allow content to appear behind status bar
+                  backgroundColor={COLORS.primary} // allow content to appear behind status bar
                 />
                 <AppNavigator />
             </GestureHandlerRootView>

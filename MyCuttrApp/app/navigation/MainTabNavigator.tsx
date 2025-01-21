@@ -15,6 +15,7 @@ const icons: Record<string, number> = {
   Swipe: require('../../assets/images/swiping.png'),
   Profile: require('../../assets/images/profile.png'),
   Settings: require('../../assets/images/settings.png'),
+  Connections: require('../../assets/images/connections.png'),
 };
 
 const MainTabNavigator = () => {

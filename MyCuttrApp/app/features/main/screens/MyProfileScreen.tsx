@@ -30,6 +30,7 @@ import { EditProfileModal } from '../components/EditProfileModal';
 import { ChangeLocationModal } from '../components/ChangeLocationModal';
 import { log } from '../../../utils/logger';
 import { COLORS } from '../../../theme/colors';
+import { PlantOverlay } from '../components/PlantOverlay';
 
 const { width } = Dimensions.get('window');
 
@@ -186,7 +187,7 @@ const MyProfileScreen: React.FC = () => {
             />
           ) : (
             <View style={styles.plantPlaceholder}>
-              <Ionicons name="leaf" size={40} color={COLORS.primary} />
+              <Ionicons name="leaf" size={40} color={COLORS.accentGreen} />
             </View>
           )}
           <View style={styles.thumbTextWrapper}>
@@ -223,23 +224,11 @@ const MyProfileScreen: React.FC = () => {
               </View>
             )}
             <View style={styles.fullImageOverlay}>
-              <LinearGradient
-                colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 1)']}
-                style={styles.overlayContent}>
-                <Text style={styles.fullPlantName}>{item.speciesName}</Text>
-                {alltags.length > 0 && (
-                  <View style={styles.tagRow}>
-                    {alltags.map((tag) => (
-                      <View key={tag} style={styles.tag}>
-                        <Text style={styles.tagText}>{tag}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-                {item.description ? (
-                  <Text style={styles.fullDescription}>{item.description}</Text>
-                ) : null}
-              </LinearGradient>
+              <PlantOverlay
+                speciesName={item.speciesName}
+                description={item.description}
+                tags={alltags}
+              />
             </View>
           </View>
         </View>
@@ -367,7 +356,7 @@ const MyProfileScreen: React.FC = () => {
                   style={styles.locationButton}
                   accessibilityRole="button"
                   accessibilityLabel={t('profile_change_location_button')}>
-                  <Ionicons name="location-outline" size={18} color={COLORS.primary} />
+                  <Ionicons name="location-outline" size={18} color={COLORS.accentGreen} />
                   <Text style={styles.locationButtonText}>
                     {t('profile_change_location_button')}
                   </Text>
@@ -386,7 +375,7 @@ const MyProfileScreen: React.FC = () => {
                 style={styles.addPlantButton}
                 accessibilityRole="button"
                 accessibilityLabel={t('profile_add_plant_button')}>
-                <Ionicons name="add-circle" size={24} color={COLORS.primary} />
+                <Ionicons name="add-circle" size={24} color={COLORS.accentGreen} />
                 <Text style={styles.addPlantButtonText}>
                   {t('profile_add_plant_button')}
                 </Text>
@@ -553,8 +542,8 @@ const styles = StyleSheet.create({
   cameraIconWrapper: {
     position: 'absolute',
     bottom: 0,
-    right: 10,
-    backgroundColor: COLORS.primary,
+    right: 15,
+    backgroundColor: COLORS.accentGreen,
     borderRadius: 16,
     padding: 4,
   },
@@ -607,13 +596,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.accentGreen,
+    
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
     marginTop: 10,
   },
   locationButtonText: {
-    color: COLORS.primary,
+    color: COLORS.accentGreen,
     fontSize: 14,
     marginLeft: 5,
     fontWeight: '600',
@@ -640,7 +630,7 @@ const styles = StyleSheet.create({
   },
   addPlantButtonText: {
     fontSize: 14,
-    color: COLORS.primary,
+    color: COLORS.accentGreen,
     marginLeft: 5,
     fontWeight: '600',
   },
@@ -659,7 +649,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   viewToggleOptionActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
   },
   viewToggleText: {
     fontSize: 14,

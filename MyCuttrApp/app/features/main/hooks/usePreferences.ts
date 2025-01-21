@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { userPreferencesService } from '../../../api/userPreferencesService';
 import { UserPreferencesResponse, UserPreferencesRequest } from '../../../types/apiTypes';
-
+import { log } from '../../../utils/logger';
 export const useUserPreferences = () => {
   const queryClient = useQueryClient();
 
@@ -19,6 +19,7 @@ export const useUserPreferences = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['userPreferences']);
+        queryClient.invalidateQueries(['likablePlants']);
       }
     }
   );

@@ -25,6 +25,7 @@ import { useMatchConversation } from '../hooks/useMatchConversation';
 import { COLORS } from '../../../theme/colors';
 // Types
 import { MatchResponse, MessageResponse } from '../../../types/apiTypes';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ChatScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -192,12 +193,12 @@ const ChatScreen: React.FC = () => {
   return (
     <SafeAreaProvider style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient style={styles.header} colors={[COLORS.primary, COLORS.secondary]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('chat_title')}</Text>
-      </View>
+      </LinearGradient>
 
       {/* Tab row if multiple matches */}
       {renderTabs()}
@@ -237,7 +238,7 @@ const ChatScreen: React.FC = () => {
             <ActivityIndicator style={{ marginRight: 12 }} color={COLORS.primary} />
           ) : (
             <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
-              <Ionicons name="send" size={20} color="#fff" />
+              <Ionicons name="send" size={20} color={COLORS.background} />
             </TouchableOpacity>
           )}
         </View>
@@ -300,7 +301,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -319,7 +320,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
     paddingHorizontal: 15,
     paddingVertical: 12,
     borderBottomLeftRadius: 20,
@@ -349,14 +349,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tabButtonActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
   },
   tabButtonText: {
     fontSize: 14,
-    color: COLORS.primary,
+    color: COLORS.textDark,
   },
   tabButtonTextActive: {
-    color: '#fff',
+    color: COLORS.textLight,
     fontWeight: '600',
   },
 
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   sendButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
     borderRadius: 20,
     padding: 10,
   },

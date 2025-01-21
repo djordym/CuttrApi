@@ -18,6 +18,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { PlantResponse } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
+import { PlantOverlay } from './PlantOverlay';
 
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 0.25 * width;
@@ -190,7 +191,7 @@ export const SwipeableCard = forwardRef<SwipeableCardRef, SwipeableCardProps>(
 const styles = StyleSheet.create({
   cardContainer: {
     position: 'absolute',
-    width: width * 0.9,
+    maxWidth: width * 0.9,
     borderRadius: 8,
     overflow: 'hidden',
     marginVertical: 'auto',

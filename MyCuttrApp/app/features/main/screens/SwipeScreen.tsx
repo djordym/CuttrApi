@@ -28,19 +28,10 @@ import { SelectPlantsModal } from '../components/SelectPlantsModal';
 // --- Types ---
 import { PlantResponse, SwipeRequest } from '../../../types/apiTypes';
 import { log } from '../../../utils/logger';
-
+import { COLORS } from '../../../theme/colors';
 const { width } = Dimensions.get('window');
 
-const COLORS = {
-  primary: '#1EAE98',
-  primaryLight: '#5EE2C6',
-  accent: '#FF6B6B',
-  accentLight: '#FF9F9F',
-  background: '#f8f8f8',
-  textDark: '#333',
-  textLight: '#fff',
-  border: '#ddd',
-};
+
 
 interface SwipeScreenProps {}
 
@@ -302,7 +293,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
 
     return (
       <LinearGradient
-        colors={[COLORS.primary, COLORS.primaryLight]}
+        colors={[COLORS.primary, COLORS.secondary]}
         style={styles.headerGradient}
       >
         <View style={styles.headerTopRow}>
@@ -442,7 +433,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
             disabled={sendingSwipes} // optionally disable while swipes are sending
           >
             <LinearGradient
-              colors={[COLORS.accent, COLORS.accentLight]}
+              colors={[COLORS.accentRed, COLORS.accentLightRed]}
               style={styles.actionButton}
             >
               <MaterialIcons name="close" size={32} color={COLORS.textLight} />
@@ -457,7 +448,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
             disabled={sendingSwipes} // optionally disable while swipes are sending
           >
             <LinearGradient
-              colors={[COLORS.primary, COLORS.primaryLight]}
+              colors={[COLORS.primary, COLORS.secondary]}
               style={styles.actionButton}
             >
               <MaterialIcons
@@ -485,6 +476,7 @@ export default SwipeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    flexDirection: 'column',
     backgroundColor: COLORS.background,
   },
   loaderContainer: {
@@ -523,7 +515,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    marginBottom: 10,
+    marginBottom: 10
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -560,7 +552,7 @@ const styles = StyleSheet.create({
   },
   tagChip: {
     flexDirection: 'row',
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.accentRed,
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 16,
@@ -580,7 +572,6 @@ const styles = StyleSheet.create({
   deckContainer: {
     marginBottom: 10,
     flex: 1,
-    justifyContent: 'flex-start',
     alignItems: 'center',
     right: 0,
   },
