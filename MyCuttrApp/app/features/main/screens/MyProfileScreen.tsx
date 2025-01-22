@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,20 +14,18 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
-
+import { MaterialIcons } from '@expo/vector-icons';
+import { ImageBackground } from 'react-native';
+import { PlantCardWithInfo } from '../components/PlantCardWithInfo';
 import { useUserProfile } from '../hooks/useUser';
 import { useMyPlants } from '../hooks/usePlants';
 import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse } from '../../../types/apiTypes';
-import { userService } from '../../../api/userService';
-import { EditProfileModal } from '../components/EditProfileModal';
-import { ChangeLocationModal } from '../components/ChangeLocationModal';
 import { COLORS } from '../../../theme/colors';
+import { EditProfileModal } from '../components/EditProfileModal';
 import { PlantOverlay } from '../components/PlantOverlay';
 import { headerStyles } from '../styles/headerStyles';
 
@@ -37,42 +35,38 @@ const MyProfileScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
 
+  // Hooks
   const {
     data: userProfile,
     isLoading: loadingProfile,
     isError: errorProfile,
     refetch: refetchProfile,
   } = useUserProfile();
-
   const {
     data: myPlants,
     isLoading: loadingPlants,
     isError: errorPlants,
     refetch: refetchPlants,
   } = useMyPlants();
-
   const {
     searchRadius,
     isLoading: srLoading,
     isError: srError,
   } = useSearchRadius();
 
-  // Modal visibility
+  // Derived state
+  const [cityCountry, setCityCountry] = useState<string>('');
   const [editProfileVisible, setEditProfileVisible] = useState(false);
-  const [changeLocationVisible, setChangeLocationVisible] = useState(false);
 
-  // Toggle: Thumbnails or Full-size
+  // Toggle: Thumbnails or Full-size for plants
   const [showFullSize, setShowFullSize] = useState(false);
 
-  // Store city/country derived from lat/long
-  const [cityCountry, setCityCountry] = useState<string>('');
-
-  // Does user have lat/long set?
+  // Check if user has location
   const userHasLocation =
     userProfile?.locationLatitude !== undefined &&
     userProfile?.locationLongitude !== undefined;
 
-  // Reverse-geocode to get city/country
+  // Reverse-geocode city/country
   useEffect(() => {
     (async () => {
       if (userHasLocation) {
@@ -82,7 +76,6 @@ const MyProfileScreen: React.FC = () => {
             longitude: userProfile!.locationLongitude!,
           });
           if (geo) {
-            // Construct city/country string. Adjust as you like:
             const city = geo.city || geo.subregion || '';
             const country = geo.country || '';
             setCityCountry(
@@ -99,107 +92,12 @@ const MyProfileScreen: React.FC = () => {
     })();
   }, [userHasLocation, userProfile]);
 
-  // ----- IMAGE PICKER & UPDATE PFP -----
-  const handleChangeProfilePicture = useCallback(() => {
-    Alert.alert(
-      t('profile_change_picture_title'),
-      t('profile_change_picture_msg'),
-      [
-        {
-          text: t('profile_picture_select_library'),
-          onPress: pickImageFromLibrary,
-        },
-        { text: t('profile_picture_take_photo'), onPress: takePictureWithCamera },
-        { text: t('profile_picture_cancel'), style: 'cancel' },
-      ]
-    );
-  }, [t]);
-
-  const pickImageFromLibrary = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-      if (!result.canceled && result.assets[0].uri) {
-        const resized = await resizeImage(result.assets[0].uri);
-        await uploadProfilePicture(resized);
-      }
-    } catch (err) {
-      console.error('pickImageFromLibrary error:', err);
-      Alert.alert('Error', 'Could not open image library.');
-    }
-  };
-
-  const takePictureWithCamera = async () => {
-    try {
-      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!cameraPermission.granted) {
-        Alert.alert('Error', 'Camera permission denied.');
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-      if (!result.canceled && result.assets[0].uri) {
-        const resized = await resizeImage(result.assets[0].uri);
-        await uploadProfilePicture(resized);
-      }
-    } catch (err) {
-      console.error('takePictureWithCamera error:', err);
-      Alert.alert('Error', 'Could not open camera.');
-    }
-  };
-
-  const resizeImage = async (uri: string) => {
-    return await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 800 } }],
-      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-    );
-  };
-
-  const uploadProfilePicture = async (img: ImageManipulator.ImageResult) => {
-    try {
-      const photo = {
-        uri: img.uri,
-        name: 'profile.jpg',
-        type: 'image/jpeg',
-      } as any;
-      await userService.updateProfilePicture({ image: photo });
-      refetchProfile();
-    } catch (err) {
-      console.error('Error uploading profile picture:', err);
-      Alert.alert('Error', 'Profile picture update failed.');
-    }
-  };
-  // ----- END IMAGE PICKER & UPDATE PFP -----
-
-  // Modal callbacks
-  const handleEditProfile = useCallback(() => {
-    setEditProfileVisible(true);
-  }, []);
-  const handleProfileUpdated = useCallback(() => {
-    refetchProfile();
-  }, [refetchProfile]);
-
-  const handleChangeLocation = useCallback(() => {
-    setChangeLocationVisible(true);
-  }, []);
-  const handleLocationUpdated = useCallback(() => {
-    refetchProfile();
-  }, [refetchProfile]);
-
   // Navigation
-  const handleAddPlant = useCallback(() => {
+  const handleAddPlant = () => {
     navigation.navigate('AddPlant' as never);
-  }, [navigation]);
+  };
 
-  // Rendering plants
+  // Plants rendering
   const renderPlantItem = (item: PlantResponse) => {
     if (!showFullSize) {
       return (
@@ -216,64 +114,34 @@ const MyProfileScreen: React.FC = () => {
             </View>
           )}
           <View style={styles.thumbTextWrapper}>
-            <Text style={styles.thumbPlantName} numberOfLines={1}>
+            <Text style={styles.thumbPlantName}>
               {item.speciesName}
             </Text>
           </View>
         </View>
       );
     } else {
-      const alltags = [
-        item.plantStage,
-        item.plantCategory,
-        item.wateringNeed,
-        item.lightRequirement,
-        item.size,
-        item.indoorOutdoor,
-        item.propagationEase,
-        item.petFriendly,
-        ...(item.extras ?? []),
-      ].filter(Boolean);
-
       return (
-        <View key={item.plantId} style={styles.plantCardFull}>
-          <View style={styles.fullImageContainer}>
-            {item.imageUrl ? (
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={styles.fullImage}
-                resizeMode="contain"
-              />
-            ) : (
-              <View style={styles.plantPlaceholder}>
-                <Ionicons name="leaf" size={60} color={COLORS.primary} />
-              </View>
-            )}
-            <View style={styles.fullImageOverlay}>
-              <PlantOverlay
-                speciesName={item.speciesName}
-                description={item.description}
-                tags={alltags}
-              />
-            </View>
-          </View>
-        </View>
+        <PlantCardWithInfo
+          key={item.plantId}
+          plant={item}
+        />
       );
     }
   };
 
-  // Main Content
-  let content: JSX.Element;
-
+  // Content states
   if (loadingProfile || loadingPlants || srLoading) {
-    content = (
+    return (
       <SafeAreaView style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>{t('profile_loading_message')}</Text>
       </SafeAreaView>
     );
-  } else if (errorProfile || errorPlants || srError) {
-    content = (
+  }
+
+  if (errorProfile || errorPlants || srError) {
+    return (
       <SafeAreaView style={styles.centerContainer}>
         <Text style={styles.errorText}>{t('profile_error_message')}</Text>
         <TouchableOpacity
@@ -289,196 +157,181 @@ const MyProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </SafeAreaView>
     );
-  } else if (!userProfile) {
-    content = (
+  }
+
+  if (!userProfile) {
+    return (
       <SafeAreaView style={styles.centerContainer}>
         <Text style={styles.errorText}>
           {t('profile_no_user_profile_error')}
         </Text>
       </SafeAreaView>
     );
-  } else {
-    content = (
-      <SafeAreaProvider style={styles.container}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
-          
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.secondary]}
-            style={headerStyles.headerGradient}
-          >
-            <Text style={headerStyles.headerTitle}>
-              {t('profile_title')}
-            </Text>
-          </LinearGradient>
-
-          {/* ---- Profile Card Section ---- */}
-          <View style={styles.profileCard}>
-            {/* Edit Icon in top-right corner */}
-            <TouchableOpacity
-              onPress={handleEditProfile}
-              style={styles.profileEditButton}
-              accessibilityLabel={t('profile_edit_button')}
-            >
-              <MaterialIcons name="edit" size={20} color={COLORS.textDark} />
-            </TouchableOpacity>
-
-            {/* Profile Picture */}
-            <TouchableOpacity
-              onPress={handleChangeProfilePicture}
-              activeOpacity={0.8}
-              style={styles.profilePictureWrapper}
-            >
-              {userProfile.profilePictureUrl ? (
-                <Image
-                  source={{ uri: userProfile.profilePictureUrl }}
-                  style={styles.profilePicture}
-                />
-              ) : (
-                <View style={styles.profilePlaceholder}>
-                  <Ionicons name="person-circle-outline" size={90} color="#ccc" />
-                </View>
-              )}
-              <View style={styles.cameraIconWrapper}>
-                <Ionicons name="camera" size={18} color={COLORS.textLight} />
-              </View>
-            </TouchableOpacity>
-
-            {/* User Name */}
-            <Text style={styles.profileNameText}>
-              {userProfile.name}
-            </Text>
-
-            {/* Location (City, Country) and a button to update location */}
-            <View style={styles.locationRow}>
-              {cityCountry ? (
-                <Text style={styles.profileLocationText}>
-                  {cityCountry}
-                </Text>
-              ) : (
-                <Text style={styles.profileLocationText}>
-                  {t('profile_no_location')}
-                </Text>
-              )}
-              <TouchableOpacity
-                onPress={handleChangeLocation}
-                style={styles.locationButton}
-              >
-                <Ionicons name="location-outline" size={18} color={COLORS.accentGreen} />
-                <Text style={styles.locationButtonText}>
-                  {t('profile_change_location_button')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Bio */}
-            {userProfile.bio ? (
-              <Text style={styles.bioText} numberOfLines={6}>
-                {userProfile.bio}
-              </Text>
-            ) : (
-              <Text style={styles.bioPlaceholder} numberOfLines={3}>
-                {t('profile_no_bio_placeholder')}
-              </Text>
-            )}
-          </View>
-
-          {/* ---- My Plants Section ---- */}
-          <View style={styles.plantsSectionWrapper}>
-            <View style={styles.plantsSectionHeader}>
-              <Text style={styles.plantsSectionTitle}>
-                {userProfile.name}
-                {t('profile_my_plants_section')}
-              </Text>
-              <TouchableOpacity
-                onPress={handleAddPlant}
-                style={styles.addPlantButton}
-                accessibilityRole="button"
-                accessibilityLabel={t('profile_add_plant_button')}
-              >
-                <Ionicons name="add-circle" size={24} color={COLORS.accentGreen} />
-                <Text style={styles.addPlantButtonText}>
-                  {t('profile_add_plant_button')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Toggle Thumbnails / Full */}
-            <View style={styles.viewToggleContainer}>
-              <TouchableOpacity
-                onPress={() => setShowFullSize(false)}
-                style={[
-                  styles.viewToggleOption,
-                  !showFullSize && styles.viewToggleOptionActive,
-                ]}
-                activeOpacity={0.9}
-              >
-                <Text
-                  style={[
-                    styles.viewToggleText,
-                    !showFullSize && styles.viewToggleTextActive,
-                  ]}
-                >
-                  {t('Thumbnails')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowFullSize(true)}
-                style={[
-                  styles.viewToggleOption,
-                  showFullSize && styles.viewToggleOptionActive,
-                ]}
-                activeOpacity={0.9}
-              >
-                <Text
-                  style={[
-                    styles.viewToggleText,
-                    showFullSize && styles.viewToggleTextActive,
-                  ]}
-                >
-                  {t('Full Size')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Plants List */}
-            {myPlants && myPlants.length > 0 ? (
-              <View
-                style={[
-                  showFullSize ? styles.fullViewContainer : styles.thumbViewContainer,
-                ]}
-              >
-                {myPlants.map((plant) => renderPlantItem(plant))}
-              </View>
-            ) : (
-              <View style={styles.noPlantsContainer}>
-                <Text style={styles.noPlantsText}>
-                  {t('profile_no_plants_message')}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* ---- Modals ---- */}
-          <EditProfileModal
-            visible={editProfileVisible}
-            initialName={userProfile.name}
-            initialBio={userProfile.bio || ''}
-            onClose={() => setEditProfileVisible(false)}
-            onUpdated={handleProfileUpdated}
-          />
-          <ChangeLocationModal
-            visible={changeLocationVisible}
-            initialLatitude={userProfile.locationLatitude}
-            initialLongitude={userProfile.locationLongitude}
-            onClose={() => setChangeLocationVisible(false)}
-            onUpdated={handleLocationUpdated}
-          />
-        </ScrollView>
-      </SafeAreaProvider>
-    );
   }
 
-  return content;
+  return (
+    <SafeAreaProvider style={styles.container}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* Header */}
+        <LinearGradient
+          colors={[COLORS.primary, COLORS.secondary]}
+          style={headerStyles.headerGradient}
+        >
+          <Text style={headerStyles.headerTitle}>{t('profile_title')}</Text>
+        </LinearGradient>
+
+        {/* --- Profile Card --- */}
+        <View style={styles.profileCardContainer}>
+          <LinearGradient
+            colors={[COLORS.cardBg1, COLORS.cardBg2]}
+            style={styles.profileCardInner}
+          >
+            <View style={styles.profileTopContainer}>
+              <ImageBackground
+              source={require('../../../../assets/images/profileBackground.png')}
+              style={styles.profileBackgroundImage}
+              />
+              <View style={styles.profilePictureContainer}>
+                {userProfile.profilePictureUrl ? (
+                  <Image
+                    source={{ uri: userProfile.profilePictureUrl }}
+                    style={styles.profilePicture}
+                  />
+                ) : (
+                  <View style={styles.profilePlaceholder}>
+                    <Ionicons name="person-circle-outline" size={90} color="#ccc" />
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={() => setEditProfileVisible(true)}
+                style={styles.profileEditButton}
+                accessibilityLabel={t('profile_edit_button')}
+              >
+                <MaterialIcons name="edit" size={20} color={COLORS.textLight} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Middle portion (Name, Location, Bio) */}
+            <View style={styles.profileInfoContainer}>
+              <Text style={styles.profileNameText}>{userProfile.name}</Text>
+              <View style={styles.profileLocationRow}>
+                <Ionicons
+                  name="location-sharp"
+                  size={16}
+                  color={COLORS.accentLightRed}
+                  style={styles.locationIcon}
+                />
+                <Text style={styles.profileLocationText}>
+                  {cityCountry || t('profile_no_location')}
+                </Text>
+              </View>
+            </View>
+            
+              <Text
+                style={[
+                  styles.bioText,
+                  !userProfile.bio && styles.bioPlaceholder,
+                ]}
+              >
+                {userProfile.bio
+                  ? userProfile.bio
+                  : t('profile_no_bio_placeholder')}
+              </Text>
+          </LinearGradient>
+        </View>
+
+        {/* ---- My Plants Section ---- */}
+        <View style={styles.plantsSectionWrapper}>
+          <View style={styles.plantsSectionHeader}>
+            <Text style={styles.plantsSectionTitle}>
+              {userProfile.name}
+              {t('profile_my_plants_section')}
+            </Text>
+            <TouchableOpacity
+              onPress={handleAddPlant}
+              style={styles.addPlantButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('profile_add_plant_button')}
+            >
+              <Ionicons name="add-circle" size={24} color={COLORS.accentGreen} />
+              <Text style={styles.addPlantButtonText}>
+                {t('profile_add_plant_button')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Toggle Thumbnails / Full */}
+          <View style={styles.viewToggleContainer}>
+            <TouchableOpacity
+              onPress={() => setShowFullSize(false)}
+              style={[
+                styles.viewToggleOption,
+                !showFullSize && styles.viewToggleOptionActive,
+              ]}
+              activeOpacity={0.9}
+            >
+              <Text
+                style={[
+                  styles.viewToggleText,
+                  !showFullSize && styles.viewToggleTextActive,
+                ]}
+              >
+                {t('Thumbnails')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowFullSize(true)}
+              style={[
+                styles.viewToggleOption,
+                showFullSize && styles.viewToggleOptionActive,
+              ]}
+              activeOpacity={0.9}
+            >
+              <Text
+                style={[
+                  styles.viewToggleText,
+                  showFullSize && styles.viewToggleTextActive,
+                ]}
+              >
+                {t('Full Size')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Plants List */}
+          {myPlants && myPlants.length > 0 ? (
+            <View
+              style={[
+                showFullSize ? styles.fullViewContainer : styles.thumbViewContainer,
+              ]}
+            >
+              {myPlants.map((plant) => renderPlantItem(plant))}
+            </View>
+          ) : (
+            <View style={styles.noPlantsContainer}>
+              <Text style={styles.noPlantsText}>
+                {t('profile_no_plants_message')}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* --- EditProfileModal (consolidated) --- */}
+        <EditProfileModal
+          visible={editProfileVisible}
+          userProfile={userProfile}
+          onClose={() => setEditProfileVisible(false)}
+          onUpdated={() => {
+            refetchProfile();
+          }}
+        />
+      </ScrollView>
+    </SafeAreaProvider>
+  );
 };
 
 export default MyProfileScreen;
@@ -516,14 +369,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  /* ---- Profile Card ---- */
-  profileCard: {
-    marginTop: 0, // so it overlaps the gradient a bit if you like
+
+  /* --- Profile Card --- */
+  profileCardContainer: {
     marginHorizontal: 16,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    padding: 20,
-    position: 'relative',
+    marginTop: 20,
+    borderRadius: 18,
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -532,92 +384,107 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
       },
       android: {
-        elevation: 3,
+        elevation: 4,
       },
     }),
   },
-  profileEditButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 2,
-    padding: 6,
+  profileCardInner: {
+    borderRadius: 18,
   },
-  profilePictureWrapper: {
-    alignSelf: 'center',
+  profileTopContainer: {
+    backgroundColor: COLORS.primary,
+    height: 120,
     position: 'relative',
-    marginBottom: 12,
+  },
+  profileBackgroundImage: {
+    height: '100%',
+    resizeMode: 'cover',
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    left: -200,
+  },
+  profilePictureContainer: {
+    position: 'absolute',
+    bottom: -75,
+    left: 25,
   },
   profilePicture: {
-    width: (width - 100) / 2,
-    height: (width - 100) / 2,
-    borderRadius: (width - 100) / 4,
-    backgroundColor: '#eee',
+    width: 170,
+    height: 170,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: '#fff',
   },
   profilePlaceholder: {
-    width: (width - 100) / 2,
-    height: (width - 100) / 2,
-    borderRadius: (width - 100) / 4,
+    width: 150,
+    height: 150,
+    borderRadius: 40,
     backgroundColor: '#eee',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
   },
-  cameraIconWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    right: 15,
-    backgroundColor: COLORS.accentGreen,
-    borderRadius: 16,
-    padding: 4,
+  profileInfoContainer: {
+    paddingHorizontal: 20,
+    right: -190,
   },
   profileNameText: {
     fontSize: 20,
     fontWeight: '700',
     color: COLORS.textDark,
-    textAlign: 'center',
+    marginTop: 8,
   },
-  locationRow: {
+  profileLocationRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 10,
-    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  locationIcon: {
+    marginRight: 4,
+    top: 1,
   },
   profileLocationText: {
     fontSize: 14,
     color: COLORS.textDark,
-    marginRight: 12,
-  },
-  locationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.accentGreen,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  locationButtonText: {
-    color: COLORS.accentGreen,
-    fontSize: 14,
-    marginLeft: 5,
-    fontWeight: '600',
+    marginTop: 4,
   },
   bioText: {
     fontSize: 14,
     color: COLORS.textDark,
-    textAlign: 'center',
     lineHeight: 20,
-    marginTop: 8,
+    margin: 25,
+    marginBottom: 25,
   },
   bioPlaceholder: {
-    fontSize: 14,
     color: '#999',
     fontStyle: 'italic',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginTop: 8,
+    marginBottom: 20,
   },
+  profileEditButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 35,
+    height: 35,
+    borderRadius: 20,
+    backgroundColor: COLORS.accentGreen,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        shadowOffset: { width: 0, height: 3 },
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+
   /* ---- Plants Section ---- */
   plantsSectionWrapper: {
     paddingHorizontal: 10,
@@ -677,7 +544,7 @@ const styles = StyleSheet.create({
   },
   plantCardThumbnail: {
     width: (width - 80) / 3,
-    backgroundColor: COLORS.cardBg,
+    backgroundColor: COLORS.cardBg1,
     borderRadius: 8,
     margin: 8,
     overflow: 'hidden',
@@ -711,38 +578,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.textDark,
+    textAlign: 'center',
   },
   fullViewContainer: {
     width: '100%',
-  },
-  plantCardFull: {
-    marginBottom: 15,
-    width: '100%',
-    borderRadius: 8,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.12,
-        shadowRadius: 5,
-        shadowOffset: { width: 0, height: 3 },
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  fullImageContainer: {
-    width: '100%',
-    position: 'relative',
-  },
-  fullImage: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-  },
-  fullImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
   },
   noPlantsContainer: {
     justifyContent: 'center',

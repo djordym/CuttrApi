@@ -8,25 +8,20 @@ import {
   Image,
   Alert,
   TextInput,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
-import { COLORS } from '../../../theme/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-
+import { useNavigation } from '@react-navigation/native';
+import { useQueryClient } from 'react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
-import { plantService } from '../../../api/plantService';
-import {
-  PlantCreateRequest,
-  PlantRequest,
-} from '../../../types/apiTypes';
-import { useNavigation } from '@react-navigation/native';
-
-import { useQueryClient } from 'react-query';
+import TagGroup from '../components/TagGroup';
+import ConfirmCancelButtons from '../components/ConfirmCancelButtons';
+import { COLORS } from '../../../theme/colors';
+import { headerStyles } from '../styles/headerStyles';
 
 import {
   PlantCategory,
@@ -39,100 +34,34 @@ import {
   PetFriendly,
   Extras,
 } from '../../../types/enums';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { headerStyles } from '../styles/headerStyles';
+import {
+  PlantCreateRequest,
+  PlantRequest,
+} from '../../../types/apiTypes';
+import { plantService } from '../../../api/plantService';
 
-/**
- * Reusable component for single-select tags (with optional deselection).
- */
-const SingleSelectTagGroup = <T extends string | number>({
-  values,
-  selectedValue,
-  onSelect,
-  isRequired,
-}: {
-  values: T[];
-  selectedValue: T | null;
-  onSelect: (val: T | null) => void;
-  /**
-   * If `isRequired` is true, we won't allow unselecting the already-selected tag.
-   * If `isRequired` is false, tapping the same tag again unselects it (set to null).
-   */
-  isRequired?: boolean;
-}) => {
-  return (
-    <View style={styles.tagGroupContainer}>
-      {values.map((val) => {
-        const isSelected = val === selectedValue;
-        return (
-          <TouchableOpacity
-            key={String(val)}
-            style={[
-              styles.singleTag,
-              isSelected && styles.singleTagSelected,
-            ]}
-            onPress={() => {
-              if (isRequired) {
-                // If required, once selected, we can't deselect to null.
-                onSelect(val);
-              } else {
-                // If optional, allow tapping the same chip to unselect.
-                onSelect(isSelected ? null : val);
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.singleTagText,
-                isSelected && styles.singleTagTextSelected,
-              ]}
-            >
-              {val}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-};
-
-/**
- * AddPlantScreen
- * - speciesName (required)
- * - stage (required)
- * - image (required)
- * - All other fields optional, pass `null` if not selected.
- */
 const AddPlantScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  // Required fields
+  const queryClient = useQueryClient();
+
   const [speciesName, setSpeciesName] = useState('');
   const [stage, setStage] = useState<PlantStage | null>(null);
   const [image, setImage] = useState<any>(null);
-  const queryClient = useQueryClient();
 
-  // Optional fields
   const [category, setCategory] = useState<PlantCategory | null>(null);
   const [watering, setWatering] = useState<WateringNeed | null>(null);
   const [light, setLight] = useState<LightRequirement | null>(null);
   const [size, setSize] = useState<Size | null>(null);
   const [indoorOutdoor, setIndoorOutdoor] = useState<IndoorOutdoor | null>(null);
-  const [propagationEase, setPropagationEase] = useState<PropagationEase | null>(
-    null
-  );
+  const [propagationEase, setPropagationEase] = useState<PropagationEase | null>(null);
   const [petFriendly, setPetFriendly] = useState<PetFriendly | null>(null);
   const [selectedExtras, setSelectedExtras] = useState<Extras[]>([]);
   const [description, setDescription] = useState('');
 
-  // UI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * handleSelectImageOption
-   * Prompts the user for how to select an image (camera vs. library).
-   */
   const handleSelectImageOption = async () => {
     Alert.alert(
       t('add_plant_select_image_title'),
@@ -154,10 +83,6 @@ const AddPlantScreen: React.FC = () => {
     );
   };
 
-  /**
-   * pickImageFromLibrary
-   * Opens the photo library picker.
-   */
   const pickImageFromLibrary = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -176,10 +101,6 @@ const AddPlantScreen: React.FC = () => {
     }
   };
 
-  /**
-   * takePictureWithCamera
-   * Opens the camera to take a new picture.
-   */
   const takePictureWithCamera = async () => {
     try {
       const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
@@ -202,10 +123,6 @@ const AddPlantScreen: React.FC = () => {
     }
   };
 
-  /**
-   * resizeImage
-   * Resizes to width=800, compresses to ~70% quality, and saves as JPEG.
-   */
   const resizeImage = async (uri: string) => {
     return await ImageManipulator.manipulateAsync(
       uri,
@@ -214,10 +131,6 @@ const AddPlantScreen: React.FC = () => {
     );
   };
 
-  /**
-   * handleExtraToggle
-   * Multi-select toggle for Extras.
-   */
   const handleExtraToggle = (extra: Extras) => {
     setSelectedExtras((prev) =>
       prev.includes(extra)
@@ -227,15 +140,12 @@ const AddPlantScreen: React.FC = () => {
   };
 
   const isExtraSelected = (extra: Extras) => selectedExtras.includes(extra);
+
   const handleCancel = () => {
     navigation.goBack();
-  }
-  /**
-   * handleSave
-   * Validates required fields, constructs request, calls service.
-   */
+  };
+
   const handleSave = async () => {
-    // Required: speciesName, plantStage, image
     if (!speciesName.trim()) {
       Alert.alert('Validation Error', 'Species name is required.');
       return;
@@ -254,11 +164,8 @@ const AddPlantScreen: React.FC = () => {
 
     try {
       const plantRequest: PlantRequest = {
-        // required
         speciesName: speciesName.trim(),
         plantStage: stage,
-
-        // optional (null if empty)
         description: description.trim() ? description : null,
         plantCategory: category,
         wateringNeed: watering,
@@ -267,10 +174,9 @@ const AddPlantScreen: React.FC = () => {
         indoorOutdoor: indoorOutdoor,
         propagationEase: propagationEase,
         petFriendly: petFriendly,
-        extras: selectedExtras, // if no extras selected, this will just be an empty array
+        extras: selectedExtras,
       };
 
-      // Construct the CreateRequest with an IFormFile (Image is required)
       const photo = {
         uri: image.uri,
         name: 'plant.jpg',
@@ -295,24 +201,30 @@ const AddPlantScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Full Screen Gradient */}
       <LinearGradient
         colors={[COLORS.primary, COLORS.secondary]}
         style={styles.gradientBackground}
       >
-          <View style={headerStyles.headerRowSticky}>
+        <View style={headerStyles.headerAboveScroll}>
+          <View style={headerStyles.headerColumn1}>
+            <Ionicons
+              name="chevron-back"
+              size={30}
+              color={COLORS.textLight}
+              style={headerStyles.headerBackButton}
+              onPress={() => navigation.goBack()}
+            />
             <Text style={headerStyles.headerTitle}>{t('add_plant_title')}</Text>
-            <MaterialIcons name="info" size={24} color="#fff" />
           </View>
+          <MaterialIcons name="info" size={24} color="#fff" />
+        </View>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-
           <View style={styles.formContainer}>
             {error && <Text style={styles.errorText}>{error}</Text>}
 
-            {/* SPECIES NAME (required) */}
             <Text style={styles.label}>{t('add_plant_species_name_label')}:</Text>
             <TextInput
               style={styles.input}
@@ -321,7 +233,6 @@ const AddPlantScreen: React.FC = () => {
               placeholder="e.g. Monstera Deliciosa"
             />
 
-            {/* DESCRIPTION (optional) */}
             <Text style={styles.label}>{t('add_plant_description_label')}:</Text>
             <TextInput
               style={[styles.input, { height: 80 }]}
@@ -330,103 +241,86 @@ const AddPlantScreen: React.FC = () => {
               multiline
             />
 
-            {/* PLANT STAGE (required) */}
             <Text style={styles.label}>{t('add_plant_stage_label')}:</Text>
-            <SingleSelectTagGroup<PlantStage>
-              values={Object.values(PlantStage)} // only actual stage values
+            <TagGroup
+              mode="single"
+              values={Object.values(PlantStage)}
               selectedValue={stage}
-              onSelect={(val) => setStage(val)}
-              isRequired={true} // once selected, can't unselect (it's required)
+              onSelectSingle={(val) => setStage(val)}
+              isRequired={true}
             />
 
-            {/* CATEGORY (optional) */}
             <Text style={styles.label}>{t('add_plant_category_label')}:</Text>
-            <SingleSelectTagGroup<PlantCategory>
+            <TagGroup
+              mode="single"
               values={Object.values(PlantCategory)}
               selectedValue={category}
-              onSelect={(val) => {
-                // if user taps the same chip again => deselect
-                setCategory(val === category ? null : val);
-              }}
-              isRequired={false} // optional => user can unselect
+              onSelectSingle={(val) => setCategory(val === category ? null : val)}
+              isRequired={false}
             />
 
-            {/* WATERING NEED (optional) */}
             <Text style={styles.label}>{t('add_plant_watering_label')}:</Text>
-            <SingleSelectTagGroup<WateringNeed>
+            <TagGroup
+              mode="single"
               values={Object.values(WateringNeed)}
               selectedValue={watering}
-              onSelect={(val) => setWatering(val === watering ? null : val)}
+              onSelectSingle={(val) => setWatering(val === watering ? null : val)}
+              isRequired={false}
             />
 
-            {/* LIGHT REQUIREMENT (optional) */}
             <Text style={styles.label}>{t('add_plant_light_label')}:</Text>
-            <SingleSelectTagGroup<LightRequirement>
+            <TagGroup
+              mode="single"
               values={Object.values(LightRequirement)}
               selectedValue={light}
-              onSelect={(val) => setLight(val === light ? null : val)}
+              onSelectSingle={(val) => setLight(val === light ? null : val)}
+              isRequired={false}
             />
 
-            {/* SIZE (optional) */}
             <Text style={styles.label}>{t('add_plant_size_question')}:</Text>
-            <SingleSelectTagGroup<Size>
+            <TagGroup
+              mode="single"
               values={Object.values(Size)}
               selectedValue={size}
-              onSelect={(val) => setSize(val === size ? null : val)}
+              onSelectSingle={(val) => setSize(val === size ? null : val)}
+              isRequired={false}
             />
 
-            {/* INDOOR/OUTDOOR (optional) */}
             <Text style={styles.label}>{t('add_plant_indoor_outdoor_question')}:</Text>
-            <SingleSelectTagGroup<IndoorOutdoor>
+            <TagGroup
+              mode="single"
               values={Object.values(IndoorOutdoor)}
               selectedValue={indoorOutdoor}
-              onSelect={(val) => setIndoorOutdoor(val === indoorOutdoor ? null : val)}
+              onSelectSingle={(val) => setIndoorOutdoor(val === indoorOutdoor ? null : val)}
+              isRequired={false}
             />
 
-            {/* PROPAGATION EASE (optional) */}
             <Text style={styles.label}>{t('add_plant_propagation_ease_question')}:</Text>
-            <SingleSelectTagGroup<PropagationEase>
+            <TagGroup
+              mode="single"
               values={Object.values(PropagationEase)}
               selectedValue={propagationEase}
-              onSelect={(val) => setPropagationEase(val === propagationEase ? null : val)}
+              onSelectSingle={(val) => setPropagationEase(val === propagationEase ? null : val)}
+              isRequired={false}
             />
 
-            {/* PET FRIENDLY (optional) */}
             <Text style={styles.label}>{t('add_plant_pet_friendly_question')}:</Text>
-            <SingleSelectTagGroup<PetFriendly>
+            <TagGroup
+              mode="single"
               values={Object.values(PetFriendly)}
               selectedValue={petFriendly}
-              onSelect={(val) => setPetFriendly(val === petFriendly ? null : val)}
+              onSelectSingle={(val) => setPetFriendly(val === petFriendly ? null : val)}
+              isRequired={false}
             />
 
-            {/* EXTRAS (optional - MULTI-SELECT) */}
             <Text style={styles.label}>{t('add_plant_extras_question')}:</Text>
-            <View style={styles.extrasContainer}>
-              {Object.values(Extras).map((extra) => {
-                const selected = isExtraSelected(extra);
-                return (
-                  <TouchableOpacity
-                    key={extra}
-                    style={[
-                      styles.extraTag,
-                      selected && styles.extraTagSelected,
-                    ]}
-                    onPress={() => handleExtraToggle(extra)}
-                  >
-                    <Text
-                      style={[
-                        styles.extraTagText,
-                        selected && styles.extraTagTextSelected,
-                      ]}
-                    >
-                      {extra}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TagGroup
+              mode="multiple"
+              values={Object.values(Extras)}
+              selectedValues={selectedExtras}
+              onToggleMulti={(val) => handleExtraToggle(val)}
+            />
 
-            {/* IMAGE (required) */}
             <Text style={styles.label}>{t('add_plant_select_image_title')}:</Text>
             <TouchableOpacity style={styles.imageButton} onPress={handleSelectImageOption}>
               <Ionicons name="image" size={24} color="#fff" />
@@ -442,30 +336,13 @@ const AddPlantScreen: React.FC = () => {
               </Text>
             )}
 
-            {loading && (
-              <ActivityIndicator
-                size="small"
-                color={COLORS.primary}
-                style={{ marginVertical: 10 }}
-              />
-            )}
-
-            {/* ACTIONS */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={handleCancel}
-              >
-                <Text style={styles.cancelButtonText}>
-                  {t('add_plant_cancel_button')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                <Text style={styles.saveButtonText}>
-                  {t('add_plant_save_button')}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <ConfirmCancelButtons
+              onConfirm={handleSave}
+              onCancel={handleCancel}
+              confirmButtonText={t('add_plant_save_button')}
+              cancelButtonText={t('add_plant_cancel_button')}
+              loading={loading}
+            />
           </View>
         </ScrollView>
       </LinearGradient>
@@ -504,7 +381,7 @@ const styles = StyleSheet.create({
     }),
   },
   errorText: {
-    color: COLORS.accent,
+    color: COLORS.textDark,
     marginBottom: 10,
     fontWeight: '600',
   },
@@ -523,62 +400,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
   },
-
-  // SINGLE SELECT TAG GROUP
-  tagGroupContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 6,
-  },
-  singleTag: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  singleTagSelected: {
-    backgroundColor: COLORS.primary,
-  },
-  singleTagText: {
-    fontSize: 12,
-    color: COLORS.primary,
-  },
-  singleTagTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-
-  // EXTRAS (MULTI-SELECT)
-  extrasContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
-  },
-  extraTag: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  extraTagSelected: {
-    backgroundColor: COLORS.primary,
-  },
-  extraTagText: {
-    fontSize: 12,
-    color: COLORS.primary,
-  },
-  extraTagTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-
-  // IMAGE
   imageButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -605,37 +426,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     marginTop: 6,
-    marginBottom: 10,
-  },
-
-  // ACTIONS
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 16,
-  },
-  cancelButton: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginRight: 10,
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  saveButtonText: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: '600',
   },
 });

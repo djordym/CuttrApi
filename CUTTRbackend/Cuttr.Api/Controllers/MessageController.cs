@@ -1,5 +1,6 @@
 ﻿using Cuttr.Api.Common;
 using Cuttr.Business.Contracts.Inputs;
+using Cuttr.Business.Contracts.Outputs;
 using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
@@ -22,7 +23,7 @@ namespace Cuttr.Api.Controllers
         }
 
         // POST: api/messages/me
-        [HttpPost("/me")]
+        [HttpPost("me")]
         public async Task<IActionResult> SendMessage([FromBody] MessageRequest request)
         {
             int senderUserId = 0;
@@ -30,7 +31,7 @@ namespace Cuttr.Api.Controllers
             {
                 senderUserId = User.GetUserId();
 
-                var messageResponse = await _messageManager.SendMessageAsync(request, senderUserId);
+                MessageResponse messageResponse = await _messageManager.SendMessageAsync(request, senderUserId);
                 return Ok(messageResponse);
             }
             catch (NotFoundException ex)

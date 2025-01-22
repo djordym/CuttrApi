@@ -3,15 +3,18 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useUserPreferences } from '../hooks/usePreferences';
+
+import TagGroup from '../components/TagGroup';
+import { COLORS } from '../../../theme/colors';
+import { headerStyles } from '../styles/headerStyles';
+import ConfirmCancelButtons from '../components/ConfirmCancelButtons';
 
 import {
   PlantStage,
@@ -24,54 +27,8 @@ import {
   PetFriendly,
   Extras,
 } from '../../../types/enums';
-import { COLORS } from '../../../theme/colors';
 import { UserPreferencesRequest } from '../../../types/apiTypes';
 
-/** 
- * Simple multi-select tag group 
- */
-const MultiSelectTagGroup = <T extends string>({
-  values,
-  selectedValues,
-  onToggle,
-}: {
-  values: T[];
-  selectedValues: T[];
-  onToggle: (val: T) => void;
-}) => {
-  return (
-    <View style={styles.tagGroupContainer}>
-      {values.map((val) => {
-        const isSelected = selectedValues.includes(val);
-        return (
-          <TouchableOpacity
-            key={String(val)}
-            style={[
-              styles.singleTag,
-              isSelected && styles.singleTagSelected,
-            ]}
-            onPress={() => onToggle(val)}
-          >
-            <Text
-              style={[
-                styles.singleTagText,
-                isSelected && styles.singleTagTextSelected,
-              ]}
-            >
-              {val}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-};
-
-/**
- * Redesigned screen to set user preferences
- * - Styled similarly to AddPlantScreen
- * - Multi-select tags for each preference category
- */
 const SetUserPreferencesScreen: React.FC = () => {
   const navigation = useNavigation();
   const {
@@ -82,7 +39,6 @@ const SetUserPreferencesScreen: React.FC = () => {
     isUpdating,
   } = useUserPreferences();
 
-  // Local states for multi-select preferences
   const [selectedStages, setSelectedStages] = useState<PlantStage[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<PlantCategory[]>([]);
   const [selectedWatering, setSelectedWatering] = useState<WateringNeed[]>([]);
@@ -92,10 +48,8 @@ const SetUserPreferencesScreen: React.FC = () => {
   const [selectedPropagationEase, setSelectedPropagationEase] = useState<PropagationEase[]>([]);
   const [selectedPetFriendly, setSelectedPetFriendly] = useState<PetFriendly[]>([]);
   const [selectedExtras, setSelectedExtras] = useState<Extras[]>([]);
-
   const [error, setError] = useState<string | null>(null);
 
-  // Load existing preferences
   useEffect(() => {
     if (preferences) {
       setSelectedStages(preferences.preferedPlantStage || []);
@@ -110,19 +64,6 @@ const SetUserPreferencesScreen: React.FC = () => {
     }
   }, [preferences]);
 
-  // Multi-select toggle helper
-  const handleToggle = <T extends string>(
-    value: T,
-    selectedList: T[],
-    setList: React.Dispatch<React.SetStateAction<T[]>>
-  ) => {
-    if (selectedList.includes(value)) {
-      setList(selectedList.filter((v) => v !== value));
-    } else {
-      setList([...selectedList, value]);
-    }
-  };
-
   const handleCancel = () => {
     navigation.goBack();
   };
@@ -131,7 +72,6 @@ const SetUserPreferencesScreen: React.FC = () => {
     if (!preferences) return;
     setError(null);
 
-    // Construct the updated preferences request without search radius
     const updated: UserPreferencesRequest = {
       ...preferences,
       preferedPlantStage: selectedStages,
@@ -154,7 +94,6 @@ const SetUserPreferencesScreen: React.FC = () => {
     }
   };
 
-  // Loading/ Error states
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -173,14 +112,21 @@ const SetUserPreferencesScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Full Screen Gradient */}
       <LinearGradient
         colors={[COLORS.primary, COLORS.secondary]}
         style={styles.gradientBackground}
       >
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>User Preferences</Text>
+        <View style={headerStyles.headerAboveScroll}>
+          <View style={headerStyles.headerColumn1}>
+            <Ionicons
+              name="chevron-back"
+              size={30}
+              color={COLORS.textLight}
+              style={headerStyles.headerBackButton}
+              onPress={() => navigation.goBack()}
+            />
+            <Text style={headerStyles.headerTitle}>User Preferences</Text>
+          </View>
           <MaterialIcons name="settings" size={24} color="#fff" />
         </View>
 
@@ -189,123 +135,141 @@ const SetUserPreferencesScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.formContainer}>
-            {/* Error */}
             {error && <Text style={styles.errorText}>{error}</Text>}
 
-            {/* PREFERENCES MULTI-SELECT SECTIONS */}
-            {/* Plant Stages */}
             <Text style={styles.label}>Preferred Plant Stages:</Text>
-            <MultiSelectTagGroup
+            <TagGroup
+              mode="multiple"
               values={Object.values(PlantStage)}
               selectedValues={selectedStages}
-              onToggle={(val) =>
-                handleToggle(val, selectedStages, setSelectedStages)
+              onToggleMulti={(val) =>
+                setSelectedStages((prev) =>
+                  prev.includes(val)
+                    ? prev.filter((v) => v !== val)
+                    : [...prev, val]
+                )
               }
             />
 
-            {/* Plant Categories */}
             <Text style={styles.label}>Preferred Categories:</Text>
-            <MultiSelectTagGroup
+            <TagGroup
+              mode="multiple"
               values={Object.values(PlantCategory)}
               selectedValues={selectedCategories}
-              onToggle={(val) =>
-                handleToggle(val, selectedCategories, setSelectedCategories)
+              onToggleMulti={(val) =>
+                setSelectedCategories((prev) =>
+                  prev.includes(val)
+                    ? prev.filter((v) => v !== val)
+                    : [...prev, val]
+                )
               }
             />
 
-            {/* Watering Need */}
             <Text style={styles.label}>Watering Need:</Text>
-            <MultiSelectTagGroup
+            <TagGroup
+              mode="multiple"
               values={Object.values(WateringNeed)}
               selectedValues={selectedWatering}
-              onToggle={(val) =>
-                handleToggle(val, selectedWatering, setSelectedWatering)
+              onToggleMulti={(val) =>
+                setSelectedWatering((prev) =>
+                  prev.includes(val)
+                    ? prev.filter((v) => v !== val)
+                    : [...prev, val]
+                )
               }
             />
 
-            {/* Light Requirement */}
             <Text style={styles.label}>Light Requirement:</Text>
-            <MultiSelectTagGroup
+            <TagGroup
+              mode="multiple"
               values={Object.values(LightRequirement)}
               selectedValues={selectedLightReq}
-              onToggle={(val) =>
-                handleToggle(val, selectedLightReq, setSelectedLightReq)
+              onToggleMulti={(val) =>
+                setSelectedLightReq((prev) =>
+                  prev.includes(val)
+                    ? prev.filter((v) => v !== val)
+                    : [...prev, val]
+                )
               }
             />
 
-            {/* Size */}
             <Text style={styles.label}>Size:</Text>
-            <MultiSelectTagGroup
+            <TagGroup
+              mode="multiple"
               values={Object.values(Size)}
               selectedValues={selectedSize}
-              onToggle={(val) =>
-                handleToggle(val, selectedSize, setSelectedSize)
+              onToggleMulti={(val) =>
+                setSelectedSize((prev) =>
+                  prev.includes(val)
+                    ? prev.filter((v) => v !== val)
+                    : [...prev, val]
+                )
               }
             />
 
-            {/* Indoor/Outdoor */}
             <Text style={styles.label}>Indoor/Outdoor:</Text>
-            <MultiSelectTagGroup
+            <TagGroup
+              mode="multiple"
               values={Object.values(IndoorOutdoor)}
               selectedValues={selectedIndoorOutdoor}
-              onToggle={(val) =>
-                handleToggle(val, selectedIndoorOutdoor, setSelectedIndoorOutdoor)
+              onToggleMulti={(val) =>
+                setSelectedIndoorOutdoor((prev) =>
+                  prev.includes(val)
+                    ? prev.filter((v) => v !== val)
+                    : [...prev, val]
+                )
               }
             />
 
-            {/* Propagation Ease */}
             <Text style={styles.label}>Propagation Ease:</Text>
-            <MultiSelectTagGroup
+            <TagGroup
+              mode="multiple"
               values={Object.values(PropagationEase)}
               selectedValues={selectedPropagationEase}
-              onToggle={(val) =>
-                handleToggle(val, selectedPropagationEase, setSelectedPropagationEase)
+              onToggleMulti={(val) =>
+                setSelectedPropagationEase((prev) =>
+                  prev.includes(val)
+                    ? prev.filter((v) => v !== val)
+                    : [...prev, val]
+                )
               }
             />
 
-            {/* Pet Friendly */}
             <Text style={styles.label}>Pet Friendly:</Text>
-            <MultiSelectTagGroup
+            <TagGroup
+              mode="multiple"
               values={Object.values(PetFriendly)}
               selectedValues={selectedPetFriendly}
-              onToggle={(val) =>
-                handleToggle(val, selectedPetFriendly, setSelectedPetFriendly)
+              onToggleMulti={(val) =>
+                setSelectedPetFriendly((prev) =>
+                  prev.includes(val)
+                    ? prev.filter((v) => v !== val)
+                    : [...prev, val]
+                )
               }
             />
 
-            {/* Extras */}
             <Text style={styles.label}>Extras:</Text>
-            <MultiSelectTagGroup
+            <TagGroup
+              mode="multiple"
               values={Object.values(Extras)}
               selectedValues={selectedExtras}
-              onToggle={(val) =>
-                handleToggle(val, selectedExtras, setSelectedExtras)
+              onToggleMulti={(val) =>
+                setSelectedExtras((prev) =>
+                  prev.includes(val)
+                    ? prev.filter((v) => v !== val)
+                    : [...prev, val]
+                )
               }
             />
 
-            {/* LOADING INDICATOR */}
-            {isUpdating && (
-              <ActivityIndicator
-                size="small"
-                color={COLORS.primary}
-                style={{ marginVertical: 10 }}
-              />
-            )}
-
-            {/* ACTIONS */}
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isUpdating}>
-                <Text style={styles.saveButtonText}>
-                  {isUpdating ? 'Saving...' : 'Save'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={handleCancel}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+            <ConfirmCancelButtons
+              onConfirm={handleSave}
+              confirmButtonText="Save"
+              onCancel={handleCancel}
+              cancelButtonText="Cancel"
+              loading={isUpdating}
+            />
           </View>
         </ScrollView>
       </LinearGradient>
@@ -325,18 +289,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 0,
     paddingBottom: 30,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 10,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
   },
   formContainer: {
     backgroundColor: '#fff',
@@ -366,64 +318,6 @@ const styles = StyleSheet.create({
     color: '#FF6F61',
     marginBottom: 10,
     fontWeight: '600',
-  },
-  tagGroupContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 6,
-  },
-  singleTag: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  singleTagSelected: {
-    backgroundColor: COLORS.primary,
-  },
-  singleTagText: {
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  singleTagTextSelected: {
-    color: '#fff',
-  },
-  actions: {
-    flexDirection: 'column',
-    justifyContent: 'flex-end',
-    marginTop: 16,
-  },
-  cancelButton: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    margin: 10,
-    marginTop: 0,
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  saveButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    margin: 10,
-  },
-  saveButtonText: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: '600',
-    textAlign: 'center',
   },
   center: {
     flex: 1,

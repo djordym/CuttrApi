@@ -1,6 +1,11 @@
 // File: src/features/main/screens/ChatScreen.tsx
-
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   View,
   Text,
@@ -12,21 +17,33 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Animated,
+  Easing,
+  ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Hooks
 import { useUserProfile } from '../hooks/useUser';
 import { useUserMatches } from '../hooks/useUserMatches';
 import { useMatchConversation } from '../hooks/useMatchConversation';
+
+// Components
 import { COLORS } from '../../../theme/colors';
-// Types
-import { MatchResponse, MessageResponse } from '../../../types/apiTypes';
-import { LinearGradient } from 'expo-linear-gradient';
 import { headerStyles } from '../styles/headerStyles';
+import { PlantCardWithInfo } from  '../components/PlantCardWithInfo';
+import { MessageBubble } from '../components/MessageBubble';
+
+// Types
+import { MessageRequest } from '../../../types/apiTypes';
+import { MatchResponse, MessageResponse } from '../../../types/apiTypes';
+
+const SHELF_MAX_HEIGHT = 300; // Adjust to your taste
 
 const ChatScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -54,7 +71,6 @@ const ChatScreen: React.FC = () => {
   const relevantMatches = useMemo<MatchResponse[]>(() => {
     if (!myMatches || !userProfile) return [];
     const myUserId = userProfile.userId;
-
     return myMatches.filter((m) => {
       return (
         (m.user1.userId === myUserId && m.user2.userId === otherUserId) ||
@@ -73,7 +89,7 @@ const ChatScreen: React.FC = () => {
     }
   }, [relevantMatches, activeMatchId]);
 
-  // Now use the combined hook for the active match
+  // Hook for the active match's conversation
   const {
     messages,
     isLoadingMessages,
@@ -91,10 +107,8 @@ const ChatScreen: React.FC = () => {
     );
   }, [messages]);
 
-  // For scrolling to bottom
-  const flatListRef = useRef<FlatList<MessageResponse>>(null);
-
   // Auto-scroll on new messages
+  const flatListRef = useRef<FlatList<MessageResponse>>(null);
   useEffect(() => {
     if (sortedMessages.length > 0) {
       setTimeout(() => {
@@ -103,9 +117,8 @@ const ChatScreen: React.FC = () => {
     }
   }, [sortedMessages]);
 
-  // Input for sending
+  // Sending messages
   const [inputText, setInputText] = useState('');
-
   const handleSendMessage = useCallback(() => {
     if (!inputText.trim()) return;
     if (!activeMatchId) {
@@ -114,52 +127,99 @@ const ChatScreen: React.FC = () => {
     }
     const text = inputText.trim();
     setInputText('');
-
-    // Use our combined hook's mutation
-    sendMessage(
-      { messageText: text },
-      {
-        onError: (error) => {
-          console.error('Error sending message:', error);
-          Alert.alert('Error', 'Failed to send message');
-        },
-        onSuccess: () => {
-          // Possibly do any success logic here
-        },
-      }
-    );
+    const messageData: MessageRequest = {
+      matchId: activeMatchId,
+      messageText: text,
+    };
+    sendMessage(messageData, {
+      onError: (error) => {
+        console.error('Error sending message:', error);
+        Alert.alert('Error', 'Failed to send message');
+      },
+    });
   }, [activeMatchId, inputText, sendMessage]);
 
-  // Tab row for multiple matches
-  const renderTabs = () => {
-    if (relevantMatches.length <= 1) return null;
+  // ========= Match Tabs (replaces the old messy circle row) ========
+  const renderMatchTabs = () => {
+    if (!relevantMatches || relevantMatches.length === 0) return null;
     return (
-      <View style={styles.tabContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsContainer}
+        contentContainerStyle={styles.tabsContent}
+      >
         {relevantMatches.map((match) => {
           const isActive = match.matchId === activeMatchId;
-          // Label with "Plant1 ↔ Plant2"
-          const p1 = match.plant1?.speciesName || 'Plant1';
-          const p2 = match.plant2?.speciesName || 'Plant2';
-          const label = `${p1} ↔ ${p2}`;
+
+          // We'll show the two plant images side by side or overlapped.
+          const plant1Uri = match.plant1?.imageUrl;
+          const plant2Uri = match.plant2?.imageUrl;
 
           return (
             <TouchableOpacity
               key={match.matchId}
               onPress={() => setActiveMatchId(match.matchId)}
-              style={[styles.tabButton, isActive && styles.tabButtonActive]}
+              style={[
+                styles.tabItem,
+                isActive && styles.tabItemActive,
+              ]}
+              activeOpacity={0.8}
             >
-              <Text
-                style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}
-                numberOfLines={1}
-              >
-                {label}
+              <View style={styles.overlappingContainer}>
+                <View style={[styles.plantCircle, styles.plantCircleFront]}>
+                  {plant1Uri ? (
+                    <Image
+                      source={{ uri: plant1Uri }}
+                      style={styles.circleImage}
+                    />
+                  ) : (
+                    <Ionicons name="leaf" size={22} color={COLORS.primary} />
+                  )}
+                </View>
+                <View style={[styles.plantCircle, styles.plantCircleBack]}>
+                  {plant2Uri ? (
+                    <Image
+                      source={{ uri: plant2Uri }}
+                      style={styles.circleImage}
+                    />
+                  ) : (
+                    <Ionicons name="leaf" size={22} color={COLORS.primary} />
+                  )}
+                </View>
+              </View>
+
+              <Text style={styles.tabLabel}>
+                {match.plant1?.speciesName} & {match.plant2?.speciesName}
               </Text>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     );
   };
+
+  // ============ Animated Shelf ============
+  const [showShelf, setShowShelf] = useState<boolean>(true);
+  const shelfAnim = useRef(new Animated.Value(SHELF_MAX_HEIGHT)).current; // start open
+
+  const toggleShelf = useCallback(() => {
+    const finalValue = showShelf ? 0 : SHELF_MAX_HEIGHT;
+    Animated.timing(shelfAnim, {
+      toValue: finalValue,
+      duration: 300,
+      easing: Easing.ease,
+      useNativeDriver: false,
+    }).start(() => {
+      setShowShelf((prev) => !prev);
+    });
+  }, [showShelf, shelfAnim]);
+
+  // For the active match, get the two plants
+  const currentMatch = useMemo(() => {
+    if (!relevantMatches || !activeMatchId) return null;
+    return relevantMatches.find((m) => m.matchId === activeMatchId) || null;
+  }, [relevantMatches, activeMatchId]);
 
   // Render states
   if (loadingProfile || loadingMatches || (activeMatchId && isLoadingMessages)) {
@@ -170,6 +230,7 @@ const ChatScreen: React.FC = () => {
       </SafeAreaProvider>
     );
   }
+
   if (errorProfile || errorMatches || isErrorMessages) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
@@ -180,11 +241,14 @@ const ChatScreen: React.FC = () => {
       </SafeAreaProvider>
     );
   }
+
   if (relevantMatches.length === 0) {
     // No matches with this user
     return (
       <SafeAreaProvider style={styles.centerContainer}>
-        <Text style={styles.noMessagesText}>{t('chat_no_matches_with_user')}</Text>
+        <Text style={styles.noMessagesText}>
+          {t('chat_no_matches_with_user')}
+        </Text>
       </SafeAreaProvider>
     );
   }
@@ -194,18 +258,72 @@ const ChatScreen: React.FC = () => {
   return (
     <SafeAreaProvider style={styles.container}>
       {/* Header */}
-      <LinearGradient style={headerStyles.headerGradient} colors={[COLORS.primary, COLORS.secondary]}>
-        <View style={headerStyles.headerRowChat}>
-        <TouchableOpacity style={headerStyles.headerBackButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={30} color={COLORS.textLight}/>
-        </TouchableOpacity>
+      <LinearGradient
+        style={headerStyles.headerGradient}
+        colors={[COLORS.primary, COLORS.secondary]}
+      >
+        <View style={headerStyles.headerColumn1}>
+          <TouchableOpacity
+            style={headerStyles.headerBackButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
+          </TouchableOpacity>
 
-        <Text style={headerStyles.headerTitle}>{t('chat_title')}</Text>
+          <Text style={headerStyles.headerTitle}>{t('chat_title')}</Text>
         </View>
       </LinearGradient>
 
-      {/* Tab row if multiple matches */}
-      {renderTabs()}
+      {/* Match "tabs" row */}
+      <View style={styles.tabWrapper}>
+      {renderMatchTabs()}
+      </View>
+      {/* Animated Shelf */}
+      <Animated.View
+        style={[
+          styles.animatedShelf,
+          {
+            height: shelfAnim, // Animate the height
+          },
+        ]}
+      >
+        {/* Actual shelf content */}
+        <View style={styles.shelfContent}>
+          {currentMatch && (
+            <View style={styles.shelfContainer}>
+              {/* Each card is in a 50%-width container with aspect ratio */}
+              <View style={styles.plantCardWrapper}>
+                <PlantCardWithInfo
+                  plant={currentMatch.plant1}
+                  compact={true}
+                />
+              </View>
+              <View style={styles.plantCardWrapper}>
+                <PlantCardWithInfo
+                  plant={currentMatch.plant2}
+                  compact={true}
+                />
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* The "grabber" toggle button pinned to the bottom of the shelf */}
+        <TouchableOpacity
+          style={styles.shelfToggleButton}
+          onPress={toggleShelf}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={showShelf ? 'chevron-up-outline' : 'chevron-down-outline'}
+            size={22}
+            color="#fff"
+          />
+          <Text style={styles.shelfToggleButtonText}>
+            {showShelf ? t('Hide plants') : t('Show plants')}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* Chat feed */}
       {!hasMessages ? (
@@ -251,35 +369,7 @@ const ChatScreen: React.FC = () => {
   );
 };
 
-/** Single message bubble component */
-interface BubbleProps {
-  message: MessageResponse;
-  isMine: boolean;
-}
-const MessageBubble: React.FC<BubbleProps> = ({ message, isMine }) => {
-  return (
-    <View
-      style={[
-        styles.bubbleContainer,
-        isMine ? styles.bubbleRightContainer : styles.bubbleLeftContainer,
-      ]}
-    >
-      <View style={[styles.bubble, isMine ? styles.bubbleRight : styles.bubbleLeft]}>
-        <Text style={styles.bubbleText}>{message.messageText}</Text>
-        <Text style={styles.timestamp}>
-          {new Date(message.sentAt).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
-      </View>
-    </View>
-  );
-};
-
 export default ChatScreen;
-
-/* ----------------------- STYLES ----------------------- */
 
 const styles = StyleSheet.create({
   container: {
@@ -320,75 +410,137 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     textAlign: 'center',
   },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    marginHorizontal: 10,
-    marginTop: 10,
-    borderRadius: 8,
-    elevation: 2,
-    overflow: 'hidden',
-  },
-  tabButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  tabButtonActive: {
-    backgroundColor: COLORS.accentGreen,
-  },
-  tabButtonText: {
-    fontSize: 14,
-    color: COLORS.textDark,
-  },
-  tabButtonTextActive: {
-    color: COLORS.textLight,
-    fontWeight: '600',
-  },
-
   emptyChatContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
+  // ====== TABS (Replaces Overlapping Circle Row) ======
+  tabWrapper: {
+    // marginVertical: 8,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  tabsContainer: {
+    marginTop: 0,
+    paddingVertical: 8,
+    backgroundColor: '#f9f9f9',
+  },
+  tabsContent: {
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  tabItem: {
+    padding: 6,
+    marginRight: 12,
+    borderRadius: 6,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    minWidth: 80,
+    // shadow/elevation for tab item
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  tabItemActive: {
+    borderColor: COLORS.accentGreen,
+    borderWidth: 2,
+  },
+  overlappingContainer: {
+    width: 40,
+    height: 30,
+    marginBottom: 4,
+    position: 'relative',
+  },
+  plantCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  plantCircleFront: {
+    left: 0,
+    zIndex: 2,
+  },
+  plantCircleBack: {
+    left: 20,
+    zIndex: 1,
+  },
+  circleImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  tabLabel: {
+    fontSize: 10,
+    color: '#333',
+    textAlign: 'center',
+  },
+
+  // ========== Animated Shelf ==========
+  animatedShelf: {
+    // pinned below the tabs
+    overflow: 'hidden',
+    backgroundColor: '#f1f1f1',
+  },
+  shelfContent: {
+    flex: 1,
+    paddingVertical: 8,
+  },
+  // Container that holds the 2 plant cards side by side
+  shelfContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  // each half is 45% width, with an aspect ratio
+  plantCardWrapper: {
+    width: '45%',
+    aspectRatio: 3 / 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  shelfToggleButton: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 32,
+    backgroundColor: COLORS.accentGreen,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shelfToggleButtonText: {
+    marginLeft: 6,
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // ========== Chat bubbles & list ==========
   listContent: {
     padding: 10,
     paddingBottom: 60, // space for input
   },
-  bubbleContainer: {
-    marginVertical: 6,
-  },
-  bubbleLeftContainer: {
-    alignSelf: 'flex-start',
-  },
-  bubbleRightContainer: {
-    alignSelf: 'flex-end',
-  },
-  bubble: {
-    maxWidth: '80%',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  bubbleLeft: {
-    backgroundColor: COLORS.bubbleLeft,
-    borderTopLeftRadius: 0,
-  },
-  bubbleRight: {
-    backgroundColor: COLORS.bubbleRight,
-    borderTopRightRadius: 0,
-  },
-  bubbleText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  timestamp: {
-    marginTop: 5,
-    fontSize: 10,
-    color: '#777',
-    textAlign: 'right',
-  },
 
+  // ========== Input ==========
   inputContainer: {
     flexDirection: 'row',
     paddingVertical: 8,

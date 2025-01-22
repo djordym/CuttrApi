@@ -16,6 +16,7 @@ import { useMyPlants } from '../hooks/usePlants'; // Adjust import path if neces
 import { PlantResponse } from '../../../types/apiTypes';
 import { t } from 'i18next';
 import { COLORS } from '../../../theme/colors';
+import ConfirmCancelButtons from './ConfirmCancelButtons';
 
 interface SelectPlantsModalProps {
   visible: boolean;
@@ -152,21 +153,13 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
             </>
           )}
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.confirmButton]}
-              onPress={handleConfirm}
-              disabled={selectedPlantIds.length === 0}
-            >
-              <Text style={styles.confirmButtonText}>Confirm</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.cancelButton]}
-              onPress={onClose}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+          <ConfirmCancelButtons
+            onConfirm={handleConfirm}
+            onCancel={onClose}
+            confirmButtonText="Confirm"
+            cancelButtonText="Cancel"
+          />
+
         </View>
       </View>
     </Modal>
@@ -300,35 +293,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.textDark,
-  },
-  buttonRow: {
-    flexDirection: 'column',
-    justifyContent: 'flex-end',
-    marginTop: 8,
-  },
-  actionButton: {
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    margin: 4, 
-  },
-  cancelButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    
-  },
-  cancelButtonText: {
-    color: COLORS.primary,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  confirmButton: {
-    backgroundColor: COLORS.primary,
-  },
-  confirmButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    textAlign: 'center',
   },
 });
