@@ -26,6 +26,7 @@ import { COLORS } from '../../../theme/colors';
 // Types
 import { MatchResponse, MessageResponse } from '../../../types/apiTypes';
 import { LinearGradient } from 'expo-linear-gradient';
+import { headerStyles } from '../styles/headerStyles';
 
 const ChatScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -193,11 +194,14 @@ const ChatScreen: React.FC = () => {
   return (
     <SafeAreaProvider style={styles.container}>
       {/* Header */}
-      <LinearGradient style={styles.header} colors={[COLORS.primary, COLORS.secondary]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
+      <LinearGradient style={headerStyles.headerGradient} colors={[COLORS.primary, COLORS.secondary]}>
+        <View style={headerStyles.headerRowChat}>
+        <TouchableOpacity style={headerStyles.headerBackButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={30} color={COLORS.textLight}/>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('chat_title')}</Text>
+
+        <Text style={headerStyles.headerTitle}>{t('chat_title')}</Text>
+        </View>
       </LinearGradient>
 
       {/* Tab row if multiple matches */}
@@ -316,25 +320,6 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     textAlign: 'center',
   },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 2,
-  },
-  backButton: {
-    marginRight: 10,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textLight,
-  },
-
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#fff',

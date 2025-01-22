@@ -40,6 +40,7 @@ import {
   Extras,
 } from '../../../types/enums';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { headerStyles } from '../styles/headerStyles';
 
 /**
  * Reusable component for single-select tags (with optional deselection).
@@ -299,9 +300,9 @@ const AddPlantScreen: React.FC = () => {
         colors={[COLORS.primary, COLORS.secondary]}
         style={styles.gradientBackground}
       >
-          <View style={styles.headerRow}>
-            <Text style={styles.headerTitle}>{t('add_plant_title')}</Text>
-            <MaterialIcons name="local_florist" size={24} color="#fff" />
+          <View style={headerStyles.headerRowSticky}>
+            <Text style={headerStyles.headerTitle}>{t('add_plant_title')}</Text>
+            <MaterialIcons name="info" size={24} color="#fff" />
           </View>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -480,24 +481,10 @@ const styles = StyleSheet.create({
   },
   gradientBackground: {
     flex: 1,
-    
   },
   scrollContent: {
     paddingTop: 0,
     paddingBottom: 30,
-  },
-  headerRow: {
-    position: 'sticky',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 10,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.textLight,
   },
   formContainer: {
     backgroundColor: '#fff',

@@ -23,6 +23,7 @@ import { COLORS } from '../../../theme/colors';
 // Types
 import { MatchResponse, UserResponse } from '../../../types/apiTypes';
 import { LinearGradient } from 'expo-linear-gradient';
+import { headerStyles } from '../styles/headerStyles';
 
 // Example branding colors
 // const COLORS = {
@@ -126,7 +127,7 @@ const ConnectionsScreen: React.FC = () => {
     return (
       <View style={styles.emptyStateContainer}>
         {/* Optionally use a placeholder illustration or icon */}
-        <Ionicons name="people-outline" size={64} color={COLORS.accent} style={{ marginBottom: 20 }} />
+        <Ionicons name="people-outline" size={64} color={COLORS.accentGreen} style={{ marginBottom: 20 }} />
         
         <Text style={styles.emptyStateTitle}>{t('connections_none_title')}</Text>
         <Text style={styles.emptyStateMessage}>
@@ -151,8 +152,8 @@ const ConnectionsScreen: React.FC = () => {
   return (
     <SafeAreaProvider style={styles.container}>
       {/* Header */}
-      <LinearGradient style={styles.header} colors={[COLORS.primary, COLORS.secondary]}>
-        <Text style={styles.headerTitle}>
+      <LinearGradient style={headerStyles.headerGradient} colors={[COLORS.primary, COLORS.secondary]}>
+        <Text style={headerStyles.headerTitle}>
           {t('connections_title', 'Connections')}
         </Text>
       </LinearGradient>
@@ -246,20 +247,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: COLORS.primary,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    marginBottom: 10,
-    elevation: 3,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: COLORS.textLight,
-  },
+  
   rowContainer: {
     flexDirection: 'row',
     alignItems: 'center',

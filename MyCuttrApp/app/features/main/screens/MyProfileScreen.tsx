@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,24 +16,22 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import MapView, { Circle } from 'react-native-maps';
-
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as Location from 'expo-location';
 
 import { useUserProfile } from '../hooks/useUser';
 import { useMyPlants } from '../hooks/usePlants';
 import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse } from '../../../types/apiTypes';
-import { userService } from '../../../api/userService'; // for updating the profile picture
+import { userService } from '../../../api/userService';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { ChangeLocationModal } from '../components/ChangeLocationModal';
-import { log } from '../../../utils/logger';
 import { COLORS } from '../../../theme/colors';
 import { PlantOverlay } from '../components/PlantOverlay';
+import { headerStyles } from '../styles/headerStyles';
 
 const { width } = Dimensions.get('window');
-
 
 const MyProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -59,20 +57,58 @@ const MyProfileScreen: React.FC = () => {
     isError: srError,
   } = useSearchRadius();
 
-  // For modals
+  // Modal visibility
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [changeLocationVisible, setChangeLocationVisible] = useState(false);
 
-  // For toggling between thumbnail vs. fullsize
+  // Toggle: Thumbnails or Full-size
   const [showFullSize, setShowFullSize] = useState(false);
 
-  // -- IMAGE PICKER & UPDATE PFP --
+  // Store city/country derived from lat/long
+  const [cityCountry, setCityCountry] = useState<string>('');
+
+  // Does user have lat/long set?
+  const userHasLocation =
+    userProfile?.locationLatitude !== undefined &&
+    userProfile?.locationLongitude !== undefined;
+
+  // Reverse-geocode to get city/country
+  useEffect(() => {
+    (async () => {
+      if (userHasLocation) {
+        try {
+          const [geo] = await Location.reverseGeocodeAsync({
+            latitude: userProfile!.locationLatitude!,
+            longitude: userProfile!.locationLongitude!,
+          });
+          if (geo) {
+            // Construct city/country string. Adjust as you like:
+            const city = geo.city || geo.subregion || '';
+            const country = geo.country || '';
+            setCityCountry(
+              city && country ? `${city}, ${country}` : city || country
+            );
+          }
+        } catch (error) {
+          console.log('Reverse geocoding error:', error);
+          setCityCountry('');
+        }
+      } else {
+        setCityCountry('');
+      }
+    })();
+  }, [userHasLocation, userProfile]);
+
+  // ----- IMAGE PICKER & UPDATE PFP -----
   const handleChangeProfilePicture = useCallback(() => {
     Alert.alert(
       t('profile_change_picture_title'),
       t('profile_change_picture_msg'),
       [
-        { text: t('profile_picture_select_library'), onPress: pickImageFromLibrary },
+        {
+          text: t('profile_picture_select_library'),
+          onPress: pickImageFromLibrary,
+        },
         { text: t('profile_picture_take_photo'), onPress: takePictureWithCamera },
         { text: t('profile_picture_cancel'), style: 'cancel' },
       ]
@@ -141,9 +177,9 @@ const MyProfileScreen: React.FC = () => {
       Alert.alert('Error', 'Profile picture update failed.');
     }
   };
-  // -- END IMAGE PICKER & UPDATE PFP --
+  // ----- END IMAGE PICKER & UPDATE PFP -----
 
-  // Modals
+  // Modal callbacks
   const handleEditProfile = useCallback(() => {
     setEditProfileVisible(true);
   }, []);
@@ -158,23 +194,12 @@ const MyProfileScreen: React.FC = () => {
     refetchProfile();
   }, [refetchProfile]);
 
+  // Navigation
   const handleAddPlant = useCallback(() => {
     navigation.navigate('AddPlant' as never);
   }, [navigation]);
 
-  const userHasLocation =
-    userProfile?.locationLatitude !== undefined &&
-    userProfile?.locationLongitude !== undefined;
-
-  const region = userHasLocation
-    ? {
-      latitude: userProfile.locationLatitude!,
-      longitude: userProfile.locationLongitude!,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
-    }
-    : undefined;
-
+  // Rendering plants
   const renderPlantItem = (item: PlantResponse) => {
     if (!showFullSize) {
       return (
@@ -207,8 +232,9 @@ const MyProfileScreen: React.FC = () => {
         item.indoorOutdoor,
         item.propagationEase,
         item.petFriendly,
-        ...(item.extras ?? [])
+        ...(item.extras ?? []),
       ].filter(Boolean);
+
       return (
         <View key={item.plantId} style={styles.plantCardFull}>
           <View style={styles.fullImageContainer}>
@@ -236,6 +262,7 @@ const MyProfileScreen: React.FC = () => {
     }
   };
 
+  // Main Content
   let content: JSX.Element;
 
   if (loadingProfile || loadingPlants || srLoading) {
@@ -273,108 +300,101 @@ const MyProfileScreen: React.FC = () => {
   } else {
     content = (
       <SafeAreaProvider style={styles.container}>
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 40 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          
           <LinearGradient
             colors={[COLORS.primary, COLORS.secondary]}
-            style={styles.headerContainer}>
-            <View style={styles.headerTopRow}>
-              <Text style={styles.headerTitle}>{userProfile.name}'s {t('profile_title')}</Text>
-              <TouchableOpacity
-                onPress={handleEditProfile}
-                style={styles.headerActionButton}
-                accessibilityLabel={t('profile_edit_button')}>
-                <MaterialIcons name="edit" size={24} color={COLORS.textLight} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Redesigned Profile Info Section */}
-            <View style={styles.profileInfoContainer}>
-              <TouchableOpacity
-                onPress={handleChangeProfilePicture}
-                activeOpacity={0.8}
-                style={styles.profilePictureWrapper}>
-                {userProfile.profilePictureUrl ? (
-                  <Image
-                    source={{ uri: userProfile.profilePictureUrl }}
-                    style={styles.profilePicture}
-                  />
-                ) : (
-                  <View style={styles.profilePlaceholder}>
-                    <Ionicons name="person-circle-outline" size={90} color="#ccc" />
-                  </View>
-                )}
-                <View style={styles.cameraIconWrapper}>
-                  <Ionicons name="camera" size={18} color={COLORS.textLight} />
-                </View>
-              </TouchableOpacity>
-
-              {userProfile.bio ? (
-                <Text style={styles.bioText} numberOfLines={50}>
-                  {userProfile.bio}
-                </Text>
-              ) : (
-                <Text style={styles.bioPlaceholder} numberOfLines={3}>
-                  {t('profile_no_bio_placeholder')}
-                </Text>
-              )}
-
-              <View style={styles.locationContainer}>
-                <Text style={styles.locationLabel}>
-                  {t('profile_location_label')}:
-                </Text>
-                {userHasLocation ? (
-                  <View style={styles.mapContainer}>
-                    <MapView
-                      style={styles.map}
-                      initialRegion={region}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
-                      rotateEnabled={false}
-                      pitchEnabled={false}
-                      >  
-                      <Circle
-                      center={{
-                        latitude: region.latitude,
-                        longitude: region.longitude,
-                      }}
-                      radius={2000} // 5km in meters
-                      strokeWidth={1.5}
-                      strokeColor="rgba(30, 174, 152, 1)" // solid blue border
-                      fillColor="rgba(30, 174, 152, 0.2)"   // translucent blue fill
-                      /> 
-                    </MapView>
-                  </View>
-                ) : (
-                  <Text style={styles.noLocationText}>
-                    {t('profile_no_location')}
-                  </Text>
-                )}
-                <TouchableOpacity
-                  onPress={handleChangeLocation}
-                  style={styles.locationButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('profile_change_location_button')}>
-                  <Ionicons name="location-outline" size={18} color={COLORS.accentGreen} />
-                  <Text style={styles.locationButtonText}>
-                    {t('profile_change_location_button')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            style={headerStyles.headerGradient}
+          >
+            <Text style={headerStyles.headerTitle}>
+              {t('profile_title')}
+            </Text>
           </LinearGradient>
 
+          {/* ---- Profile Card Section ---- */}
+          <View style={styles.profileCard}>
+            {/* Edit Icon in top-right corner */}
+            <TouchableOpacity
+              onPress={handleEditProfile}
+              style={styles.profileEditButton}
+              accessibilityLabel={t('profile_edit_button')}
+            >
+              <MaterialIcons name="edit" size={20} color={COLORS.textDark} />
+            </TouchableOpacity>
+
+            {/* Profile Picture */}
+            <TouchableOpacity
+              onPress={handleChangeProfilePicture}
+              activeOpacity={0.8}
+              style={styles.profilePictureWrapper}
+            >
+              {userProfile.profilePictureUrl ? (
+                <Image
+                  source={{ uri: userProfile.profilePictureUrl }}
+                  style={styles.profilePicture}
+                />
+              ) : (
+                <View style={styles.profilePlaceholder}>
+                  <Ionicons name="person-circle-outline" size={90} color="#ccc" />
+                </View>
+              )}
+              <View style={styles.cameraIconWrapper}>
+                <Ionicons name="camera" size={18} color={COLORS.textLight} />
+              </View>
+            </TouchableOpacity>
+
+            {/* User Name */}
+            <Text style={styles.profileNameText}>
+              {userProfile.name}
+            </Text>
+
+            {/* Location (City, Country) and a button to update location */}
+            <View style={styles.locationRow}>
+              {cityCountry ? (
+                <Text style={styles.profileLocationText}>
+                  {cityCountry}
+                </Text>
+              ) : (
+                <Text style={styles.profileLocationText}>
+                  {t('profile_no_location')}
+                </Text>
+              )}
+              <TouchableOpacity
+                onPress={handleChangeLocation}
+                style={styles.locationButton}
+              >
+                <Ionicons name="location-outline" size={18} color={COLORS.accentGreen} />
+                <Text style={styles.locationButtonText}>
+                  {t('profile_change_location_button')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Bio */}
+            {userProfile.bio ? (
+              <Text style={styles.bioText} numberOfLines={6}>
+                {userProfile.bio}
+              </Text>
+            ) : (
+              <Text style={styles.bioPlaceholder} numberOfLines={3}>
+                {t('profile_no_bio_placeholder')}
+              </Text>
+            )}
+          </View>
+
+          {/* ---- My Plants Section ---- */}
           <View style={styles.plantsSectionWrapper}>
             <View style={styles.plantsSectionHeader}>
               <Text style={styles.plantsSectionTitle}>
-                {userProfile.name}{t('profile_my_plants_section')}
+                {userProfile.name}
+                {t('profile_my_plants_section')}
               </Text>
               <TouchableOpacity
                 onPress={handleAddPlant}
                 style={styles.addPlantButton}
                 accessibilityRole="button"
-                accessibilityLabel={t('profile_add_plant_button')}>
+                accessibilityLabel={t('profile_add_plant_button')}
+              >
                 <Ionicons name="add-circle" size={24} color={COLORS.accentGreen} />
                 <Text style={styles.addPlantButtonText}>
                   {t('profile_add_plant_button')}
@@ -382,6 +402,7 @@ const MyProfileScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
+            {/* Toggle Thumbnails / Full */}
             <View style={styles.viewToggleContainer}>
               <TouchableOpacity
                 onPress={() => setShowFullSize(false)}
@@ -389,40 +410,43 @@ const MyProfileScreen: React.FC = () => {
                   styles.viewToggleOption,
                   !showFullSize && styles.viewToggleOptionActive,
                 ]}
-                activeOpacity={0.9}>
+                activeOpacity={0.9}
+              >
                 <Text
                   style={[
                     styles.viewToggleText,
                     !showFullSize && styles.viewToggleTextActive,
-                  ]}>
+                  ]}
+                >
                   {t('Thumbnails')}
                 </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 onPress={() => setShowFullSize(true)}
                 style={[
                   styles.viewToggleOption,
                   showFullSize && styles.viewToggleOptionActive,
                 ]}
-                activeOpacity={0.9}>
+                activeOpacity={0.9}
+              >
                 <Text
                   style={[
                     styles.viewToggleText,
                     showFullSize && styles.viewToggleTextActive,
-                  ]}>
+                  ]}
+                >
                   {t('Full Size')}
                 </Text>
               </TouchableOpacity>
             </View>
 
+            {/* Plants List */}
             {myPlants && myPlants.length > 0 ? (
               <View
                 style={[
-                  showFullSize
-                    ? styles.fullViewContainer
-                    : styles.thumbViewContainer,
-                ]}>
+                  showFullSize ? styles.fullViewContainer : styles.thumbViewContainer,
+                ]}
+              >
                 {myPlants.map((plant) => renderPlantItem(plant))}
               </View>
             ) : (
@@ -434,6 +458,7 @@ const MyProfileScreen: React.FC = () => {
             )}
           </View>
 
+          {/* ---- Modals ---- */}
           <EditProfileModal
             visible={editProfileVisible}
             initialName={userProfile.name}
@@ -448,7 +473,6 @@ const MyProfileScreen: React.FC = () => {
             onClose={() => setChangeLocationVisible(false)}
             onUpdated={handleLocationUpdated}
           />
-
         </ScrollView>
       </SafeAreaProvider>
     );
@@ -492,42 +516,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  headerContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    marginBottom: 10,
+  /* ---- Profile Card ---- */
+  profileCard: {
+    marginTop: 0, // so it overlaps the gradient a bit if you like
+    marginHorizontal: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    padding: 20,
+    position: 'relative',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.textLight,
-  },
-  headerActionButton: {
-    padding: 8,
-  },
-  profileInfoContainer: {
-    alignItems: 'center',
-    marginTop: 15,
-    marginHorizontal: 20,
+  profileEditButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 2,
+    padding: 6,
   },
   profilePictureWrapper: {
+    alignSelf: 'center',
     position: 'relative',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   profilePicture: {
     width: (width - 100) / 2,
     height: (width - 100) / 2,
     borderRadius: (width - 100) / 4,
     backgroundColor: '#eee',
-    borderWidth: 2,
-    borderColor: '#fff',
   },
   profilePlaceholder: {
     width: (width - 100) / 2,
@@ -536,8 +561,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
   },
   cameraIconWrapper: {
     position: 'absolute',
@@ -547,60 +570,32 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 4,
   },
-  bioText: {
-    fontSize: 14,
-    color: COLORS.textLight,
+  profileNameText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.textDark,
     textAlign: 'center',
-    marginVertical: 10,
-    lineHeight: 20,
   },
-  bioPlaceholder: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginVertical: 10,
-    lineHeight: 20,
-  },
-
-  locationContainer: {
-    width: '100%',
+  locationRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 15,
+    marginVertical: 10,
+    flexWrap: 'wrap',
   },
-  locationLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textLight,
-    marginBottom: 8,
-  },
-  mapContainer: {
-    width: '100%',
-    height: (width - 40) / 2,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#ddd',
-    marginBottom: 10,
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  noLocationText: {
+  profileLocationText: {
     fontSize: 14,
-    color: COLORS.textLight,
-    marginBottom: 10,
+    color: COLORS.textDark,
+    marginRight: 12,
   },
   locationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
     borderWidth: 1,
     borderColor: COLORS.accentGreen,
-    
     borderRadius: 8,
-    backgroundColor: COLORS.background,
-    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   locationButtonText: {
     color: COLORS.accentGreen,
@@ -608,9 +603,25 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontWeight: '600',
   },
+  bioText: {
+    fontSize: 14,
+    color: COLORS.textDark,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  bioPlaceholder: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  /* ---- Plants Section ---- */
   plantsSectionWrapper: {
     paddingHorizontal: 10,
-    paddingTop: 10,
+    paddingTop: 20,
   },
   plantsSectionHeader: {
     flexDirection: 'row',
@@ -663,8 +674,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-
-
   },
   plantCardThumbnail: {
     width: (width - 80) / 3,
@@ -734,39 +743,6 @@ const styles = StyleSheet.create({
   fullImageOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
-  },
-  overlayContent: {
-    padding: 10,
-    paddingTop: 100,
-  },
-  fullPlantName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 6,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 6,
-  },
-  tag: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 6,
-    marginBottom: 6,
-  },
-  tagText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  fullDescription: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '400',
   },
   noPlantsContainer: {
     justifyContent: 'center',

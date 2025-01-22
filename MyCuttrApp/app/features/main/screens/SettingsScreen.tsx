@@ -24,6 +24,7 @@ import { logout } from '../../auth/store/authSlice';
 import { store } from '../../../store';
 import { QueryClient } from 'react-query';
 import { COLORS } from '../../../theme/colors';
+import { headerStyles } from '../styles/headerStyles';
 
 const SettingsScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -181,10 +182,10 @@ const queryClient = new QueryClient();
     <SafeAreaProvider style={styles.safeArea}>
       <LinearGradient
         colors={[COLORS.primary, COLORS.secondary]}
-        style={styles.gradientHeader}
+        style={headerStyles.headerGradient}
       >
-        <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>{t('Settings')}</Text>
+        <View style={headerStyles.headerRow}>
+          <Text style={headerStyles.headerTitle}>{t('Settings')}</Text>
           <MaterialIcons name="settings" size={24} color="#fff" />
         </View>
       </LinearGradient>
@@ -404,23 +405,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  gradientHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    marginBottom: 10,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
-  },
+
   scrollContent: {
     paddingBottom: 40,
     paddingHorizontal: 20,

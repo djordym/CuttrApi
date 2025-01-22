@@ -29,6 +29,7 @@ import { SelectPlantsModal } from '../components/SelectPlantsModal';
 import { PlantResponse, SwipeRequest } from '../../../types/apiTypes';
 import { log } from '../../../utils/logger';
 import { COLORS } from '../../../theme/colors';
+import { headerStyles } from '../styles/headerStyles';
 const { width } = Dimensions.get('window');
 
 
@@ -294,13 +295,13 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
     return (
       <LinearGradient
         colors={[COLORS.primary, COLORS.secondary]}
-        style={styles.headerGradient}
+        style={headerStyles.headerGradient}
       >
-        <View style={styles.headerTopRow}>
-          <Text style={styles.headerTitle}>Explore</Text>
+        <View style={headerStyles.headerRow}>
+          <Text style={headerStyles.headerTitle}>Explore</Text>
           <TouchableOpacity
             onPress={handleFilterPress}
-            style={styles.headerActionButton}
+            style={headerStyles.headerActionButton}
           >
             <Ionicons name="options" size={24} color={COLORS.textLight} />
           </TouchableOpacity>
@@ -508,27 +509,6 @@ const styles = StyleSheet.create({
   reloadButtonText: {
     color: '#fff',
     fontWeight: '600',
-  },
-  headerGradient: {
-    paddingHorizontal: 16,
-    paddingTop: 15,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    marginBottom: 10
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: COLORS.textLight,
-  },
-  headerActionButton: {
-    padding: 6,
   },
   filterContainer: {
     flexDirection: 'row',
