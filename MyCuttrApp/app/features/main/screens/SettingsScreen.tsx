@@ -441,19 +441,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.accentGreen,
     borderRadius: 20,
     marginRight: 10,
   },
   langButtonSelected: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
   },
   langButtonText: {
     fontSize: 14,
-    color: COLORS.primary,
+    color: COLORS.accentGreen,
   },
   langButtonTextSelected: {
-    color: '#fff',
+    color: COLORS.textLight,
     fontWeight: '600',
   },
   toggleRow: {
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   },
   changeButton: {
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.accentGreen,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   changeButtonText: {
-    color: COLORS.primary,
+    color: COLORS.accentGreen,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.accentRed,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,

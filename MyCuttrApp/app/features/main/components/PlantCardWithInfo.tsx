@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     },
     lowerGradient: {
         position: 'absolute',
-        bottom: 0,
+        bottom: -1,
         width: '100%',
     },
 

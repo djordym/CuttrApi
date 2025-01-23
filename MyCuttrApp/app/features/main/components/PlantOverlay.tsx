@@ -52,12 +52,10 @@ const styles = StyleSheet.create({
   tagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 6,
   },
   tagRowCompact: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 0,
   },
   tag: {
     backgroundColor: COLORS.primary,
