@@ -280,7 +280,6 @@ const ChatScreen: React.FC = () => {
           </View>
         ))}
       </View>
-      <View style={styles.listContainer}>
       {/* Chat messages */}
       {!hasMessages ? (
         <View style={styles.emptyChatContainer}>
@@ -289,6 +288,7 @@ const ChatScreen: React.FC = () => {
           </Text>
         </View>
       ) : (
+        <View style={styles.listContainer}>
         <FlatList
           ref={flatListRef}
           data={sortedMessages}
@@ -298,9 +298,9 @@ const ChatScreen: React.FC = () => {
             const isMine = item.senderUserId === userProfile?.userId;
             return <MessageBubble message={item} isMine={isMine} />;
           }}
-        />
+          />
+          </View>
       )}
-      </View>
       {/* Input field */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -371,30 +371,26 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     textAlign: 'center',
   },
-  emptyChatContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
 
   // ====== Tabs ======
   tabWrapper: {
     backgroundColor: '#f9f9f9',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
+    
   },
   tabsContainer: {
-    marginTop: 0,
     paddingVertical: 8,
     backgroundColor: '#f9f9f9',
   },
   tabsContent: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
   },
   tabItem: {
     padding: 6,
-    marginRight: 12,
+    marginRight: 8,
     borderRadius: 6,
     backgroundColor: '#fff',
     alignItems: 'center',
@@ -453,16 +449,11 @@ const styles = StyleSheet.create({
   // ========== Chat shelves ==========
   shelfContainer: {
     position: 'relative',
-    flex: 1,
   },
   shelfWrapper: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: -1,
   },
   hiddenShelf: {
+    position: 'absolute',
     opacity: 0,
     zIndex: -1,
   },
@@ -470,12 +461,17 @@ const styles = StyleSheet.create({
   // ========== Chat bubbles & list ==========
   listContainer: {
     flex: 1,
-    marginTop: 20,
+
   },
   listContent: {
-    padding: 10,
+    padding: 8,
     paddingBottom: 60, // space for the input
     zIndex: -2,
+  },
+  emptyChatContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // ========== Input ==========

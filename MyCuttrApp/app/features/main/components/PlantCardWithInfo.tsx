@@ -85,7 +85,7 @@ export const PlantCardWithInfo: React.FC<PlantCardWithInfoProps> = ({
                         <Ionicons name="leaf" size={60} color={COLORS.primary} />
                     </View>
                 )}
-                <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,1)']} style={[styles.lowerGradient, { height: overlayHeight * 1.5 }]} />
+                <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,1)']} style={[styles.lowerGradient, { height: compact ? overlayHeight : overlayHeight * 1.5}]} />
             </View>
 
             {/* ---- Black Extension (dynamic or fixed) ---- */}
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     },
     lowerGradient: {
         position: 'absolute',
-        bottom: -1,
+        bottom: 0,
         width: '100%',
     },
 

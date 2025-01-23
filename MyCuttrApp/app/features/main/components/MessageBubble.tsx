@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MessageResponse } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
+import { Platform } from 'react-native';
 
 interface BubbleProps {
   message: MessageResponse;
@@ -31,8 +32,7 @@ export const  MessageBubble: React.FC<BubbleProps> = ({ message, isMine }) => {
 const styles = StyleSheet.create({
   bubbleContainer: {
     marginVertical: 3,
-    paddingHorizontal: 8,
-  },
+    },
   bubbleLeftContainer: {
     alignSelf: 'flex-start',
   },
@@ -44,6 +44,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   bubbleLeft: {
     backgroundColor: COLORS.bubbleLeft,

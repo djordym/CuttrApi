@@ -14,7 +14,7 @@ export const PlantOverlay: React.FC<PlantOverlayProps> = ({ speciesName, descrip
   <View style={[styles.overlayContent, compact && styles.overlayContentCompact]}>
     <Text style={[styles.fullPlantName, compact && styles.fullPlantNameCompact]}>{speciesName}</Text>
     {tags.length > 0 && (
-      <View style={styles.tagRow}>
+      <View style={[styles.tagRow, compact && styles.tagRowCompact]}>
         {tags.map((tag) => (
           <View key={tag} style={[styles.tag, compact && styles.tagCompact]}>
             <Text style={[styles.tagText, compact && styles.tagTextCompact]}>{tag}</Text>
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   overlayContentCompact: {
-    padding: 10,
+    padding: 6,
     bottom: 0,
   },
   fullPlantName: {
@@ -47,12 +47,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 6,
+    marginBottom: 3,
   },
   tagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 6,
+  },
+  tagRowCompact: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 0,
   },
   tag: {
     backgroundColor: COLORS.primary,
@@ -77,7 +82,7 @@ const styles = StyleSheet.create({
   },
   tagTextCompact: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
   },
   fullDescription: {
