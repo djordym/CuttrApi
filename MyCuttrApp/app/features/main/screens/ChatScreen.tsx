@@ -280,7 +280,7 @@ const ChatScreen: React.FC = () => {
           </View>
         ))}
       </View>
-
+      <View style={styles.listContainer}>
       {/* Chat messages */}
       {!hasMessages ? (
         <View style={styles.emptyChatContainer}>
@@ -300,7 +300,7 @@ const ChatScreen: React.FC = () => {
           }}
         />
       )}
-
+      </View>
       {/* Input field */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -452,15 +452,15 @@ const styles = StyleSheet.create({
 
   // ========== Chat shelves ==========
   shelfContainer: {
-    flex: 1,
     position: 'relative',
+    flex: 1,
   },
   shelfWrapper: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
+    zIndex: -1,
   },
   hiddenShelf: {
     opacity: 0,
@@ -468,9 +468,14 @@ const styles = StyleSheet.create({
   },
 
   // ========== Chat bubbles & list ==========
+  listContainer: {
+    flex: 1,
+    marginTop: 20,
+  },
   listContent: {
     padding: 10,
     paddingBottom: 60, // space for the input
+    zIndex: -2,
   },
 
   // ========== Input ==========

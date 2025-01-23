@@ -30,7 +30,7 @@ export const  MessageBubble: React.FC<BubbleProps> = ({ message, isMine }) => {
 
 const styles = StyleSheet.create({
   bubbleContainer: {
-    marginVertical: 6,
+    marginVertical: 3,
     paddingHorizontal: 8,
   },
   bubbleLeftContainer: {
