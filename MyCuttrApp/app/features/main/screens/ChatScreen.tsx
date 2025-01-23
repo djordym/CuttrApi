@@ -17,8 +17,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Animated,
-  Easing,
   ScrollView,
   Image,
 } from 'react-native';
@@ -36,14 +34,13 @@ import { useMatchConversation } from '../hooks/useMatchConversation';
 // Components
 import { COLORS } from '../../../theme/colors';
 import { headerStyles } from '../styles/headerStyles';
-import { PlantCardWithInfo } from  '../components/PlantCardWithInfo';
+import { PlantCardWithInfo } from '../components/PlantCardWithInfo';
 import { MessageBubble } from '../components/MessageBubble';
+import ChatShelf from '../components/ChatShelf';
 
 // Types
 import { MessageRequest } from '../../../types/apiTypes';
 import { MatchResponse, MessageResponse } from '../../../types/apiTypes';
-
-const SHELF_MAX_HEIGHT = 300; // Adjust to your taste
 
 const ChatScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -139,89 +136,13 @@ const ChatScreen: React.FC = () => {
     });
   }, [activeMatchId, inputText, sendMessage]);
 
-  // ========= Match Tabs (replaces the old messy circle row) ========
-  const renderMatchTabs = () => {
-    if (!relevantMatches || relevantMatches.length === 0) return null;
-    return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabsContainer}
-        contentContainerStyle={styles.tabsContent}
-      >
-        {relevantMatches.map((match) => {
-          const isActive = match.matchId === activeMatchId;
-
-          // We'll show the two plant images side by side or overlapped.
-          const plant1Uri = match.plant1?.imageUrl;
-          const plant2Uri = match.plant2?.imageUrl;
-
-          return (
-            <TouchableOpacity
-              key={match.matchId}
-              onPress={() => setActiveMatchId(match.matchId)}
-              style={[
-                styles.tabItem,
-                isActive && styles.tabItemActive,
-              ]}
-              activeOpacity={0.8}
-            >
-              <View style={styles.overlappingContainer}>
-                <View style={[styles.plantCircle, styles.plantCircleFront]}>
-                  {plant1Uri ? (
-                    <Image
-                      source={{ uri: plant1Uri }}
-                      style={styles.circleImage}
-                    />
-                  ) : (
-                    <Ionicons name="leaf" size={22} color={COLORS.primary} />
-                  )}
-                </View>
-                <View style={[styles.plantCircle, styles.plantCircleBack]}>
-                  {plant2Uri ? (
-                    <Image
-                      source={{ uri: plant2Uri }}
-                      style={styles.circleImage}
-                    />
-                  ) : (
-                    <Ionicons name="leaf" size={22} color={COLORS.primary} />
-                  )}
-                </View>
-              </View>
-
-              <Text style={styles.tabLabel}>
-                {match.plant1?.speciesName} & {match.plant2?.speciesName}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    );
-  };
-
-  // ============ Animated Shelf ============
-  const [showShelf, setShowShelf] = useState<boolean>(true);
-  const shelfAnim = useRef(new Animated.Value(SHELF_MAX_HEIGHT)).current; // start open
-
-  const toggleShelf = useCallback(() => {
-    const finalValue = showShelf ? 0 : SHELF_MAX_HEIGHT;
-    Animated.timing(shelfAnim, {
-      toValue: finalValue,
-      duration: 300,
-      easing: Easing.ease,
-      useNativeDriver: false,
-    }).start(() => {
-      setShowShelf((prev) => !prev);
-    });
-  }, [showShelf, shelfAnim]);
-
-  // For the active match, get the two plants
+  // Current match data
   const currentMatch = useMemo(() => {
     if (!relevantMatches || !activeMatchId) return null;
     return relevantMatches.find((m) => m.matchId === activeMatchId) || null;
   }, [relevantMatches, activeMatchId]);
 
-  // Render states
+  // Loading states
   if (loadingProfile || loadingMatches || (activeMatchId && isLoadingMessages)) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
@@ -253,6 +174,71 @@ const ChatScreen: React.FC = () => {
     );
   }
 
+  // Render tabs for each relevant match
+  const renderMatchTabs = () => {
+    if (relevantMatches.length === 0) return null;
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsContainer}
+        contentContainerStyle={styles.tabsContent}
+      >
+        {relevantMatches.map((match) => {
+          const isActive = match.matchId === activeMatchId;
+
+          const plant1Uri = match.plant1?.imageUrl;
+          const plant2Uri = match.plant2?.imageUrl;
+
+          return (
+            <TouchableOpacity
+              key={match.matchId}
+              onPress={() => setActiveMatchId(match.matchId)}
+              style={[styles.tabItem, isActive && styles.tabItemActive]}
+              activeOpacity={0.8}
+            >
+              {/* Overlapping images */}
+              <View style={styles.overlappingContainer}>
+                <View style={[styles.plantCircle, styles.plantCircleFront]}>
+                  {plant1Uri ? (
+                    <Image
+                      source={{ uri: plant1Uri }}
+                      style={styles.circleImage}
+                    />
+                  ) : (
+                    <Ionicons
+                      name="leaf"
+                      size={22}
+                      color={COLORS.primary}
+                    />
+                  )}
+                </View>
+                <View style={[styles.plantCircle, styles.plantCircleBack]}>
+                  {plant2Uri ? (
+                    <Image
+                      source={{ uri: plant2Uri }}
+                      style={styles.circleImage}
+                    />
+                  ) : (
+                    <Ionicons
+                      name="leaf"
+                      size={22}
+                      color={COLORS.primary}
+                    />
+                  )}
+                </View>
+              </View>
+
+              <Text style={styles.tabLabel}>
+                {match.plant1?.speciesName} & {match.plant2?.speciesName}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
   const hasMessages = messages && messages.length > 0;
 
   return (
@@ -274,61 +260,33 @@ const ChatScreen: React.FC = () => {
         </View>
       </LinearGradient>
 
-      {/* Match "tabs" row */}
-      <View style={styles.tabWrapper}>
-      {renderMatchTabs()}
+      {/* Match tabs */}
+      <View style={styles.tabWrapper}>{renderMatchTabs()}</View>
+
+      {/* Shelf components for each match */}
+      <View style={styles.shelfContainer}>
+        {relevantMatches.map((match) => (
+          <View
+            key={match.matchId}
+            style={[
+              styles.shelfWrapper,
+              match.matchId !== activeMatchId && styles.hiddenShelf,
+            ]}
+          >
+            <ChatShelf
+              plant1={match.plant1}
+              plant2={match.plant2}
+            />
+          </View>
+        ))}
       </View>
-      {/* Animated Shelf */}
-      <Animated.View
-        style={[
-          styles.animatedShelf,
-          {
-            height: shelfAnim, // Animate the height
-          },
-        ]}
-      >
-        {/* Actual shelf content */}
-        <View style={styles.shelfContent}>
-          {currentMatch && (
-            <View style={styles.shelfContainer}>
-              {/* Each card is in a 50%-width container with aspect ratio */}
-              <View style={styles.plantCardWrapper}>
-                <PlantCardWithInfo
-                  plant={currentMatch.plant1}
-                  compact={true}
-                />
-              </View>
-              <View style={styles.plantCardWrapper}>
-                <PlantCardWithInfo
-                  plant={currentMatch.plant2}
-                  compact={true}
-                />
-              </View>
-            </View>
-          )}
-        </View>
 
-        {/* The "grabber" toggle button pinned to the bottom of the shelf */}
-        <TouchableOpacity
-          style={styles.shelfToggleButton}
-          onPress={toggleShelf}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={showShelf ? 'chevron-up-outline' : 'chevron-down-outline'}
-            size={22}
-            color="#fff"
-          />
-          <Text style={styles.shelfToggleButtonText}>
-            {showShelf ? t('Hide plants') : t('Show plants')}
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* Chat feed */}
+      {/* Chat messages */}
       {!hasMessages ? (
         <View style={styles.emptyChatContainer}>
-          <Text style={styles.noMessagesText}>{t('chat_no_messages_yet')}</Text>
+          <Text style={styles.noMessagesText}>
+            {t('chat_no_messages_yet')}
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -357,7 +315,10 @@ const ChatScreen: React.FC = () => {
             multiline
           />
           {isSending ? (
-            <ActivityIndicator style={{ marginRight: 12 }} color={COLORS.primary} />
+            <ActivityIndicator
+              style={{ marginRight: 12 }}
+              color={COLORS.primary}
+            />
           ) : (
             <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
               <Ionicons name="send" size={20} color={COLORS.background} />
@@ -416,9 +377,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // ====== TABS (Replaces Overlapping Circle Row) ======
+  // ====== Tabs ======
   tabWrapper: {
-    // marginVertical: 8,
     backgroundColor: '#f9f9f9',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
@@ -439,7 +399,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     minWidth: 80,
-    // shadow/elevation for tab item
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -491,53 +450,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // ========== Animated Shelf ==========
-  animatedShelf: {
-    // pinned below the tabs
-    overflow: 'hidden',
-    backgroundColor: '#f1f1f1',
-  },
-  shelfContent: {
-    flex: 1,
-    paddingVertical: 8,
-  },
-  // Container that holds the 2 plant cards side by side
+  // ========== Chat shelves ==========
   shelfContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    flex: 1,
+    position: 'relative',
   },
-  // each half is 45% width, with an aspect ratio
-  plantCardWrapper: {
-    width: '45%',
-    aspectRatio: 3 / 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-  },
-  shelfToggleButton: {
+  shelfWrapper: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     left: 0,
     right: 0,
-    height: 32,
-    backgroundColor: COLORS.accentGreen,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    bottom: 0,
   },
-  shelfToggleButtonText: {
-    marginLeft: 6,
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+  hiddenShelf: {
+    opacity: 0,
+    zIndex: -1,
   },
 
   // ========== Chat bubbles & list ==========
   listContent: {
     padding: 10,
-    paddingBottom: 60, // space for input
+    paddingBottom: 60, // space for the input
   },
 
   // ========== Input ==========

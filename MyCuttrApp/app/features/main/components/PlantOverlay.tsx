@@ -11,7 +11,7 @@ interface PlantOverlayProps {
 }
 
 export const PlantOverlay: React.FC<PlantOverlayProps> = ({ speciesName, description, tags = [], compact=false }) => (
-  <LinearGradient colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 1)']} style={[styles.overlayContent, compact && styles.overlayContentCompact]}>
+  <View style={[styles.overlayContent, compact && styles.overlayContentCompact]}>
     <Text style={[styles.fullPlantName, compact && styles.fullPlantNameCompact]}>{speciesName}</Text>
     {tags.length > 0 && (
       <View style={styles.tagRow}>
@@ -25,17 +25,17 @@ export const PlantOverlay: React.FC<PlantOverlayProps> = ({ speciesName, descrip
     {description ? (
       <Text style={[styles.fullDescription, compact && styles.fullDescriptionCompact]}>{description}</Text>
     ) : null}
-  </LinearGradient>
+  </View>
 );
 
 const styles = StyleSheet.create({
   overlayContent: {
     padding: 10,
-    paddingTop: 100,
+    bottom: 0,
   },
   overlayContentCompact: {
     padding: 10,
-    paddingTop: 60,
+    bottom: 0,
   },
   fullPlantName: {
     fontSize: 18,
@@ -87,5 +87,7 @@ const styles = StyleSheet.create({
   },
   fullDescriptionCompact: {
     fontSize: 12,
+    color: '#fff',
+    fontWeight: '400',
   },
 });

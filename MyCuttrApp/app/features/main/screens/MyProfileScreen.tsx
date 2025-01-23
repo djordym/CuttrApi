@@ -122,10 +122,12 @@ const MyProfileScreen: React.FC = () => {
       );
     } else {
       return (
+        <View style={styles.plantCardWrapper}>
         <PlantCardWithInfo
           key={item.plantId}
           plant={item}
         />
+      </View>
       );
     }
   };
@@ -582,6 +584,9 @@ const styles = StyleSheet.create({
   },
   fullViewContainer: {
     width: '100%',
+  },
+  plantCardWrapper: {
+    marginBottom: 15,
   },
   noPlantsContainer: {
     justifyContent: 'center',
