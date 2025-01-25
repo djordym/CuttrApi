@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,11 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { MaterialIcons } from '@expo/vector-icons';
 import { ImageBackground } from 'react-native';
+
 import { PlantCardWithInfo } from '../components/PlantCardWithInfo';
 import { useUserProfile } from '../hooks/useUser';
 import { useMyPlants } from '../hooks/usePlants';
@@ -26,10 +26,10 @@ import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
 import { EditProfileModal } from '../components/EditProfileModal';
-import { PlantOverlay } from '../components/PlantOverlay';
+import { PlantThumbnail } from '../components/PlantThumbnail';
 import { headerStyles } from '../styles/headerStyles';
+import { profileCardStyles } from '../styles/profileCardStyles';
 
-const { width } = Dimensions.get('window');
 
 const MyProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -54,19 +54,36 @@ const MyProfileScreen: React.FC = () => {
     isError: srError,
   } = useSearchRadius();
 
-  // Derived state
+  // For showing city, country
   const [cityCountry, setCityCountry] = useState<string>('');
   const [editProfileVisible, setEditProfileVisible] = useState(false);
 
   // Toggle: Thumbnails or Full-size for plants
   const [showFullSize, setShowFullSize] = useState(false);
 
-  // Check if user has location
+  // Position for the EditProfileModal
+  const [editCardLayout, setEditCardLayout] = useState({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+  const cardRef = useRef<View>(null);
+
+  // If the user has location
   const userHasLocation =
     userProfile?.locationLatitude !== undefined &&
     userProfile?.locationLongitude !== undefined;
 
-  // Reverse-geocode city/country
+  // Handler for measuring the card and opening the modal
+  const openEditModal = () => {
+    cardRef.current?.measureInWindow((x, y, width, height) => {
+      setEditCardLayout({ x, y, width, height });
+      setEditProfileVisible(true);
+    });
+  };
+
+  // Reverse-geocode for city / country
   useEffect(() => {
     (async () => {
       if (userHasLocation) {
@@ -92,47 +109,25 @@ const MyProfileScreen: React.FC = () => {
     })();
   }, [userHasLocation, userProfile]);
 
-  // Navigation
+  // Navigation to AddPlant
   const handleAddPlant = () => {
     navigation.navigate('AddPlant' as never);
   };
 
-  // Plants rendering
+  // Rendering plants
   const renderPlantItem = (item: PlantResponse) => {
     if (!showFullSize) {
-      return (
-        <View key={item.plantId} style={styles.plantCardThumbnail}>
-          {item.imageUrl ? (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.thumbImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.plantPlaceholder}>
-              <Ionicons name="leaf" size={40} color={COLORS.accentGreen} />
-            </View>
-          )}
-          <View style={styles.thumbTextWrapper}>
-            <Text style={styles.thumbPlantName}>
-              {item.speciesName}
-            </Text>
-          </View>
-        </View>
-      );
+      return <PlantThumbnail key={item.plantId} plant={item} />;
     } else {
       return (
-        <View style={styles.plantCardWrapper}>
-        <PlantCardWithInfo
-          key={item.plantId}
-          plant={item}
-        />
-      </View>
+        <View key={item.plantId} style={styles.plantCardWrapper}>
+          <PlantCardWithInfo plant={item} />
+        </View>
       );
     }
   };
 
-  // Content states
+  // Loading states
   if (loadingProfile || loadingPlants || srLoading) {
     return (
       <SafeAreaView style={styles.centerContainer}>
@@ -153,9 +148,7 @@ const MyProfileScreen: React.FC = () => {
           }}
           style={styles.retryButton}
         >
-          <Text style={styles.retryButtonText}>
-            {t('profile_retry_button')}
-          </Text>
+          <Text style={styles.retryButtonText}>{t('profile_retry_button')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -164,19 +157,14 @@ const MyProfileScreen: React.FC = () => {
   if (!userProfile) {
     return (
       <SafeAreaView style={styles.centerContainer}>
-        <Text style={styles.errorText}>
-          {t('profile_no_user_profile_error')}
-        </Text>
+        <Text style={styles.errorText}>{t('profile_no_user_profile_error')}</Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaProvider style={styles.container}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
+      <ScrollView style={{ flex: 1 }}>
         {/* Header */}
         <LinearGradient
           colors={[COLORS.primary, COLORS.secondary]}
@@ -186,63 +174,76 @@ const MyProfileScreen: React.FC = () => {
         </LinearGradient>
 
         {/* --- Profile Card --- */}
-        <View style={styles.profileCardContainer}>
+        <View
+          ref={cardRef}
+          style={[
+            // Use the shared style for the card container
+            profileCardStyles.profileCardContainer,
+            {
+              marginHorizontal: 16,
+              marginTop: 20,
+            },
+          ]}
+        >
           <LinearGradient
             colors={[COLORS.cardBg1, COLORS.cardBg2]}
-            style={styles.profileCardInner}
+            style={profileCardStyles.profileCardInner}
           >
-            <View style={styles.profileTopContainer}>
+            <View style={profileCardStyles.profileTopContainer}>
               <ImageBackground
-              source={require('../../../../assets/images/profileBackground.png')}
-              style={styles.profileBackgroundImage}
+                source={require('../../../../assets/images/profileBackground.png')}
+                style={profileCardStyles.profileBackgroundImage}
               />
-              <View style={styles.profilePictureContainer}>
+              <View style={profileCardStyles.profilePictureContainer}>
                 {userProfile.profilePictureUrl ? (
                   <Image
                     source={{ uri: userProfile.profilePictureUrl }}
-                    style={styles.profilePicture}
+                    style={profileCardStyles.profilePicture}
                   />
                 ) : (
-                  <View style={styles.profilePlaceholder}>
+                  <View style={profileCardStyles.profilePlaceholder}>
                     <Ionicons name="person-circle-outline" size={90} color="#ccc" />
                   </View>
                 )}
               </View>
+
+              {/* Edit button (opens modal) */}
               <TouchableOpacity
-                onPress={() => setEditProfileVisible(true)}
-                style={styles.profileEditButton}
+                onPress={openEditModal}
+                style={profileCardStyles.profileEditButton}
                 accessibilityLabel={t('profile_edit_button')}
               >
                 <MaterialIcons name="edit" size={20} color={COLORS.textLight} />
               </TouchableOpacity>
             </View>
 
-            {/* Middle portion (Name, Location, Bio) */}
-            <View style={styles.profileInfoContainer}>
-              <Text style={styles.profileNameText}>{userProfile.name}</Text>
-              <View style={styles.profileLocationRow}>
+            {/* Name, location, bio */}
+            <View style={profileCardStyles.profileInfoContainer}>
+              <View style={profileCardStyles.nameContainer}>
+              <Text style={profileCardStyles.profileNameText}>{userProfile.name}</Text>
+              </View>
+              <View style={profileCardStyles.profileLocationRow}>
                 <Ionicons
                   name="location-sharp"
                   size={16}
                   color={COLORS.accentLightRed}
-                  style={styles.locationIcon}
+                  style={profileCardStyles.locationIcon}
                 />
-                <Text style={styles.profileLocationText}>
+                <Text style={profileCardStyles.profileLocationText}>
                   {cityCountry || t('profile_no_location')}
                 </Text>
               </View>
             </View>
-            
-              <Text
-                style={[
-                  styles.bioText,
-                  !userProfile.bio && styles.bioPlaceholder,
-                ]}
-              >
-                {userProfile.bio
-                  ? userProfile.bio
-                  : t('profile_no_bio_placeholder')}
-              </Text>
+            <View style={profileCardStyles.bioContainer}>
+            <Text
+              style={[
+                profileCardStyles.bioText,
+                !userProfile.bio && profileCardStyles.bioPlaceholder,
+              ]}
+            >
+              {userProfile.bio ? userProfile.bio : t('profile_no_bio_placeholder')}
+            </Text>
+          </View>
           </LinearGradient>
         </View>
 
@@ -266,7 +267,7 @@ const MyProfileScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Toggle Thumbnails / Full */}
+          {/* Toggle between Thumbnails and Full view */}
           <View style={styles.viewToggleContainer}>
             <TouchableOpacity
               onPress={() => setShowFullSize(false)}
@@ -306,11 +307,7 @@ const MyProfileScreen: React.FC = () => {
 
           {/* Plants List */}
           {myPlants && myPlants.length > 0 ? (
-            <View
-              style={[
-                showFullSize ? styles.fullViewContainer : styles.thumbViewContainer,
-              ]}
-            >
+            <View style={showFullSize ? styles.fullViewContainer : styles.thumbViewContainer}>
               {myPlants.map((plant) => renderPlantItem(plant))}
             </View>
           ) : (
@@ -322,7 +319,7 @@ const MyProfileScreen: React.FC = () => {
           )}
         </View>
 
-        {/* --- EditProfileModal (consolidated) --- */}
+        {/* Edit Profile Modal */}
         <EditProfileModal
           visible={editProfileVisible}
           userProfile={userProfile}
@@ -330,6 +327,7 @@ const MyProfileScreen: React.FC = () => {
           onUpdated={() => {
             refetchProfile();
           }}
+          cardLayout={editCardLayout}
         />
       </ScrollView>
     </SafeAreaProvider>
@@ -372,125 +370,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  /* --- Profile Card --- */
-  profileCardContainer: {
-    marginHorizontal: 16,
-    marginTop: 20,
-    borderRadius: 18,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.12,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 3 },
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  profileCardInner: {
-    borderRadius: 18,
-  },
-  profileTopContainer: {
-    backgroundColor: COLORS.primary,
-    height: 120,
-    position: 'relative',
-  },
-  profileBackgroundImage: {
-    height: '100%',
-    resizeMode: 'cover',
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    left: -200,
-  },
-  profilePictureContainer: {
-    position: 'absolute',
-    bottom: -75,
-    left: 25,
-  },
-  profilePicture: {
-    width: 170,
-    height: 170,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  profilePlaceholder: {
-    width: 150,
-    height: 150,
-    borderRadius: 40,
-    backgroundColor: '#eee',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  profileInfoContainer: {
-    paddingHorizontal: 20,
-    right: -190,
-  },
-  profileNameText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textDark,
-    marginTop: 8,
-  },
-  profileLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  locationIcon: {
-    marginRight: 4,
-    top: 1,
-  },
-  profileLocationText: {
-    fontSize: 14,
-    color: COLORS.textDark,
-    marginTop: 4,
-  },
-  bioText: {
-    fontSize: 14,
-    color: COLORS.textDark,
-    lineHeight: 20,
-    margin: 25,
-    marginBottom: 25,
-  },
-  bioPlaceholder: {
-    color: '#999',
-    fontStyle: 'italic',
-    marginBottom: 20,
-  },
-  profileEditButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 35,
-    height: 35,
-    borderRadius: 20,
-    backgroundColor: COLORS.accentGreen,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        shadowOffset: { width: 0, height: 3 },
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-
-  /* ---- Plants Section ---- */
+  // ---- Plants Section ----
   plantsSectionWrapper: {
     paddingHorizontal: 10,
     paddingTop: 20,
+    paddingBottom: 15,
   },
   plantsSectionHeader: {
     flexDirection: 'row',
@@ -514,6 +398,8 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontWeight: '600',
   },
+
+  // Toggle for Thumbnails / Full
   viewToggleContainer: {
     flexDirection: 'row',
     alignSelf: 'center',
@@ -539,48 +425,12 @@ const styles = StyleSheet.create({
   viewToggleTextActive: {
     color: '#fff',
   },
+
+  // Different layouts for the plant items
   thumbViewContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-  },
-  plantCardThumbnail: {
-    width: (width - 80) / 3,
-    backgroundColor: COLORS.cardBg1,
-    borderRadius: 8,
-    margin: 8,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  thumbImage: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-  },
-  plantPlaceholder: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#eee',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  thumbTextWrapper: {
-    padding: 8,
-    alignItems: 'center',
-  },
-  thumbPlantName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    textAlign: 'center',
   },
   fullViewContainer: {
     width: '100%',

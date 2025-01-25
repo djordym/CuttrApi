@@ -13,6 +13,10 @@ import MapView, { Marker, MapPressEvent, Region } from 'react-native-maps';
 import { useTranslation } from 'react-i18next';
 import { userService } from '../../../api/userService';
 import { UpdateLocationRequest } from '../../../types/apiTypes';
+import { log } from '../../../utils/logger';
+import ConfirmCancelButtons from './ConfirmCancelButtons';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../../../theme/colors';
 
 interface ChangeLocationModalProps {
   visible: boolean;
@@ -54,16 +58,20 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
   useEffect(() => {
     if (visible) {
       if (hasInitialCoords) {
+        log.debug('setting initial coords:', initialLatitude, initialLongitude);
         // Create a region with a small delta so the user can see the marker
         setRegion({
-          latitude: initialLatitude!,
-          longitude: initialLongitude!,
+          latitude: initialLatitude,
+          longitude: initialLongitude,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         });
-        setMarkerPosition({ lat: initialLatitude!, lng: initialLongitude! });
+        log.debug('region set:', region);
+        setMarkerPosition({ lat: initialLatitude, lng: initialLongitude });
+        log.debug('marker set:', markerPosition);
       } else {
         // Default region or fallback
+        log.debug('no initial coords, setting default region');
         setRegion({
           latitude: 37.78825,
           longitude: -122.4324,
@@ -82,6 +90,7 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
    */
   const handleMapPress = (e: MapPressEvent) => {
     const { coordinate } = e.nativeEvent;
+    log.debug('map press:', coordinate);
     setMarkerPosition({ lat: coordinate.latitude, lng: coordinate.longitude });
   };
 
@@ -192,7 +201,7 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
               onSubmitEditing={handleSearch}
             />
             <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-              <Text style={styles.searchButtonText}>{t('Search')}</Text>
+              <Ionicons name="search" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
 
@@ -222,26 +231,12 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
             <ActivityIndicator size="small" color="#1EAE98" style={{ marginVertical: 10 }} />
           )}
 
-          <View style={styles.actions}>
-            <TouchableOpacity
-              onPress={handleCancel}
-              style={styles.cancelButton}
-              accessibilityRole="button"
-            >
-              <Text style={styles.cancelButtonText}>
-                {t('change_location_cancel_button')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleConfirm}
-              style={styles.confirmButton}
-              accessibilityRole="button"
-            >
-              <Text style={styles.confirmButtonText}>
-                {t('change_location_confirm_button')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <ConfirmCancelButtons
+            onCancel={handleCancel}
+            onConfirm={handleConfirm}
+            confirmButtonText={t('Confirm')}
+            cancelButtonText={t('Cancel')}
+          />
         </View>
       </View>
     </Modal>
@@ -267,11 +262,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     marginBottom: 10,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
     color: '#555',
     marginBottom: 10,
+    textAlign: 'center',
   },
   searchRow: {
     flexDirection: 'row',
@@ -288,9 +285,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   searchButton: {
-    backgroundColor: '#1EAE98',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    backgroundColor: COLORS.accentGreen,
+    padding: 7,
     borderRadius: 8,
   },
   searchButtonText: {
@@ -308,31 +304,5 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: '#eee',
   },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  cancelButton: {
-    marginRight: 10,
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-  },
-  confirmButton: {
-    backgroundColor: '#1EAE98',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
-  },
+  
 });

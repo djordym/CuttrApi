@@ -32,10 +32,14 @@ const styles = StyleSheet.create({
   overlayContent: {
     padding: 10,
     bottom: 0,
+    marginBottom: 2,
+    marginLeft: 4,
   },
   overlayContentCompact: {
     padding: 6,
     bottom: 0,
+    marginBottom: 1,
+    marginLeft: 2,
   },
   fullPlantName: {
     fontSize: 18,
@@ -44,7 +48,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   fullPlantNameCompact: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#fff',
     marginBottom: 3,
@@ -52,13 +56,15 @@ const styles = StyleSheet.create({
   tagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginLeft: -6,
   },
   tagRowCompact: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginLeft: -3,
   },
   tag: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -66,31 +72,31 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   tagCompact: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
     borderRadius: 10,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     paddingVertical: 2,
     marginRight: 3,
     marginBottom: 3,
   },
   tagText: {
-    color: '#fff',
+    color: COLORS.textLight,
     fontSize: 12,
     fontWeight: '600',
   },
   tagTextCompact: {
-    color: '#fff',
-    fontSize: 9,
+    color: COLORS.textLight,
+    fontSize: 8,
     fontWeight: '600',
   },
   fullDescription: {
-    color: '#fff',
+    color: COLORS.textLight,
     fontSize: 14,
     fontWeight: '400',
   },
   fullDescriptionCompact: {
-    fontSize: 12,
-    color: '#fff',
+    fontSize: 10,
+    color: COLORS.textLight,
     fontWeight: '400',
   },
 });

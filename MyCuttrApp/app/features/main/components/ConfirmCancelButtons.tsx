@@ -48,7 +48,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'column',
     justifyContent: 'flex-end',
-    marginTop: 16,
   },
   confirmButton: {
     backgroundColor: COLORS.accentGreen,

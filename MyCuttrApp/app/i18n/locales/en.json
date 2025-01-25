@@ -129,5 +129,16 @@
   "chat_no_matches_with_user": "No matches found with this user.",
   "chat_title": "Chat",
   "chat_no_messages_yet": "No messages yet. Say hello!",
-  "chat_message_placeholder": "Type a message"
+  "chat_message_placeholder": "Type a message",
+  "profile_change_picture_title": "Change Profile Picture",
+  "profile_change_picture_msg": "Choose an option to change your profile picture.",
+  "profile_picture_select_library": "Select from Library",
+  "profile_picture_take_photo": "Take Photo",
+  "profile_picture_cancel": "Cancel",
+  "profile_no_bio_placeholder": "Add a bio...",
+  "error_title": "Error",
+  "error_could_not_open_image_library": "Could not open image library.",
+  "error_camera_permission_denied": "Camera permission denied.",
+  "error_could_not_open_camera": "Could not open camera.",
+  "error_profile_picture_update_failed": "Profile picture update failed."
 }

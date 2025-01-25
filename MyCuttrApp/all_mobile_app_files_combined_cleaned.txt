@@ -9,7 +9,7 @@
 "icon": "./assets/images/icon.png",
 "scheme": "myapp",
 "userInterfaceStyle": "automatic",
-"newArchEnabled": true,
+"newArchEnabled": false,
 "ios": {
 "supportsTablet": true
 },
@@ -35,7 +35,9 @@
 "backgroundColor": "#00000000"
 }
 ],
-"expo-localization"
+"expo-localization",
+"expo-font",
+"expo-secure-store"
 ],
 "experiments": {
 "typedRoutes": true
@@ -78,34 +80,36 @@ plugins: ['react-native-reanimated/plugin'],
 "@react-navigation/stack": "^7.1.1",
 "@reduxjs/toolkit": "^2.5.0",
 "axios": "^1.7.9",
-"expo": "^52.0.23",
-"expo-blur": "~14.0.1",
-"expo-constants": "~17.0.3",
-"expo-font": "~13.0.2",
-"expo-haptics": "~14.0.0",
-"expo-image-manipulator": "^13.0.5",
-"expo-image-picker": "^16.0.3",
-"expo-linear-gradient": "~14.0.1",
-"expo-linking": "~7.0.3",
-"expo-localization": "~16.0.0",
-"expo-router": "~4.0.15",
-"expo-secure-store": "^14.0.0",
-"expo-splash-screen": "~0.29.18",
-"expo-status-bar": "^2.0.0",
-"expo-symbols": "~0.2.0",
-"expo-system-ui": "~4.0.6",
-"expo-web-browser": "~14.0.1",
+"expo": "~52.0.26",
+"expo-blur": "~14.0.3",
+"expo-constants": "~17.0.4",
+"expo-font": "~13.0.3",
+"expo-haptics": "~14.0.1",
+"expo-image-manipulator": "~13.0.6",
+"expo-image-picker": "~16.0.4",
+"expo-linear-gradient": "~14.0.2",
+"expo-linking": "~7.0.4",
+"expo-localization": "~16.0.1",
+"expo-location": "^18.0.5",
+"expo-router": "~4.0.17",
+"expo-secure-store": "~14.0.1",
+"expo-splash-screen": "~0.29.21",
+"expo-status-bar": "~2.0.1",
+"expo-symbols": "~0.2.1",
+"expo-system-ui": "~4.0.7",
+"expo-web-browser": "~14.0.2",
 "i18next": "^24.2.0",
 "react": "18.3.1",
 "react-dom": "18.3.1",
 "react-i18next": "^15.2.0",
-"react-native": "^0.76.5",
+"react-native": "0.76.6",
 "react-native-gesture-handler": "~2.20.2",
 "react-native-logs": "^5.3.0",
 "react-native-maps": "1.18.0",
 "react-native-reanimated": "^3.16.6",
 "react-native-safe-area-context": "4.12.0",
-"react-native-screens": "^4.4.0",
+"react-native-screens": "~4.4.0",
+"react-native-svg": "15.8.0",
 "react-native-vector-icons": "^10.2.0",
 "react-native-web": "~0.19.13",
 "react-native-webview": "13.12.5",
@@ -119,7 +123,7 @@ plugins: ['react-native-reanimated/plugin'],
 "@types/react-redux": "^7.1.34",
 "@types/react-test-renderer": "^18.3.0",
 "jest": "^29.2.1",
-"jest-expo": "~52.0.2",
+"jest-expo": "~52.0.3",
 "react-test-renderer": "18.3.1",
 "typescript": "^5.7.2"
 },
@@ -188,7 +192,7 @@ return (
 <GestureHandlerRootView>
 <StatusBar
 style="dark"
-backgroundColor='#1EAE98'
+backgroundColor={COLORS.primary}
 />
 <AppNavigator />
 </GestureHandlerRootView>
@@ -906,6 +910,8 @@ TouchableOpacity,
 ActivityIndicator,
 TextInput,
 Alert,
+Dimensions,
+Platform,
 } from 'react-native';
 interface ChangeLocationModalProps {
 visible: boolean;
@@ -922,10 +928,7 @@ onClose,
 onUpdated,
 }) => {
 const { t } = useTranslation();
-const [markerPosition, setMarkerPosition] = useState<{
-lat: number;
-lng: number;
-} | null>(null);
+const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
 const [region, setRegion] = useState<Region | null>(null);
 const [loading, setLoading] = useState(false);
 const [error, setError] = useState<string | null>(null);
@@ -938,6 +941,7 @@ typeof initialLongitude === 'number' &&
 useEffect(() => {
 if (visible) {
 if (hasInitialCoords) {
+log.debug('Setting initial coords:', initialLatitude, initialLongitude);
 setRegion({
 latitude: initialLatitude!,
 longitude: initialLongitude!,
@@ -960,6 +964,7 @@ setError(null);
 }, [visible, hasInitialCoords, initialLatitude, initialLongitude]);
 const handleMapPress = (e: MapPressEvent) => {
 const { coordinate } = e.nativeEvent;
+log.debug('Map press:', coordinate);
 setMarkerPosition({ lat: coordinate.latitude, lng: coordinate.longitude });
 };
 const handleRegionChangeComplete = (newRegion: Region) => {
@@ -996,7 +1001,7 @@ setError(null);
 try {
 const url = `https:
 searchInput
-)}&format=json&limit=1`;
+)}`;
 const response = await fetch(url);
 const data = await response.json();
 if (data && data.length > 0) {
@@ -1026,9 +1031,21 @@ return null;
 }
 return (
 <Modal visible={visible} animationType="slide" transparent>
-<View style={styles.overlay}>
-<View style={styles.modalContainer}>
+{}
+<View style={styles.modalOverlay}>
+{}
+<LinearGradient
+colors={[COLORS.primary, COLORS.secondary]}
+style={styles.gradientBackground}
+>
+{}
+<View style={styles.cardContainer}>
+<View style={styles.headerRow}>
 <Text style={styles.title}>{t('change_location_title')}</Text>
+<TouchableOpacity onPress={handleCancel} style={styles.closeIconWrapper}>
+<Ionicons name="close" size={24} color={COLORS.textDark} />
+</TouchableOpacity>
+</View>
 <Text style={styles.subtitle}>{t('change_location_instructions')}</Text>
 {}
 <View style={styles.searchRow}>
@@ -1039,12 +1056,15 @@ value={searchInput}
 onChangeText={setSearchInput}
 returnKeyType="search"
 onSubmitEditing={handleSearch}
+placeholderTextColor="#999"
 />
 <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
 <Text style={styles.searchButtonText}>{t('Search')}</Text>
 </TouchableOpacity>
 </View>
+{}
 {error && <Text style={styles.errorText}>{error}</Text>}
+{}
 <View style={styles.mapContainer}>
 {region && (
 <MapView
@@ -1064,13 +1084,19 @@ longitude: markerPosition.lng,
 </MapView>
 )}
 </View>
+{}
 {loading && (
-<ActivityIndicator size="small" color="#1EAE98" style={{ marginVertical: 10 }} />
+<ActivityIndicator
+size="small"
+color={COLORS.accentGreen}
+style={{ marginVertical: 10 }}
+/>
 )}
+{}
 <View style={styles.actions}>
 <TouchableOpacity
 onPress={handleCancel}
-style={styles.cancelButton}
+style={[styles.actionButton, styles.cancelButton]}
 accessibilityRole="button"
 >
 <Text style={styles.cancelButtonText}>
@@ -1079,7 +1105,7 @@ accessibilityRole="button"
 </TouchableOpacity>
 <TouchableOpacity
 onPress={handleConfirm}
-style={styles.confirmButton}
+style={[styles.actionButton, styles.confirmButton]}
 accessibilityRole="button"
 >
 <Text style={styles.confirmButtonText}>
@@ -1088,29 +1114,52 @@ accessibilityRole="button"
 </TouchableOpacity>
 </View>
 </View>
+</LinearGradient>
 </View>
 </Modal>
 );
 };
 const styles = StyleSheet.create({
-overlay: {
+modalOverlay: {
 flex: 1,
 backgroundColor: 'rgba(0,0,0,0.5)',
 justifyContent: 'center',
-alignItems: 'center',
 },
-modalContainer: {
-width: '90%',
-height: '80%',
+gradientBackground: {
+flex: 1,
+justifyContent: 'center',
+},
+cardContainer: {
 backgroundColor: '#fff',
-borderRadius: 16,
-padding: 20,
+marginHorizontal: 20,
+borderRadius: 12,
+padding: 16,
+maxHeight: '85%',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.15,
+shadowRadius: 6,
+shadowOffset: { width: 0, height: 3 },
+},
+android: {
+elevation: 5,
+},
+}),
+},
+headerRow: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+alignItems: 'center',
+marginBottom: 6,
 },
 title: {
 fontSize: 18,
 fontWeight: '700',
-color: '#333',
-marginBottom: 10,
+color: COLORS.textDark,
+},
+closeIconWrapper: {
+padding: 4,
 },
 subtitle: {
 fontSize: 14,
@@ -1130,9 +1179,10 @@ borderRadius: 8,
 paddingHorizontal: 10,
 paddingVertical: 6,
 marginRight: 8,
+fontSize: 14,
 },
 searchButton: {
-backgroundColor: '#1EAE98',
+backgroundColor: COLORS.accentGreen,
 paddingHorizontal: 15,
 paddingVertical: 10,
 borderRadius: 8,
@@ -1142,7 +1192,7 @@ color: '#fff',
 fontWeight: '600',
 },
 errorText: {
-color: '#FF6B6B',
+color: COLORS.accentRed,
 marginBottom: 10,
 },
 mapContainer: {
@@ -1156,48 +1206,353 @@ actions: {
 flexDirection: 'row',
 justifyContent: 'flex-end',
 },
-cancelButton: {
-marginRight: 10,
-backgroundColor: '#f0f0f0',
+actionButton: {
+borderRadius: 8,
 paddingHorizontal: 15,
 paddingVertical: 10,
-borderRadius: 8,
+marginLeft: 10,
+},
+cancelButton: {
+backgroundColor: '#f0f0f0',
 },
 cancelButtonText: {
-fontSize: 16,
+fontSize: 14,
 color: '#333',
 fontWeight: '600',
 },
 confirmButton: {
-backgroundColor: '#1EAE98',
-paddingHorizontal: 15,
-paddingVertical: 10,
-borderRadius: 8,
+backgroundColor: COLORS.accentGreen,
 },
 confirmButtonText: {
-fontSize: 16,
+fontSize: 14,
 color: '#fff',
 fontWeight: '600',
 },
 });
+export default ChangeLocationModal;
+// File: app\features\main\components\ChatShelf.tsx
+Animated,
+Easing,
+View,
+TouchableOpacity,
+StyleSheet,
+LayoutChangeEvent,
+} from 'react-native';
+interface ChatShelfProps {
+plant1?: PlantResponse;
+plant2?: PlantResponse;
+}
+const ChatShelf: React.FC<ChatShelfProps> = memo(({ plant1, plant2 }) => {
+const [isShelfOpen, setIsShelfOpen] = useState(true);
+const [maxShelfHeight, setMaxShelfHeight] = useState<number>(0);
+const shelfAnim = useRef(new Animated.Value(0)).current;
+const handleShelfLayout = useCallback(
+(event: LayoutChangeEvent) => {
+const { height } = event.nativeEvent.layout;
+log.debug('Measured layout height:', height);
+if (height > maxShelfHeight) {
+setMaxShelfHeight(height);
+if (isShelfOpen) {
+shelfAnim.setValue(height);
+}
+}
+},
+[isShelfOpen, maxShelfHeight, shelfAnim]
+);
+const toggleShelf = useCallback(() => {
+if (!maxShelfHeight) return;
+const collapsedHeight = styles.shelfToggleButton.height;
+const targetValue = isShelfOpen ? collapsedHeight : maxShelfHeight;
+Animated.timing(shelfAnim, {
+toValue: targetValue,
+duration: 300,
+easing: Easing.ease,
+useNativeDriver: false,
+}).start(() => {
+setIsShelfOpen((prev) => !prev);
+});
+}, [isShelfOpen, maxShelfHeight, shelfAnim]);
+const containerStyle =
+maxShelfHeight > 0 ? { height: shelfAnim } : undefined;
+return (
+<Animated.View style={[styles.animatedShelf, containerStyle]}>
+{}
+<View style={styles.shelfInnerContainer} onLayout={handleShelfLayout}>
+<View style={styles.plantCardWrapper}>
+{plant1 && <PlantCardWithInfo plant={plant1} compact />}
+</View>
+<View style={styles.plantCardWrapper}>
+{plant2 && <PlantCardWithInfo plant={plant2} compact />}
+</View>
+</View>
+{}
+<TouchableOpacity
+style={styles.shelfToggleButton}
+onPress={toggleShelf}
+activeOpacity={0.7}
+>
+<Ionicons
+name={isShelfOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
+size={10}
+color="#fff"
+/>
+</TouchableOpacity>
+</Animated.View>
+);
+});
+export default ChatShelf;
+const styles = StyleSheet.create({
+animatedShelf: {
+overflow: 'hidden',
+backgroundColor: '#f1f1f1',
+},
+shelfInnerContainer: {
+flexDirection: 'row',
+justifyContent: 'space-evenly',
+paddingHorizontal: 12,
+paddingVertical: 8,
+paddingBottom: 23,
+},
+plantCardWrapper: {
+width: '45%',
+borderRadius: 8,
+alignSelf: 'center',
+},
+shelfToggleButton: {
+position: 'absolute',
+bottom: 0,
+left: 0,
+right: 0,
+height: 15,
+backgroundColor: COLORS.accentGreen,
+flexDirection: 'row',
+alignItems: 'center',
+justifyContent: 'center',
+},
+});
+// File: app\features\main\components\ConfirmCancelButtons.tsx
+interface ConfirmCancelButtonsProps {
+confirmButtonText: string;
+cancelButtonText: string;
+onConfirm: () => void;
+onCancel: () => void;
+loading?: boolean;
+}
+export const ConfirmCancelButtons: React.FC<ConfirmCancelButtonsProps> = ({
+confirmButtonText,
+cancelButtonText,
+onConfirm,
+onCancel,
+loading = false,
+}) => {
+return (
+<View style={styles.actions}>
+<TouchableOpacity
+style={styles.confirmButton}
+onPress={onConfirm}
+disabled={loading}
+>
+{loading ? (
+<ActivityIndicator size="small" color="#fff" />
+) : (
+<Text style={styles.confirmButtonText}>{confirmButtonText}</Text>
+)}
+</TouchableOpacity>
+<TouchableOpacity
+style={styles.cancelButton}
+onPress={onCancel}
+disabled={loading}
+>
+<Text style={styles.cancelButtonText}>{cancelButtonText}</Text>
+</TouchableOpacity>
+</View>
+);
+};
+export default ConfirmCancelButtons;
+const styles = StyleSheet.create({
+actions: {
+flexDirection: 'column',
+justifyContent: 'flex-end',
+marginTop: 16,
+},
+confirmButton: {
+backgroundColor: COLORS.accentGreen,
+borderRadius: 8,
+padding: 13,
+alignItems: 'center',
+justifyContent: 'center',
+},
+confirmButtonText: {
+fontSize: 14,
+color: COLORS.textLight,
+fontWeight: '600',
+textAlign: 'center',
+},
+cancelButton: {
+borderWidth: 1,
+borderColor: COLORS.accentGreen,
+borderRadius: 8,
+padding: 13,
+marginTop: 6,
+alignItems: 'center',
+justifyContent: 'center',
+},
+cancelButtonText: {
+fontSize: 14,
+color: COLORS.accentGreen,
+fontWeight: '600',
+textAlign: 'center',
+},
+});
 // File: app\features\main\components\EditProfileModal.tsx
+Modal,
+View,
+Text,
+Image,
+TextInput,
+StyleSheet,
+TouchableOpacity,
+ActivityIndicator,
+Alert,
+Dimensions,
+Platform,
+ImageBackground,
+} from 'react-native';
 interface EditProfileModalProps {
 visible: boolean;
-initialName: string;
-initialBio: string;
+userProfile: UserResponse;
 onClose: () => void;
 onUpdated: () => void;
+cardLayout: { x: number; y: number; width: number; height: number };
 }
-export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, initialName, initialBio, onClose, onUpdated }) => {
+export const EditProfileModal: React.FC<EditProfileModalProps> = ({
+visible,
+userProfile,
+onClose,
+onUpdated,
+cardLayout,
+}) => {
 const { t } = useTranslation();
-const [name, setName] = useState(initialName);
-const [bio, setBio] = useState(initialBio);
-const [loading, setLoading] = useState(false);
+const screenWidth = Dimensions.get('window').width;
+const [name, setName] = useState(userProfile.name);
+const [bio, setBio] = useState(userProfile.bio || '');
+const [cityCountry, setCityCountry] = useState<string>('');
+const [updating, setUpdating] = useState(false);
 const [error, setError] = useState<string | null>(null);
-const handleConfirm = async () => {
-setLoading(true);
+const [locationModalVisible, setLocationModalVisible] = useState(false);
+const userHasLocation =
+userProfile.locationLatitude !== undefined &&
+userProfile.locationLongitude !== undefined;
+useEffect(() => {
+(async () => {
+if (userHasLocation) {
+try {
+const [geo] = await Location.reverseGeocodeAsync({
+latitude: userProfile.locationLatitude!,
+longitude: userProfile.locationLongitude!,
+});
+if (geo) {
+const city = geo.city || geo.subregion || '';
+const country = geo.country || '';
+setCityCountry(
+city && country ? `${city}, ${country}` : city || country
+);
+}
+} catch (err) {
+console.log('Reverse geocoding error:', err);
+setCityCountry('');
+}
+} else {
+setCityCountry('');
+}
+})();
+}, [userHasLocation, userProfile]);
+const handleChangeProfilePicture = useCallback(() => {
+Alert.alert(
+t('profile_change_picture_title'),
+t('profile_change_picture_msg'),
+[
+{
+text: t('profile_picture_select_library'),
+onPress: pickImageFromLibrary,
+},
+{
+text: t('profile_picture_take_photo'),
+onPress: takePictureWithCamera,
+},
+{ text: t('profile_picture_cancel'), style: 'cancel' },
+]
+);
+}, [t]);
+const pickImageFromLibrary = async () => {
+try {
+const result = await ImagePicker.launchImageLibraryAsync({
+mediaTypes: ImagePicker.MediaTypeOptions.Images,
+allowsEditing: true,
+aspect: [1, 1],
+quality: 0.7,
+});
+if (!result.canceled && result.assets[0].uri) {
+const resized = await resizeImage(result.assets[0].uri);
+await uploadProfilePicture(resized);
+}
+} catch (err) {
+console.error('pickImageFromLibrary error:', err);
+Alert.alert(t('error_title'), t('error_could_not_open_image_library'));
+}
+};
+const takePictureWithCamera = async () => {
+try {
+const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+if (!cameraPermission.granted) {
+Alert.alert(t('error_title'), t('error_camera_permission_denied'));
+return;
+}
+const result = await ImagePicker.launchCameraAsync({
+allowsEditing: true,
+aspect: [1, 1],
+quality: 0.7,
+});
+if (!result.canceled && result.assets[0].uri) {
+const resized = await resizeImage(result.assets[0].uri);
+await uploadProfilePicture(resized);
+}
+} catch (err) {
+console.error('takePictureWithCamera error:', err);
+Alert.alert(t('error_title'), t('error_could_not_open_camera'));
+}
+};
+const resizeImage = async (uri: string) => {
+return await ImageManipulator.manipulateAsync(
+uri,
+[{ resize: { width: 800 } }],
+{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+);
+};
+const uploadProfilePicture = async (img: ImageManipulator.ImageResult) => {
+setUpdating(true);
+try {
+const photo = {
+uri: img.uri,
+name: 'profile.jpg',
+type: 'image/jpeg',
+} as any;
+await userService.updateProfilePicture({ image: photo });
+onUpdated();
+} catch (err) {
+console.error('Error uploading profile picture:', err);
+Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));
+} finally {
+setUpdating(false);
+}
+};
+const handleSave = async () => {
+setUpdating(true);
 setError(null);
-const payload: UserUpdateRequest = { name: name, bio: bio };
+const payload: UserUpdateRequest = {
+name: name.trim(),
+bio: bio.trim(),
+};
 try {
 await userService.updateMe(payload);
 onUpdated();
@@ -1205,107 +1560,222 @@ onClose();
 } catch {
 setError(t('edit_profile_error_message'));
 } finally {
-setLoading(false);
+setUpdating(false);
 }
 };
-const handleCancel = () => {
-onClose();
+const handleOpenSetLocationModal = () => {
+log.debug('Opening location modal');
+log.debug('userProfile.locationLatitude', userProfile.locationLatitude);
+log.debug('userProfile.locationLongitude', userProfile.locationLongitude);
+setLocationModalVisible(true);
 };
 return (
-<Modal visible={visible} animationType="slide" transparent>
-<View style={styles.overlay}>
-<View style={styles.modalContainer}>
-<Text style={styles.title}>{t('edit_profile_title')}</Text>
-{error && <Text style={styles.errorText}>{error}</Text>}
-<Text style={styles.label}>{t('edit_profile_name_label')}:</Text>
-<TextInput
-style={styles.input}
-value={name}
-onChangeText={setName}
-accessibilityLabel={t('edit_profile_name_label')}
+<Modal visible={visible} animationType="none" transparent>
+<View style={styles.modalOverlay}>
+{}
+<View
+style={[
+profileCardStyles.profileCardContainer,
+{
+position: 'absolute',
+top: cardLayout.y,
+left: cardLayout.x,
+width: cardLayout.width,
+},
+]}
+>
+<LinearGradient
+colors={[COLORS.cardBg1, COLORS.cardBg2]}
+style={profileCardStyles.profileCardInner}
+>
+{}
+<View style={profileCardStyles.profileTopContainer}>
+<ImageBackground
+source={require('../../../../assets/images/profileBackground.png')}
+style={profileCardStyles.profileBackgroundImage}
 />
-<Text style={styles.label}>{t('edit_profile_bio_label')}:</Text>
+<View style={profileCardStyles.profilePictureContainer}>
+{userProfile.profilePictureUrl ? (
+<Image
+source={{ uri: userProfile.profilePictureUrl }}
+style={profileCardStyles.profilePicture}
+/>
+) : (
+<View style={profileCardStyles.profilePlaceholder}>
+<Ionicons name="person-circle-outline" size={90} color="#ccc" />
+</View>
+)}
+{}
+<TouchableOpacity
+style={profileCardStyles.cameraIconWrapper}
+onPress={handleChangeProfilePicture}
+disabled={updating}
+>
+<Ionicons name="camera" size={18} color="#fff" />
+</TouchableOpacity>
+</View>
+{}
+<TouchableOpacity
+onPress={handleSave}
+style={profileCardStyles.profileEditButton}
+disabled={updating}
+>
+<MaterialIcons name="check" size={20} color={COLORS.textLight} />
+</TouchableOpacity>
+</View>
+{}
+<View style={profileCardStyles.profileInfoContainer}>
+<View
+style={[
+profileCardStyles.nameContainer,
+profileCardStyles.editNameContainer,
+{ maxWidth: (screenWidth * 0.9 - 215)},
+]}
+>
 <TextInput
-style={[styles.input, { height:80 }]}
+style={[
+profileCardStyles.profileNameText,
+profileCardStyles.editableTextName,
+]}
+value={name}
+maxLength={16}
+onChangeText={setName}
+placeholder={t('edit_profile_name_label')}
+placeholderTextColor="#999"
+/>
+</View>
+<View style={profileCardStyles.profileLocationRow}>
+<Ionicons
+name="location-sharp"
+size={16}
+color={COLORS.accentLightRed}
+style={profileCardStyles.locationIcon}
+/>
+{}
+<TouchableOpacity
+onPress={handleOpenSetLocationModal}
+style={{ flex: 1 }}
+>
+<Text style={profileCardStyles.profileLocationText}>
+{cityCountry || t('profile_no_location')}
+</Text>
+</TouchableOpacity>
+</View>
+</View>
+{}
+<View
+style={[
+profileCardStyles.bioContainer,
+profileCardStyles.bioContainerEdit,
+]}
+>
+<TextInput
+style={[
+profileCardStyles.bioText,
+profileCardStyles.editableTextBio,
+!bio && profileCardStyles.bioPlaceholder,
+]}
+multiline
 value={bio}
 onChangeText={setBio}
-multiline
-accessibilityLabel={t('edit_profile_bio_label')}
+placeholder={t('profile_no_bio_placeholder')}
+placeholderTextColor="#999"
 />
-{loading && <ActivityIndicator size="small" color="#1EAE98" style={{marginVertical:10}}/>}
-<View style={styles.actions}>
-<TouchableOpacity onPress={handleCancel} style={styles.cancelButton} accessibilityRole="button">
-<Text style={styles.cancelButtonText}>{t('edit_profile_cancel_button')}</Text>
-</TouchableOpacity>
-<TouchableOpacity onPress={handleConfirm} style={styles.confirmButton} accessibilityRole="button">
-<Text style={styles.confirmButtonText}>{t('edit_profile_confirm_button')}</Text>
-</TouchableOpacity>
+</View>
+{}
+{error && <Text style={profileCardStyles.errorText}>{error}</Text>}
+</LinearGradient>
 </View>
 </View>
-</View>
+{}
+<ChangeLocationModal
+visible={locationModalVisible}
+initialLatitude={userProfile.locationLatitude}
+initialLongitude={userProfile.locationLongitude}
+onClose={() => setLocationModalVisible(false)}
+onUpdated={() => {
+setLocationModalVisible(false);
+onUpdated();
+}}
+/>
 </Modal>
 );
 };
 const styles = StyleSheet.create({
-overlay:{
-flex:1,
-backgroundColor:'rgba(0,0,0,0.5)',
-justifyContent:'center',
-alignItems:'center'
+modalOverlay: {
+flex: 1,
+backgroundColor: 'rgba(0,0,0,0.45)',
 },
-modalContainer:{
-width:'90%',
-backgroundColor:'#fff',
-borderRadius:16,
-padding:20
-},
-title:{
-fontSize:18,
-fontWeight:'700',
-color:'#333',
-marginBottom:10
-},
-errorText:{
-color:'#FF6B6B',
-marginBottom:10
-},
-label:{
-fontSize:14,
-fontWeight:'600',
-color:'#333',
-marginBottom:4
-},
-input:{
-borderWidth:1,
-borderColor:'#ccc',
-borderRadius:8,
-padding:10,
-marginBottom:10,
-fontSize:14
-},
-actions:{
-flexDirection:'row',
-justifyContent:'flex-end',
-marginTop:10
-},
-cancelButton:{
-marginRight:10
-},
-cancelButtonText:{
-fontSize:16,
-color:'#333'
-},
-confirmButton:{
-backgroundColor:'#1EAE98',
-paddingHorizontal:15,
-paddingVertical:10,
-borderRadius:8
-},
-confirmButtonText:{
-fontSize:16,
-color:'#fff',
-fontWeight:'600'
+});
+// File: app\features\main\components\MessageBubble.tsx
+interface BubbleProps {
+message: MessageResponse;
+isMine: boolean;
 }
+export const MessageBubble: React.FC<BubbleProps> = ({ message, isMine }) => {
+return (
+<View
+style={[
+styles.bubbleContainer,
+isMine ? styles.bubbleRightContainer : styles.bubbleLeftContainer,
+]}
+>
+<View style={[styles.bubble, isMine ? styles.bubbleRight : styles.bubbleLeft]}>
+<Text style={styles.bubbleText}>{message.messageText}</Text>
+<Text style={styles.timestamp}>
+{new Date(message.sentAt).toLocaleTimeString([], {
+hour: '2-digit',
+minute: '2-digit',
+})}
+</Text>
+</View>
+</View>
+);
+};
+const styles = StyleSheet.create({
+bubbleContainer: {
+marginVertical: 3,
+},
+bubbleLeftContainer: {
+alignSelf: 'flex-start',
+},
+bubbleRightContainer: {
+alignSelf: 'flex-end',
+},
+bubble: {
+maxWidth: '80%',
+borderRadius: 8,
+paddingHorizontal: 12,
+paddingVertical: 8,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+},
+android: {
+elevation: 3,
+},
+}),
+},
+bubbleLeft: {
+backgroundColor: COLORS.bubbleLeft,
+borderTopLeftRadius: 0,
+},
+bubbleRight: {
+backgroundColor: COLORS.bubbleRight,
+borderTopRightRadius: 0,
+},
+bubbleText: {
+fontSize: 14,
+color: '#333',
+},
+timestamp: {
+marginTop: 5,
+fontSize: 10,
+color: '#777',
+textAlign: 'right',
+},
 });
 // File: app\features\main\components\MultiSelectTagGroup.tsx
 interface MultiSelectTagGroupProps<T extends string | number> {
@@ -1373,6 +1843,326 @@ color: '#fff',
 fontWeight: '600',
 },
 });
+// File: app\features\main\components\PlantCardWithInfo.tsx
+View,
+Image,
+StyleSheet,
+Platform,
+LayoutChangeEvent,
+} from 'react-native';
+interface PlantCardWithInfoProps {
+plant: PlantResponse;
+compact?: boolean;
+isDynamic?: boolean;
+fixedExtensionHeight?: number;
+}
+export const PlantCardWithInfo: React.FC<PlantCardWithInfoProps> = ({
+plant,
+compact = false,
+isDynamic = true,
+fixedExtensionHeight = 120,
+}) => {
+const [overlayHeight, setOverlayHeight] = useState(0);
+const allTags = [
+plant.plantStage,
+plant.plantCategory,
+plant.wateringNeed,
+plant.lightRequirement,
+plant.size,
+plant.indoorOutdoor,
+plant.propagationEase,
+plant.petFriendly,
+...(plant.extras ?? []),
+].filter(Boolean);
+const handleOverlayLayout = useCallback(
+(event: LayoutChangeEvent) => {
+if (isDynamic && overlayHeight === 0) {
+const { height } = event.nativeEvent.layout;
+setOverlayHeight(height);
+}
+},
+[isDynamic, overlayHeight]
+);
+const blackExtensionHeight = isDynamic
+? overlayHeight / 2
+: fixedExtensionHeight;
+return (
+<View style={styles.cardContainer}>
+{}
+<View style={styles.imageContainer}>
+{plant.imageUrl ? (
+<Image
+source={{ uri: plant.imageUrl }}
+style={styles.fullImage}
+resizeMode="contain"
+/>
+) : (
+<View style={styles.plantPlaceholder}>
+<Ionicons name="leaf" size={60} color={COLORS.primary} />
+</View>
+)}
+<LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,1)']} style={[styles.lowerGradient, { height: compact ? overlayHeight : overlayHeight * 1.5}]} />
+</View>
+{}
+<View
+style={[
+styles.blackExtension,
+{ height: blackExtensionHeight },
+]}
+/>
+<View
+style={styles.overlayWrapper}
+onLayout={handleOverlayLayout}
+>
+<PlantOverlay
+speciesName={plant.speciesName}
+description={plant.description}
+tags={allTags}
+compact={compact}
+/>
+</View>
+{}
+</View>
+);
+};
+const styles = StyleSheet.create({
+cardContainer: {
+borderRadius: 8,
+overflow: 'hidden',
+backgroundColor: '#fff',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.12,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 3 },
+},
+android: {
+elevation: 3,
+},
+}),
+},
+imageContainer: {
+width: '100%',
+},
+fullImage: {
+width: '100%',
+aspectRatio: 3 / 4,
+},
+plantPlaceholder: {
+width: '100%',
+aspectRatio: 3 / 4,
+backgroundColor: '#eee',
+justifyContent: 'center',
+alignItems: 'center',
+},
+lowerGradient: {
+position: 'absolute',
+bottom: -1,
+width: '100%',
+},
+blackExtension: {
+width: '100%',
+backgroundColor: '#000',
+},
+overlayWrapper: {
+position: 'absolute',
+bottom: 0,
+},
+});
+// File: app\features\main\components\PlantOverlay.tsx
+interface PlantOverlayProps {
+speciesName: string;
+description?: string;
+tags?: string[];
+compact?: boolean;
+}
+export const PlantOverlay: React.FC<PlantOverlayProps> = ({ speciesName, description, tags = [], compact=false }) => (
+<View style={[styles.overlayContent, compact && styles.overlayContentCompact]}>
+<Text style={[styles.fullPlantName, compact && styles.fullPlantNameCompact]}>{speciesName}</Text>
+{tags.length > 0 && (
+<View style={[styles.tagRow, compact && styles.tagRowCompact]}>
+{tags.map((tag) => (
+<View key={tag} style={[styles.tag, compact && styles.tagCompact]}>
+<Text style={[styles.tagText, compact && styles.tagTextCompact]}>{tag}</Text>
+</View>
+))}
+</View>
+)}
+{description ? (
+<Text style={[styles.fullDescription, compact && styles.fullDescriptionCompact]}>{description}</Text>
+) : null}
+</View>
+);
+const styles = StyleSheet.create({
+overlayContent: {
+padding: 10,
+bottom: 0,
+marginBottom: 2,
+marginLeft: 4,
+},
+overlayContentCompact: {
+padding: 6,
+bottom: 0,
+marginBottom: 1,
+marginLeft: 2,
+},
+fullPlantName: {
+fontSize: 18,
+fontWeight: '700',
+color: '#fff',
+marginBottom: 6,
+},
+fullPlantNameCompact: {
+fontSize: 12,
+fontWeight: '700',
+color: '#fff',
+marginBottom: 3,
+},
+tagRow: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+marginLeft: -6,
+},
+tagRowCompact: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+marginLeft: -3,
+},
+tag: {
+backgroundColor: COLORS.accentGreen,
+borderRadius: 12,
+paddingHorizontal: 8,
+paddingVertical: 4,
+marginRight: 6,
+marginBottom: 6,
+},
+tagCompact: {
+backgroundColor: COLORS.accentGreen,
+borderRadius: 10,
+paddingHorizontal: 4,
+paddingVertical: 2,
+marginRight: 3,
+marginBottom: 3,
+},
+tagText: {
+color: COLORS.textLight,
+fontSize: 12,
+fontWeight: '600',
+},
+tagTextCompact: {
+color: COLORS.textLight,
+fontSize: 8,
+fontWeight: '600',
+},
+fullDescription: {
+color: COLORS.textLight,
+fontSize: 14,
+fontWeight: '400',
+},
+fullDescriptionCompact: {
+fontSize: 10,
+color: COLORS.textLight,
+fontWeight: '400',
+},
+});
+// File: app\features\main\components\PlantThumbnail.tsx
+TouchableOpacity,
+View,
+Image,
+Text,
+StyleSheet,
+Platform,
+StyleProp,
+ViewStyle,
+Dimensions,
+} from 'react-native';
+interface PlantThumbnailProps {
+plant: PlantResponse;
+onPress?: () => void;
+isSelected?: boolean;
+containerStyle?: StyleProp<ViewStyle>;
+}
+const screenWidth = Dimensions.get('window').width;
+export const PlantThumbnail: React.FC<PlantThumbnailProps> = ({
+plant,
+onPress,
+isSelected,
+containerStyle,
+}) => {
+return (
+<TouchableOpacity
+activeOpacity={0.9}
+style={[
+styles.container,
+containerStyle,
+isSelected && styles.selected,
+]}
+onPress={onPress}
+>
+{plant.imageUrl ? (
+<Image
+source={{ uri: plant.imageUrl }}
+style={styles.thumbImage}
+resizeMode="contain"
+/>
+) : (
+<View style={styles.plantPlaceholder}>
+<Ionicons name="leaf" size={40} color={COLORS.accentGreen} />
+</View>
+)}
+<View style={styles.thumbTextWrapper}>
+<Text style={styles.thumbPlantName}>
+{plant.speciesName}
+</Text>
+</View>
+</TouchableOpacity>
+);
+};
+const styles = StyleSheet.create({
+container: {
+width: (screenWidth-70)/3,
+backgroundColor: COLORS.cardBg1,
+borderRadius: 8,
+margin: 8,
+overflow: 'hidden',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+},
+android: {
+elevation: 3,
+},
+}),
+},
+selected: {
+borderWidth: 3,
+borderColor: COLORS.accentGreen,
+},
+thumbImage: {
+width: '100%',
+aspectRatio: 3 / 4,
+},
+plantPlaceholder: {
+width: '100%',
+height: 120,
+backgroundColor: '#eee',
+justifyContent: 'center',
+alignItems: 'center',
+},
+thumbTextWrapper: {
+padding: 8,
+alignItems: 'center',
+},
+thumbPlantName: {
+fontSize: 14,
+fontWeight: '600',
+color: COLORS.textDark,
+textAlign: 'center',
+},
+});
 // File: app\features\main\components\SelectPlantsModal.tsx
 Modal,
 View,
@@ -1428,7 +2218,6 @@ return (
 <Modal visible={visible} transparent animationType="slide">
 <View style={styles.modalContainer}>
 <View style={styles.modalContent}>
-<Text style={styles.modalTitle}>Select Plants</Text>
 {isLoading && (
 <View style={styles.loadingContainer}>
 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -1455,6 +2244,7 @@ You have no plants in your collection yet.
 </View>
 ) : (
 <ScrollView style={styles.scrollArea}>
+<Text style={styles.modalTitle}>Select Plants</Text>
 <Text style={styles.titleText}>
 Select the plants you want to trade for. Tap on a plant to select it.
 </Text>
@@ -1462,54 +2252,27 @@ Select the plants you want to trade for. Tap on a plant to select it.
 {myPlants.map((plant: PlantResponse) => {
 const isSelected = selectedPlantIds.includes(plant.plantId);
 return (
-<TouchableOpacity
+<PlantThumbnail
 key={plant.plantId}
+plant={plant}
+isSelected={isSelected}
 onPress={() => handleToggleSelect(plant.plantId)}
-activeOpacity={0.9}
-style={[
-styles.plantCardThumbnail,
-isSelected && styles.plantCardThumbnailSelected,
-]}
->
-{plant.imageUrl ? (
-<Image
-source={{ uri: plant.imageUrl }}
-style={styles.thumbImage}
-resizeMode="contain"
 />
-) : (
-<View style={styles.plantPlaceholder}>
-<Ionicons name="leaf" size={40} color={COLORS.primary} />
-</View>
-)}
-<View style={styles.thumbTextWrapper}>
-<Text style={styles.thumbPlantName} numberOfLines={1}>
-{plant.speciesName}
-</Text>
-</View>
-</TouchableOpacity>
 );
 })}
+</View>
+<View style={styles.actionbuttons}>
+<ConfirmCancelButtons
+onConfirm={handleConfirm}
+onCancel={onClose}
+confirmButtonText="Confirm"
+cancelButtonText="Cancel"
+/>
 </View>
 </ScrollView>
 )}
 </>
 )}
-<View style={styles.buttonRow}>
-<TouchableOpacity
-style={[styles.actionButton, styles.confirmButton]}
-onPress={handleConfirm}
-disabled={selectedPlantIds.length === 0}
->
-<Text style={styles.confirmButtonText}>Confirm</Text>
-</TouchableOpacity>
-<TouchableOpacity
-style={[styles.actionButton, styles.cancelButton]}
-onPress={onClose}
->
-<Text style={styles.cancelButtonText}>Cancel</Text>
-</TouchableOpacity>
-</View>
 </View>
 </View>
 </Modal>
@@ -1525,9 +2288,6 @@ modalContent: {
 backgroundColor: COLORS.textLight,
 borderTopLeftRadius: 16,
 borderTopRightRadius: 16,
-paddingTop: 20,
-paddingBottom: 10,
-paddingHorizontal: 16,
 maxHeight: '85%',
 ...Platform.select({
 ios: {
@@ -1545,13 +2305,13 @@ modalTitle: {
 fontSize: 18,
 fontWeight: '700',
 color: COLORS.textDark,
-marginBottom: 12,
 textAlign: 'center',
+marginTop: 15,
 },
 titleText: {
 fontSize: 14,
 color: COLORS.textDark,
-marginBottom: 10,
+margin: 10,
 textAlign: 'center',
 },
 loadingContainer: {
@@ -1593,83 +2353,15 @@ color: COLORS.textDark,
 textAlign: 'center',
 },
 scrollArea: {
-marginVertical: 10,
 },
 gridContainer: {
 flexDirection: 'row',
 flexWrap: 'wrap',
 justifyContent: 'center',
 },
-plantCardThumbnail: {
-width: (width - 70) / 3,
-backgroundColor: COLORS.cardBg,
-borderRadius: 8,
-marginBottom: 15,
-marginRight: 10,
-overflow: 'hidden',
-...Platform.select({
-ios: {
-shadowColor: '#000',
-shadowOpacity: 0.1,
-shadowRadius: 5,
-},
-android: {
-elevation: 3,
-},
-}),
-},
-plantCardThumbnailSelected: {
-borderWidth: 2,
-borderColor: COLORS.primary,
-},
-thumbImage: {
-width: '100%',
-aspectRatio: 3 / 4,
-},
-plantPlaceholder: {
-width: '100%',
-height: 120,
-backgroundColor: '#eee',
-justifyContent: 'center',
-alignItems: 'center',
-},
-thumbTextWrapper: {
-padding: 8,
-alignItems: 'center',
-},
-thumbPlantName: {
-fontSize: 14,
-fontWeight: '600',
-color: COLORS.textDark,
-},
-buttonRow: {
-flexDirection: 'column',
-justifyContent: 'flex-end',
-marginTop: 8,
-},
-actionButton: {
-borderRadius: 8,
-paddingVertical: 10,
-paddingHorizontal: 16,
-margin: 4,
-},
-cancelButton: {
-backgroundColor: '#fff',
-borderWidth: 1,
-borderColor: COLORS.primary,
-},
-cancelButtonText: {
-color: COLORS.primary,
-fontWeight: '600',
-textAlign: 'center',
-},
-confirmButton: {
-backgroundColor: COLORS.primary,
-},
-confirmButtonText: {
-color: '#fff',
-fontWeight: '600',
-textAlign: 'center',
+actionbuttons: {
+marginHorizontal: 17,
+marginBottom: 17,
 },
 });
 // File: app\features\main\components\SwipeableCard.tsx
@@ -1782,27 +2474,12 @@ style={styles.overlayContent}
 />
 </View>
 </View>
-<View style={styles.tagContainer}>
-{}
-<Text style={styles.fullPlantName} numberOfLines={1}>
-{plant.speciesName}
-</Text>
-{}
-{allTags.length > 0 && (
-<View style={styles.tagRow}>
-{allTags.map((tag) => (
-<View key={tag} style={styles.tag}>
-<Text style={styles.tagText}>{tag}</Text>
-</View>
-))}
-</View>
-)}
-{}
-{plant.description ? (
-<Text style={styles.fullDescription} numberOfLines={3}>
-{plant.description}
-</Text>
-) : null}
+<View style={styles.plantInfoContainer}>
+<PlantOverlay
+speciesName={plant.speciesName}
+description={plant.description}
+tags={allTags}
+/>
 </View>
 <View style={styles.underImageExtension} />
 </Animated.View>
@@ -1813,7 +2490,7 @@ style={styles.overlayContent}
 const styles = StyleSheet.create({
 cardContainer: {
 position: 'absolute',
-width: width * 0.9,
+maxWidth: width * 0.9,
 borderRadius: 8,
 overflow: 'hidden',
 marginVertical: 'auto',
@@ -1852,7 +2529,7 @@ backgroundColor: 'black',
 zIndex: -1,
 height: 50,
 },
-tagContainer: {
+plantInfoContainer: {
 padding: 5,
 position: 'absolute',
 bottom: 0,
@@ -1887,6 +2564,126 @@ fontSize: 14,
 fontWeight: '400',
 },
 });
+// File: app\features\main\components\TagGroup.tsx
+View,
+TouchableOpacity,
+Text,
+StyleSheet,
+StyleProp,
+ViewStyle,
+TextStyle,
+} from 'react-native';
+export type TagGroupMode = 'single' | 'multiple';
+interface TagGroupProps<T> {
+values: T[];
+mode: TagGroupMode;
+selectedValue?: T | null;
+selectedValues?: T[];
+onSelectSingle?: (val: T | null) => void;
+onToggleMulti?: (val: T) => void;
+isRequired?: boolean;
+containerStyle?: StyleProp<ViewStyle>;
+tagStyle?: StyleProp<ViewStyle>;
+tagSelectedStyle?: StyleProp<ViewStyle>;
+tagTextStyle?: StyleProp<TextStyle>;
+tagTextSelectedStyle?: StyleProp<TextStyle>;
+}
+function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
+const {
+mode,
+values,
+selectedValue,
+selectedValues,
+onSelectSingle,
+onToggleMulti,
+isRequired = false,
+containerStyle,
+tagStyle,
+tagSelectedStyle,
+tagTextStyle,
+tagTextSelectedStyle,
+} = props;
+const isSelected = (val: T) => {
+if (mode === 'single') {
+return val === selectedValue;
+}
+return selectedValues?.includes(val);
+};
+const handlePress = (val: T) => {
+if (mode === 'single') {
+if (!onSelectSingle) return;
+const alreadySelected = isSelected(val);
+if (isRequired) {
+onSelectSingle(val);
+} else {
+onSelectSingle(alreadySelected ? null : val);
+}
+} else {
+if (!onToggleMulti) return;
+onToggleMulti(val);
+}
+};
+return (
+<View style={[styles.container, containerStyle]}>
+{values.map((val) => {
+const selected = isSelected(val);
+return (
+<TouchableOpacity
+key={String(val)}
+style={[
+styles.tag,
+tagStyle,
+selected && [styles.tagSelected, tagSelectedStyle],
+]}
+onPress={() => handlePress(val)}
+accessible
+accessibilityRole="button"
+accessibilityLabel={`Select tag value: ${String(val)}`}
+>
+<Text
+style={[
+styles.tagText,
+tagTextStyle,
+selected && [styles.tagTextSelected, tagTextSelectedStyle],
+]}
+>
+{val}
+</Text>
+</TouchableOpacity>
+);
+})}
+</View>
+);
+}
+export default TagGroup;
+const styles = StyleSheet.create({
+container: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+marginBottom: 6,
+},
+tag: {
+borderWidth: 1,
+borderColor: COLORS.accentGreen,
+borderRadius: 20,
+paddingVertical: 6,
+paddingHorizontal: 12,
+marginRight: 8,
+marginBottom: 8,
+},
+tagSelected: {
+backgroundColor: COLORS.accentGreen,
+},
+tagText: {
+fontSize: 12,
+color: COLORS.accentGreen,
+fontWeight: '600',
+},
+tagTextSelected: {
+color: COLORS.textLight,
+fontWeight: '600',
+},
+});
 // File: app\features\main\hooks\useMatchConversation.ts
 export const useMatchConversation = (matchId: number) => {
 const queryClient = useQueryClient();
@@ -1898,14 +2695,8 @@ enabled: matchId > 0,
 staleTime: 1000 * 30,
 }
 );
-const sendMessageMutation = useMutation<
-MessageResponse,
-unknown,
-Omit<MessageRequest, 'matchId'>
->(
-async (payload) => {
-return await messageService.sendMessage({ matchId, ...payload });
-},
+const sendMessageMutation = useMutation(
+(data: MessageRequest) => messageService.sendMessage(data),
 {
 onSuccess: () => {
 queryClient.invalidateQueries(['messages', matchId]);
@@ -1957,6 +2748,7 @@ const mutation = useMutation(
 {
 onSuccess: () => {
 queryClient.invalidateQueries(['userPreferences']);
+queryClient.invalidateQueries(['likablePlants']);
 }
 }
 );
@@ -2037,12 +2829,8 @@ ScrollView,
 Image,
 Alert,
 TextInput,
-ActivityIndicator,
 Platform,
 } from 'react-native';
-PlantCreateRequest,
-PlantRequest,
-} from '../../../types/apiTypes';
 PlantCategory,
 PlantStage,
 WateringNeed,
@@ -2053,65 +2841,22 @@ PropagationEase,
 PetFriendly,
 Extras,
 } from '../../../types/enums';
-const SingleSelectTagGroup = <T extends string | number>({
-values,
-selectedValue,
-onSelect,
-isRequired,
-}: {
-values: T[];
-selectedValue: T | null;
-onSelect: (val: T | null) => void;
-isRequired?: boolean;
-}) => {
-return (
-<View style={styles.tagGroupContainer}>
-{values.map((val) => {
-const isSelected = val === selectedValue;
-return (
-<TouchableOpacity
-key={String(val)}
-style={[
-styles.singleTag,
-isSelected && styles.singleTagSelected,
-]}
-onPress={() => {
-if (isRequired) {
-onSelect(val);
-} else {
-onSelect(isSelected ? null : val);
-}
-}}
->
-<Text
-style={[
-styles.singleTagText,
-isSelected && styles.singleTagTextSelected,
-]}
->
-{val}
-</Text>
-</TouchableOpacity>
-);
-})}
-</View>
-);
-};
+PlantCreateRequest,
+PlantRequest,
+} from '../../../types/apiTypes';
 const AddPlantScreen: React.FC = () => {
 const { t } = useTranslation();
 const navigation = useNavigation();
+const queryClient = useQueryClient();
 const [speciesName, setSpeciesName] = useState('');
 const [stage, setStage] = useState<PlantStage | null>(null);
 const [image, setImage] = useState<any>(null);
-const queryClient = useQueryClient();
 const [category, setCategory] = useState<PlantCategory | null>(null);
 const [watering, setWatering] = useState<WateringNeed | null>(null);
 const [light, setLight] = useState<LightRequirement | null>(null);
 const [size, setSize] = useState<Size | null>(null);
 const [indoorOutdoor, setIndoorOutdoor] = useState<IndoorOutdoor | null>(null);
-const [propagationEase, setPropagationEase] = useState<PropagationEase | null>(
-null
-);
+const [propagationEase, setPropagationEase] = useState<PropagationEase | null>(null);
 const [petFriendly, setPetFriendly] = useState<PetFriendly | null>(null);
 const [selectedExtras, setSelectedExtras] = useState<Extras[]>([]);
 const [description, setDescription] = useState('');
@@ -2192,7 +2937,7 @@ prev.includes(extra)
 const isExtraSelected = (extra: Extras) => selectedExtras.includes(extra);
 const handleCancel = () => {
 navigation.goBack();
-}
+};
 const handleSave = async () => {
 if (!speciesName.trim()) {
 Alert.alert('Validation Error', 'Species name is required.');
@@ -2243,14 +2988,22 @@ setLoading(false);
 };
 return (
 <View style={styles.container}>
-{}
 <LinearGradient
 colors={[COLORS.primary, COLORS.secondary]}
 style={styles.gradientBackground}
 >
-<View style={styles.headerRow}>
-<Text style={styles.headerTitle}>{t('add_plant_title')}</Text>
-<MaterialIcons name="local_florist" size={24} color="#fff" />
+<View style={headerStyles.headerAboveScroll}>
+<View style={headerStyles.headerColumn1}>
+<Ionicons
+name="chevron-back"
+size={30}
+color={COLORS.textLight}
+style={headerStyles.headerBackButton}
+onPress={() => navigation.goBack()}
+/>
+<Text style={headerStyles.headerTitle}>{t('add_plant_title')}</Text>
+</View>
+<MaterialIcons name="info" size={24} color="#fff" />
 </View>
 <ScrollView
 contentContainerStyle={styles.scrollContent}
@@ -2258,7 +3011,6 @@ showsVerticalScrollIndicator={false}
 >
 <View style={styles.formContainer}>
 {error && <Text style={styles.errorText}>{error}</Text>}
-{}
 <Text style={styles.label}>{t('add_plant_species_name_label')}:</Text>
 <TextInput
 style={styles.input}
@@ -2266,7 +3018,6 @@ value={speciesName}
 onChangeText={setSpeciesName}
 placeholder="e.g. Monstera Deliciosa"
 />
-{}
 <Text style={styles.label}>{t('add_plant_description_label')}:</Text>
 <TextInput
 style={[styles.input, { height: 80 }]}
@@ -2274,93 +3025,77 @@ value={description}
 onChangeText={setDescription}
 multiline
 />
-{}
 <Text style={styles.label}>{t('add_plant_stage_label')}:</Text>
-<SingleSelectTagGroup<PlantStage>
+<TagGroup
+mode="single"
 values={Object.values(PlantStage)}
 selectedValue={stage}
-onSelect={(val) => setStage(val)}
+onSelectSingle={(val) => setStage(val)}
 isRequired={true}
 />
-{}
 <Text style={styles.label}>{t('add_plant_category_label')}:</Text>
-<SingleSelectTagGroup<PlantCategory>
+<TagGroup
+mode="single"
 values={Object.values(PlantCategory)}
 selectedValue={category}
-onSelect={(val) => {
-setCategory(val === category ? null : val);
-}}
+onSelectSingle={(val) => setCategory(val === category ? null : val)}
 isRequired={false}
 />
-{}
 <Text style={styles.label}>{t('add_plant_watering_label')}:</Text>
-<SingleSelectTagGroup<WateringNeed>
+<TagGroup
+mode="single"
 values={Object.values(WateringNeed)}
 selectedValue={watering}
-onSelect={(val) => setWatering(val === watering ? null : val)}
+onSelectSingle={(val) => setWatering(val === watering ? null : val)}
+isRequired={false}
 />
-{}
 <Text style={styles.label}>{t('add_plant_light_label')}:</Text>
-<SingleSelectTagGroup<LightRequirement>
+<TagGroup
+mode="single"
 values={Object.values(LightRequirement)}
 selectedValue={light}
-onSelect={(val) => setLight(val === light ? null : val)}
+onSelectSingle={(val) => setLight(val === light ? null : val)}
+isRequired={false}
 />
-{}
 <Text style={styles.label}>{t('add_plant_size_question')}:</Text>
-<SingleSelectTagGroup<Size>
+<TagGroup
+mode="single"
 values={Object.values(Size)}
 selectedValue={size}
-onSelect={(val) => setSize(val === size ? null : val)}
+onSelectSingle={(val) => setSize(val === size ? null : val)}
+isRequired={false}
 />
-{}
 <Text style={styles.label}>{t('add_plant_indoor_outdoor_question')}:</Text>
-<SingleSelectTagGroup<IndoorOutdoor>
+<TagGroup
+mode="single"
 values={Object.values(IndoorOutdoor)}
 selectedValue={indoorOutdoor}
-onSelect={(val) => setIndoorOutdoor(val === indoorOutdoor ? null : val)}
+onSelectSingle={(val) => setIndoorOutdoor(val === indoorOutdoor ? null : val)}
+isRequired={false}
 />
-{}
 <Text style={styles.label}>{t('add_plant_propagation_ease_question')}:</Text>
-<SingleSelectTagGroup<PropagationEase>
+<TagGroup
+mode="single"
 values={Object.values(PropagationEase)}
 selectedValue={propagationEase}
-onSelect={(val) => setPropagationEase(val === propagationEase ? null : val)}
+onSelectSingle={(val) => setPropagationEase(val === propagationEase ? null : val)}
+isRequired={false}
 />
-{}
 <Text style={styles.label}>{t('add_plant_pet_friendly_question')}:</Text>
-<SingleSelectTagGroup<PetFriendly>
+<TagGroup
+mode="single"
 values={Object.values(PetFriendly)}
 selectedValue={petFriendly}
-onSelect={(val) => setPetFriendly(val === petFriendly ? null : val)}
+onSelectSingle={(val) => setPetFriendly(val === petFriendly ? null : val)}
+isRequired={false}
 />
-{}
 <Text style={styles.label}>{t('add_plant_extras_question')}:</Text>
-<View style={styles.extrasContainer}>
-{Object.values(Extras).map((extra) => {
-const selected = isExtraSelected(extra);
-return (
-<TouchableOpacity
-key={extra}
-style={[
-styles.extraTag,
-selected && styles.extraTagSelected,
-]}
-onPress={() => handleExtraToggle(extra)}
->
-<Text
-style={[
-styles.extraTagText,
-selected && styles.extraTagTextSelected,
-]}
->
-{extra}
-</Text>
-</TouchableOpacity>
-);
-})}
-</View>
-{}
+<TagGroup
+mode="multiple"
+values={Object.values(Extras)}
+selectedValues={selectedExtras}
+onToggleMulti={(val) => handleExtraToggle(val)}
+/>
 <Text style={styles.label}>{t('add_plant_select_image_title')}:</Text>
 <TouchableOpacity style={styles.imageButton} onPress={handleSelectImageOption}>
 <Ionicons name="image" size={24} color="#fff" />
@@ -2375,29 +3110,13 @@ selected && styles.extraTagTextSelected,
 {t('add_plant_no_image_selected')}
 </Text>
 )}
-{loading && (
-<ActivityIndicator
-size="small"
-color={COLORS.primary}
-style={{ marginVertical: 10 }}
+<ConfirmCancelButtons
+onConfirm={handleSave}
+onCancel={handleCancel}
+confirmButtonText={t('add_plant_save_button')}
+cancelButtonText={t('add_plant_cancel_button')}
+loading={loading}
 />
-)}
-{}
-<View style={styles.actions}>
-<TouchableOpacity
-style={styles.cancelButton}
-onPress={handleCancel}
->
-<Text style={styles.cancelButtonText}>
-{t('add_plant_cancel_button')}
-</Text>
-</TouchableOpacity>
-<TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-<Text style={styles.saveButtonText}>
-{t('add_plant_save_button')}
-</Text>
-</TouchableOpacity>
-</View>
 </View>
 </ScrollView>
 </LinearGradient>
@@ -2415,19 +3134,6 @@ flex: 1,
 scrollContent: {
 paddingTop: 0,
 paddingBottom: 30,
-},
-headerRow: {
-position: 'sticky',
-flexDirection: 'row',
-justifyContent: 'space-between',
-alignItems: 'center',
-marginHorizontal: 20,
-marginBottom: 10,
-},
-headerTitle: {
-fontSize: 24,
-fontWeight: 'bold',
-color: COLORS.textLight,
 },
 formContainer: {
 backgroundColor: '#fff',
@@ -2447,7 +3153,7 @@ elevation: 3,
 }),
 },
 errorText: {
-color: COLORS.accent,
+color: COLORS.textDark,
 marginBottom: 10,
 fontWeight: '600',
 },
@@ -2465,56 +3171,6 @@ borderRadius: 8,
 paddingHorizontal: 10,
 paddingVertical: 8,
 fontSize: 14,
-},
-tagGroupContainer: {
-flexDirection: 'row',
-flexWrap: 'wrap',
-marginBottom: 6,
-},
-singleTag: {
-borderWidth: 1,
-borderColor: COLORS.primary,
-borderRadius: 20,
-paddingVertical: 6,
-paddingHorizontal: 12,
-marginRight: 8,
-marginBottom: 8,
-},
-singleTagSelected: {
-backgroundColor: COLORS.primary,
-},
-singleTagText: {
-fontSize: 12,
-color: COLORS.primary,
-},
-singleTagTextSelected: {
-color: '#fff',
-fontWeight: '600',
-},
-extrasContainer: {
-flexDirection: 'row',
-flexWrap: 'wrap',
-marginTop: 4,
-},
-extraTag: {
-borderWidth: 1,
-borderColor: COLORS.primary,
-borderRadius: 20,
-paddingVertical: 6,
-paddingHorizontal: 12,
-marginRight: 8,
-marginBottom: 8,
-},
-extraTagSelected: {
-backgroundColor: COLORS.primary,
-},
-extraTagText: {
-fontSize: 12,
-color: COLORS.primary,
-},
-extraTagTextSelected: {
-color: '#fff',
-fontWeight: '600',
 },
 imageButton: {
 flexDirection: 'row',
@@ -2542,39 +3198,15 @@ noImageText: {
 fontSize: 14,
 color: '#555',
 marginTop: 6,
-marginBottom: 10,
-},
-actions: {
-flexDirection: 'row',
-justifyContent: 'flex-end',
-marginTop: 16,
-},
-cancelButton: {
-borderWidth: 1,
-borderColor: COLORS.primary,
-borderRadius: 8,
-paddingVertical: 10,
-paddingHorizontal: 16,
-marginRight: 10,
-},
-cancelButtonText: {
-fontSize: 14,
-color: COLORS.primary,
-fontWeight: '600',
-},
-saveButton: {
-backgroundColor: COLORS.primary,
-borderRadius: 8,
-paddingVertical: 10,
-paddingHorizontal: 16,
-},
-saveButtonText: {
-fontSize: 14,
-color: '#fff',
-fontWeight: '600',
 },
 });
 // File: app\features\main\screens\ChatScreen.tsx
+useMemo,
+useState,
+useEffect,
+useRef,
+useCallback,
+} from 'react';
 View,
 Text,
 StyleSheet,
@@ -2585,6 +3217,8 @@ FlatList,
 KeyboardAvoidingView,
 Platform,
 Alert,
+ScrollView,
+Image,
 } from 'react-native';
 const ChatScreen: React.FC = () => {
 const { t } = useTranslation();
@@ -2648,45 +3282,21 @@ return;
 }
 const text = inputText.trim();
 setInputText('');
-sendMessage(
-{ messageText: text },
-{
+const messageData: MessageRequest = {
+matchId: activeMatchId,
+messageText: text,
+};
+sendMessage(messageData, {
 onError: (error) => {
 console.error('Error sending message:', error);
 Alert.alert('Error', 'Failed to send message');
 },
-onSuccess: () => {
-},
-}
-);
+});
 }, [activeMatchId, inputText, sendMessage]);
-const renderTabs = () => {
-if (relevantMatches.length <= 1) return null;
-return (
-<View style={styles.tabContainer}>
-{relevantMatches.map((match) => {
-const isActive = match.matchId === activeMatchId;
-const p1 = match.plant1?.speciesName || 'Plant1';
-const p2 = match.plant2?.speciesName || 'Plant2';
-const label = `${p1} ↔ ${p2}`;
-return (
-<TouchableOpacity
-key={match.matchId}
-onPress={() => setActiveMatchId(match.matchId)}
-style={[styles.tabButton, isActive && styles.tabButtonActive]}
->
-<Text
-style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}
-numberOfLines={1}
->
-{label}
-</Text>
-</TouchableOpacity>
-);
-})}
-</View>
-);
-};
+const currentMatch = useMemo(() => {
+if (!relevantMatches || !activeMatchId) return null;
+return relevantMatches.find((m) => m.matchId === activeMatchId) || null;
+}, [relevantMatches, activeMatchId]);
 if (loadingProfile || loadingMatches || (activeMatchId && isLoadingMessages)) {
 return (
 <SafeAreaProvider style={styles.centerContainer}>
@@ -2708,28 +3318,118 @@ return (
 if (relevantMatches.length === 0) {
 return (
 <SafeAreaProvider style={styles.centerContainer}>
-<Text style={styles.noMessagesText}>{t('chat_no_matches_with_user')}</Text>
+<Text style={styles.noMessagesText}>
+{t('chat_no_matches_with_user')}
+</Text>
 </SafeAreaProvider>
 );
 }
+const renderMatchTabs = () => {
+if (relevantMatches.length === 0) return null;
+return (
+<ScrollView
+horizontal
+showsHorizontalScrollIndicator={false}
+style={styles.tabsContainer}
+contentContainerStyle={styles.tabsContent}
+>
+{relevantMatches.map((match) => {
+const isActive = match.matchId === activeMatchId;
+const plant1Uri = match.plant1?.imageUrl;
+const plant2Uri = match.plant2?.imageUrl;
+return (
+<TouchableOpacity
+key={match.matchId}
+onPress={() => setActiveMatchId(match.matchId)}
+style={[styles.tabItem, isActive && styles.tabItemActive]}
+activeOpacity={0.8}
+>
+{}
+<View style={styles.overlappingContainer}>
+<View style={[styles.plantCircle, styles.plantCircleFront]}>
+{plant1Uri ? (
+<Image
+source={{ uri: plant1Uri }}
+style={styles.circleImage}
+/>
+) : (
+<Ionicons
+name="leaf"
+size={22}
+color={COLORS.primary}
+/>
+)}
+</View>
+<View style={[styles.plantCircle, styles.plantCircleBack]}>
+{plant2Uri ? (
+<Image
+source={{ uri: plant2Uri }}
+style={styles.circleImage}
+/>
+) : (
+<Ionicons
+name="leaf"
+size={22}
+color={COLORS.primary}
+/>
+)}
+</View>
+</View>
+<Text style={styles.tabLabel}>
+{match.plant1?.speciesName} & {match.plant2?.speciesName}
+</Text>
+</TouchableOpacity>
+);
+})}
+</ScrollView>
+);
+};
 const hasMessages = messages && messages.length > 0;
 return (
 <SafeAreaProvider style={styles.container}>
 {}
-<View style={styles.header}>
-<TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-<Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
+<LinearGradient
+style={headerStyles.headerGradient}
+colors={[COLORS.primary, COLORS.secondary]}
+>
+<View style={headerStyles.headerColumn1}>
+<TouchableOpacity
+style={headerStyles.headerBackButton}
+onPress={() => navigation.goBack()}
+>
+<Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
 </TouchableOpacity>
-<Text style={styles.headerTitle}>{t('chat_title')}</Text>
+<Text style={headerStyles.headerTitle}>{t('chat_title')}</Text>
 </View>
+</LinearGradient>
 {}
-{renderTabs()}
+<View style={styles.tabWrapper}>{renderMatchTabs()}</View>
+{}
+<View style={styles.shelfContainer}>
+{relevantMatches.map((match) => (
+<View
+key={match.matchId}
+style={[
+styles.shelfWrapper,
+match.matchId !== activeMatchId && styles.hiddenShelf,
+]}
+>
+<ChatShelf
+plant1={match.plant1}
+plant2={match.plant2}
+/>
+</View>
+))}
+</View>
 {}
 {!hasMessages ? (
 <View style={styles.emptyChatContainer}>
-<Text style={styles.noMessagesText}>{t('chat_no_messages_yet')}</Text>
+<Text style={styles.noMessagesText}>
+{t('chat_no_messages_yet')}
+</Text>
 </View>
 ) : (
+<View style={styles.listContainer}>
 <FlatList
 ref={flatListRef}
 data={sortedMessages}
@@ -2740,6 +3440,7 @@ const isMine = item.senderUserId === userProfile?.userId;
 return <MessageBubble message={item} isMine={isMine} />;
 }}
 />
+</View>
 )}
 {}
 <KeyboardAvoidingView
@@ -2755,39 +3456,18 @@ placeholder={t('chat_message_placeholder')}
 multiline
 />
 {isSending ? (
-<ActivityIndicator style={{ marginRight: 12 }} color={COLORS.primary} />
+<ActivityIndicator
+style={{ marginRight: 12 }}
+color={COLORS.primary}
+/>
 ) : (
 <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
-<Ionicons name="send" size={20} color="#fff" />
+<Ionicons name="send" size={20} color={COLORS.background} />
 </TouchableOpacity>
 )}
 </View>
 </KeyboardAvoidingView>
 </SafeAreaProvider>
-);
-};
-interface BubbleProps {
-message: MessageResponse;
-isMine: boolean;
-}
-const MessageBubble: React.FC<BubbleProps> = ({ message, isMine }) => {
-return (
-<View
-style={[
-styles.bubbleContainer,
-isMine ? styles.bubbleRightContainer : styles.bubbleLeftContainer,
-]}
->
-<View style={[styles.bubble, isMine ? styles.bubbleRight : styles.bubbleLeft]}>
-<Text style={styles.bubbleText}>{message.messageText}</Text>
-<Text style={styles.timestamp}>
-{new Date(message.sentAt).toLocaleTimeString([], {
-hour: '2-digit',
-minute: '2-digit',
-})}
-</Text>
-</View>
-</View>
 );
 };
 export default ChatScreen;
@@ -2815,7 +3495,7 @@ marginBottom: 10,
 textAlign: 'center',
 },
 retryButton: {
-backgroundColor: COLORS.primary,
+backgroundColor: COLORS.accentGreen,
 borderRadius: 8,
 paddingHorizontal: 16,
 paddingVertical: 10,
@@ -2830,89 +3510,98 @@ fontSize: 16,
 color: COLORS.textDark,
 textAlign: 'center',
 },
-header: {
-flexDirection: 'row',
+tabWrapper: {
+backgroundColor: '#f9f9f9',
+borderBottomWidth: 1,
+borderBottomColor: '#ddd',
+},
+tabsContainer: {
+paddingVertical: 8,
+backgroundColor: '#f9f9f9',
+},
+tabsContent: {
+paddingHorizontal: 8,
 alignItems: 'center',
-backgroundColor: COLORS.primary,
-paddingHorizontal: 15,
-paddingVertical: 12,
-borderBottomLeftRadius: 20,
-borderBottomRightRadius: 20,
-elevation: 2,
 },
-backButton: {
-marginRight: 10,
-},
-headerTitle: {
-fontSize: 20,
-fontWeight: '700',
-color: COLORS.textLight,
-},
-tabContainer: {
-flexDirection: 'row',
+tabItem: {
+padding: 6,
+marginRight: 8,
+borderRadius: 6,
 backgroundColor: '#fff',
-marginHorizontal: 10,
-marginTop: 10,
-borderRadius: 8,
+alignItems: 'center',
+minWidth: 80,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.08,
+shadowRadius: 3,
+shadowOffset: { width: 0, height: 2 },
+},
+android: {
 elevation: 2,
+},
+}),
+},
+tabItemActive: {
+borderColor: COLORS.accentGreen,
+borderWidth: 2,
+},
+overlappingContainer: {
+width: 40,
+height: 30,
+marginBottom: 4,
+position: 'relative',
+},
+plantCircle: {
+width: 28,
+height: 28,
+borderRadius: 14,
+backgroundColor: '#fff',
+position: 'absolute',
+alignItems: 'center',
+justifyContent: 'center',
 overflow: 'hidden',
 },
-tabButton: {
-paddingHorizontal: 12,
-paddingVertical: 8,
+plantCircleFront: {
+left: 0,
+zIndex: 2,
 },
-tabButtonActive: {
-backgroundColor: COLORS.primary,
+plantCircleBack: {
+left: 20,
+zIndex: 1,
 },
-tabButtonText: {
-fontSize: 14,
-color: COLORS.primary,
+circleImage: {
+width: '100%',
+height: '100%',
+resizeMode: 'cover',
 },
-tabButtonTextActive: {
-color: '#fff',
-fontWeight: '600',
+tabLabel: {
+fontSize: 10,
+color: '#333',
+textAlign: 'center',
+},
+shelfContainer: {
+position: 'relative',
+},
+shelfWrapper: {
+},
+hiddenShelf: {
+position: 'absolute',
+opacity: 0,
+zIndex: -1,
+},
+listContainer: {
+flex: 1,
+},
+listContent: {
+padding: 8,
+paddingBottom: 60,
+zIndex: -2,
 },
 emptyChatContainer: {
 flex: 1,
 justifyContent: 'center',
 alignItems: 'center',
-},
-listContent: {
-padding: 10,
-paddingBottom: 60,
-},
-bubbleContainer: {
-marginVertical: 6,
-},
-bubbleLeftContainer: {
-alignSelf: 'flex-start',
-},
-bubbleRightContainer: {
-alignSelf: 'flex-end',
-},
-bubble: {
-maxWidth: '80%',
-borderRadius: 8,
-paddingHorizontal: 12,
-paddingVertical: 8,
-},
-bubbleLeft: {
-backgroundColor: COLORS.bubbleLeft,
-borderTopLeftRadius: 0,
-},
-bubbleRight: {
-backgroundColor: COLORS.bubbleRight,
-borderTopRightRadius: 0,
-},
-bubbleText: {
-fontSize: 14,
-color: '#333',
-},
-timestamp: {
-marginTop: 5,
-fontSize: 10,
-color: '#777',
-textAlign: 'right',
 },
 inputContainer: {
 flexDirection: 'row',
@@ -2935,7 +3624,7 @@ marginRight: 8,
 fontSize: 14,
 },
 sendButton: {
-backgroundColor: COLORS.primary,
+backgroundColor: COLORS.accentGreen,
 borderRadius: 20,
 padding: 10,
 },
@@ -3018,7 +3707,7 @@ const renderEmptyState = () => {
 return (
 <View style={styles.emptyStateContainer}>
 {}
-<Ionicons name="people-outline" size={64} color={COLORS.accent} style={{ marginBottom: 20 }} />
+<Ionicons name="people-outline" size={64} color={COLORS.accentGreen} style={{ marginBottom: 20 }} />
 <Text style={styles.emptyStateTitle}>{t('connections_none_title')}</Text>
 <Text style={styles.emptyStateMessage}>
 {t('connections_none_message')}
@@ -3039,11 +3728,11 @@ navigation.navigate('SwipeScreen' as never);
 return (
 <SafeAreaProvider style={styles.container}>
 {}
-<View style={styles.header}>
-<Text style={styles.headerTitle}>
+<LinearGradient style={headerStyles.headerGradient} colors={[COLORS.primary, COLORS.secondary]}>
+<Text style={headerStyles.headerTitle}>
 {t('connections_title', 'Connections')}
 </Text>
-</View>
+</LinearGradient>
 {}
 {(!groupedConversations || groupedConversations.length === 0) && (
 renderEmptyState()
@@ -3125,20 +3814,6 @@ borderRadius: 8,
 retryButtonText: {
 color: '#fff',
 fontWeight: '600',
-},
-header: {
-paddingHorizontal: 20,
-paddingVertical: 15,
-backgroundColor: COLORS.primary,
-borderBottomLeftRadius: 20,
-borderBottomRightRadius: 20,
-marginBottom: 10,
-elevation: 3,
-},
-headerTitle: {
-fontSize: 22,
-fontWeight: '700',
-color: COLORS.textLight,
 },
 rowContainer: {
 flexDirection: 'row',
@@ -3242,187 +3917,73 @@ searchRadius,
 isLoading: srLoading,
 isError: srError,
 } = useSearchRadius();
+const [cityCountry, setCityCountry] = useState<string>('');
 const [editProfileVisible, setEditProfileVisible] = useState(false);
-const [changeLocationVisible, setChangeLocationVisible] = useState(false);
 const [showFullSize, setShowFullSize] = useState(false);
-const handleChangeProfilePicture = useCallback(() => {
-Alert.alert(
-t('profile_change_picture_title'),
-t('profile_change_picture_msg'),
-[
-{ text: t('profile_picture_select_library'), onPress: pickImageFromLibrary },
-{ text: t('profile_picture_take_photo'), onPress: takePictureWithCamera },
-{ text: t('profile_picture_cancel'), style: 'cancel' },
-]
-);
-}, [t]);
-const pickImageFromLibrary = async () => {
-try {
-const result = await ImagePicker.launchImageLibraryAsync({
-mediaTypes: ImagePicker.MediaTypeOptions.Images,
-allowsEditing: true,
-aspect: [1, 1],
-quality: 0.7,
+const [editCardLayout, setEditCardLayout] = useState({
+x: 0,
+y: 0,
+width: 0,
+height: 0,
 });
-if (!result.canceled && result.assets[0].uri) {
-const resized = await resizeImage(result.assets[0].uri);
-await uploadProfilePicture(resized);
-}
-} catch (err) {
-console.error('pickImageFromLibrary error:', err);
-Alert.alert('Error', 'Could not open image library.');
-}
-};
-const takePictureWithCamera = async () => {
-try {
-const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-if (!cameraPermission.granted) {
-Alert.alert('Error', 'Camera permission denied.');
-return;
-}
-const result = await ImagePicker.launchCameraAsync({
-allowsEditing: true,
-aspect: [1, 1],
-quality: 0.7,
-});
-if (!result.canceled && result.assets[0].uri) {
-const resized = await resizeImage(result.assets[0].uri);
-await uploadProfilePicture(resized);
-}
-} catch (err) {
-console.error('takePictureWithCamera error:', err);
-Alert.alert('Error', 'Could not open camera.');
-}
-};
-const resizeImage = async (uri: string) => {
-return await ImageManipulator.manipulateAsync(
-uri,
-[{ resize: { width: 800 } }],
-{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-);
-};
-const uploadProfilePicture = async (img: ImageManipulator.ImageResult) => {
-try {
-const photo = {
-uri: img.uri,
-name: 'profile.jpg',
-type: 'image/jpeg',
-} as any;
-await userService.updateProfilePicture({ image: photo });
-refetchProfile();
-} catch (err) {
-console.error('Error uploading profile picture:', err);
-Alert.alert('Error', 'Profile picture update failed.');
-}
-};
-const handleEditProfile = useCallback(() => {
-setEditProfileVisible(true);
-}, []);
-const handleProfileUpdated = useCallback(() => {
-refetchProfile();
-}, [refetchProfile]);
-const handleChangeLocation = useCallback(() => {
-setChangeLocationVisible(true);
-}, []);
-const handleLocationUpdated = useCallback(() => {
-refetchProfile();
-}, [refetchProfile]);
-const handleAddPlant = useCallback(() => {
-navigation.navigate('AddPlant' as never);
-}, [navigation]);
+const cardRef = useRef<View>(null);
 const userHasLocation =
 userProfile?.locationLatitude !== undefined &&
 userProfile?.locationLongitude !== undefined;
-const region = userHasLocation
-? {
-latitude: userProfile.locationLatitude!,
-longitude: userProfile.locationLongitude!,
-latitudeDelta: 0.05,
-longitudeDelta: 0.05,
+const openEditModal = () => {
+cardRef.current?.measureInWindow((x, y, width, height) => {
+setEditCardLayout({ x, y, width, height });
+setEditProfileVisible(true);
+});
+};
+useEffect(() => {
+(async () => {
+if (userHasLocation) {
+try {
+const [geo] = await Location.reverseGeocodeAsync({
+latitude: userProfile!.locationLatitude!,
+longitude: userProfile!.locationLongitude!,
+});
+if (geo) {
+const city = geo.city || geo.subregion || '';
+const country = geo.country || '';
+setCityCountry(
+city && country ? `${city}, ${country}` : city || country
+);
 }
-: undefined;
+} catch (error) {
+console.log('Reverse geocoding error:', error);
+setCityCountry('');
+}
+} else {
+setCityCountry('');
+}
+})();
+}, [userHasLocation, userProfile]);
+const handleAddPlant = () => {
+navigation.navigate('AddPlant' as never);
+};
 const renderPlantItem = (item: PlantResponse) => {
 if (!showFullSize) {
-return (
-<View key={item.plantId} style={styles.plantCardThumbnail}>
-{item.imageUrl ? (
-<Image
-source={{ uri: item.imageUrl }}
-style={styles.thumbImage}
-resizeMode="contain"
-/>
-) : (
-<View style={styles.plantPlaceholder}>
-<Ionicons name="leaf" size={40} color={COLORS.primary} />
-</View>
-)}
-<View style={styles.thumbTextWrapper}>
-<Text style={styles.thumbPlantName} numberOfLines={1}>
-{item.speciesName}
-</Text>
-</View>
-</View>
-);
+return <PlantThumbnail key={item.plantId} plant={item} />;
 } else {
-const alltags = [
-item.plantStage,
-item.plantCategory,
-item.wateringNeed,
-item.lightRequirement,
-item.size,
-item.indoorOutdoor,
-item.propagationEase,
-item.petFriendly,
-...(item.extras ?? [])
-].filter(Boolean);
 return (
-<View key={item.plantId} style={styles.plantCardFull}>
-<View style={styles.fullImageContainer}>
-{item.imageUrl ? (
-<Image
-source={{ uri: item.imageUrl }}
-style={styles.fullImage}
-resizeMode="contain"
-/>
-) : (
-<View style={styles.plantPlaceholder}>
-<Ionicons name="leaf" size={60} color={COLORS.primary} />
-</View>
-)}
-<View style={styles.fullImageOverlay}>
-<LinearGradient
-colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 1)']}
-style={styles.overlayContent}>
-<Text style={styles.fullPlantName}>{item.speciesName}</Text>
-{alltags.length > 0 && (
-<View style={styles.tagRow}>
-{alltags.map((tag) => (
-<View key={tag} style={styles.tag}>
-<Text style={styles.tagText}>{tag}</Text>
-</View>
-))}
-</View>
-)}
-{item.description ? (
-<Text style={styles.fullDescription}>{item.description}</Text>
-) : null}
-</LinearGradient>
-</View>
-</View>
+<View key={item.plantId} style={styles.plantCardWrapper}>
+<PlantCardWithInfo plant={item} />
 </View>
 );
 }
 };
-let content: JSX.Element;
 if (loadingProfile || loadingPlants || srLoading) {
-content = (
+return (
 <SafeAreaView style={styles.centerContainer}>
 <ActivityIndicator size="large" color={COLORS.primary} />
 <Text style={styles.loadingText}>{t('profile_loading_message')}</Text>
 </SafeAreaView>
 );
-} else if (errorProfile || errorPlants || srError) {
-content = (
+}
+if (errorProfile || errorPlants || srError) {
+return (
 <SafeAreaView style={styles.centerContainer}>
 <Text style={styles.errorText}>{t('profile_error_message')}</Text>
 <TouchableOpacity
@@ -3432,127 +3993,118 @@ refetchPlants();
 }}
 style={styles.retryButton}
 >
-<Text style={styles.retryButtonText}>
-{t('profile_retry_button')}
-</Text>
+<Text style={styles.retryButtonText}>{t('profile_retry_button')}</Text>
 </TouchableOpacity>
 </SafeAreaView>
 );
-} else if (!userProfile) {
-content = (
+}
+if (!userProfile) {
+return (
 <SafeAreaView style={styles.centerContainer}>
-<Text style={styles.errorText}>
-{t('profile_no_user_profile_error')}
-</Text>
+<Text style={styles.errorText}>{t('profile_no_user_profile_error')}</Text>
 </SafeAreaView>
 );
-} else {
-content = (
+}
+return (
 <SafeAreaProvider style={styles.container}>
-<ScrollView
-style={{ flex: 1 }}
-contentContainerStyle={{ paddingBottom: 40 }}>
+<ScrollView style={{ flex: 1 }}>
+{}
 <LinearGradient
 colors={[COLORS.primary, COLORS.secondary]}
-style={styles.headerContainer}>
-<View style={styles.headerTopRow}>
-<Text style={styles.headerTitle}>{userProfile.name}'s {t('profile_title')}</Text>
-<TouchableOpacity
-onPress={handleEditProfile}
-style={styles.headerActionButton}
-accessibilityLabel={t('profile_edit_button')}>
-<MaterialIcons name="edit" size={24} color={COLORS.textLight} />
-</TouchableOpacity>
-</View>
+style={headerStyles.headerGradient}
+>
+<Text style={headerStyles.headerTitle}>{t('profile_title')}</Text>
+</LinearGradient>
 {}
-<View style={styles.profileInfoContainer}>
-<TouchableOpacity
-onPress={handleChangeProfilePicture}
-activeOpacity={0.8}
-style={styles.profilePictureWrapper}>
+<View
+ref={cardRef}
+style={[
+profileCardStyles.profileCardContainer,
+{
+marginHorizontal: 16,
+marginTop: 20,
+},
+]}
+>
+<LinearGradient
+colors={[COLORS.cardBg1, COLORS.cardBg2]}
+style={profileCardStyles.profileCardInner}
+>
+<View style={profileCardStyles.profileTopContainer}>
+<ImageBackground
+source={require('../../../../assets/images/profileBackground.png')}
+style={profileCardStyles.profileBackgroundImage}
+/>
+<View style={profileCardStyles.profilePictureContainer}>
 {userProfile.profilePictureUrl ? (
 <Image
 source={{ uri: userProfile.profilePictureUrl }}
-style={styles.profilePicture}
+style={profileCardStyles.profilePicture}
 />
 ) : (
-<View style={styles.profilePlaceholder}>
+<View style={profileCardStyles.profilePlaceholder}>
 <Ionicons name="person-circle-outline" size={90} color="#ccc" />
 </View>
 )}
-<View style={styles.cameraIconWrapper}>
-<Ionicons name="camera" size={18} color={COLORS.textLight} />
 </View>
-</TouchableOpacity>
-{userProfile.bio ? (
-<Text style={styles.bioText} numberOfLines={50}>
-{userProfile.bio}
-</Text>
-) : (
-<Text style={styles.bioPlaceholder} numberOfLines={3}>
-{t('profile_no_bio_placeholder')}
-</Text>
-)}
-<View style={styles.locationContainer}>
-<Text style={styles.locationLabel}>
-{t('profile_location_label')}:
-</Text>
-{userHasLocation ? (
-<View style={styles.mapContainer}>
-<MapView
-style={styles.map}
-initialRegion={region}
-scrollEnabled={false}
-zoomEnabled={false}
-rotateEnabled={false}
-pitchEnabled={false}
->
-<Circle
-center={{
-latitude: region.latitude,
-longitude: region.longitude,
-}}
-radius={2000}
-strokeWidth={1.5}
-strokeColor="rgba(30, 174, 152, 1)"
-fillColor="rgba(30, 174, 152, 0.2)"
-/>
-</MapView>
-</View>
-) : (
-<Text style={styles.noLocationText}>
-{t('profile_no_location')}
-</Text>
-)}
+{}
 <TouchableOpacity
-onPress={handleChangeLocation}
-style={styles.locationButton}
-accessibilityRole="button"
-accessibilityLabel={t('profile_change_location_button')}>
-<Ionicons name="location-outline" size={18} color={COLORS.primary} />
-<Text style={styles.locationButtonText}>
-{t('profile_change_location_button')}
-</Text>
+onPress={openEditModal}
+style={profileCardStyles.profileEditButton}
+accessibilityLabel={t('profile_edit_button')}
+>
+<MaterialIcons name="edit" size={20} color={COLORS.textLight} />
 </TouchableOpacity>
 </View>
+{}
+<View style={profileCardStyles.profileInfoContainer}>
+<View style={profileCardStyles.nameContainer}>
+<Text style={profileCardStyles.profileNameText}>{userProfile.name}</Text>
+</View>
+<View style={profileCardStyles.profileLocationRow}>
+<Ionicons
+name="location-sharp"
+size={16}
+color={COLORS.accentLightRed}
+style={profileCardStyles.locationIcon}
+/>
+<Text style={profileCardStyles.profileLocationText}>
+{cityCountry || t('profile_no_location')}
+</Text>
+</View>
+</View>
+<View style={profileCardStyles.bioContainer}>
+<Text
+style={[
+profileCardStyles.bioText,
+!userProfile.bio && profileCardStyles.bioPlaceholder,
+]}
+>
+{userProfile.bio ? userProfile.bio : t('profile_no_bio_placeholder')}
+</Text>
 </View>
 </LinearGradient>
+</View>
+{}
 <View style={styles.plantsSectionWrapper}>
 <View style={styles.plantsSectionHeader}>
 <Text style={styles.plantsSectionTitle}>
-{userProfile.name}{t('profile_my_plants_section')}
+{userProfile.name}
+{t('profile_my_plants_section')}
 </Text>
 <TouchableOpacity
 onPress={handleAddPlant}
 style={styles.addPlantButton}
 accessibilityRole="button"
-accessibilityLabel={t('profile_add_plant_button')}>
-<Ionicons name="add-circle" size={24} color={COLORS.primary} />
+accessibilityLabel={t('profile_add_plant_button')}
+>
+<Ionicons name="add-circle" size={24} color={COLORS.accentGreen} />
 <Text style={styles.addPlantButtonText}>
 {t('profile_add_plant_button')}
 </Text>
 </TouchableOpacity>
 </View>
+{}
 <View style={styles.viewToggleContainer}>
 <TouchableOpacity
 onPress={() => setShowFullSize(false)}
@@ -3560,12 +4112,14 @@ style={[
 styles.viewToggleOption,
 !showFullSize && styles.viewToggleOptionActive,
 ]}
-activeOpacity={0.9}>
+activeOpacity={0.9}
+>
 <Text
 style={[
 styles.viewToggleText,
 !showFullSize && styles.viewToggleTextActive,
-]}>
+]}
+>
 {t('Thumbnails')}
 </Text>
 </TouchableOpacity>
@@ -3575,23 +4129,21 @@ style={[
 styles.viewToggleOption,
 showFullSize && styles.viewToggleOptionActive,
 ]}
-activeOpacity={0.9}>
+activeOpacity={0.9}
+>
 <Text
 style={[
 styles.viewToggleText,
 showFullSize && styles.viewToggleTextActive,
-]}>
+]}
+>
 {t('Full Size')}
 </Text>
 </TouchableOpacity>
 </View>
+{}
 {myPlants && myPlants.length > 0 ? (
-<View
-style={[
-showFullSize
-? styles.fullViewContainer
-: styles.thumbViewContainer,
-]}>
+<View style={showFullSize ? styles.fullViewContainer : styles.thumbViewContainer}>
 {myPlants.map((plant) => renderPlantItem(plant))}
 </View>
 ) : (
@@ -3602,25 +4154,19 @@ showFullSize
 </View>
 )}
 </View>
+{}
 <EditProfileModal
 visible={editProfileVisible}
-initialName={userProfile.name}
-initialBio={userProfile.bio || ''}
+userProfile={userProfile}
 onClose={() => setEditProfileVisible(false)}
-onUpdated={handleProfileUpdated}
-/>
-<ChangeLocationModal
-visible={changeLocationVisible}
-initialLatitude={userProfile.locationLatitude}
-initialLongitude={userProfile.locationLongitude}
-onClose={() => setChangeLocationVisible(false)}
-onUpdated={handleLocationUpdated}
+onUpdated={() => {
+refetchProfile();
+}}
+cardLayout={editCardLayout}
 />
 </ScrollView>
 </SafeAreaProvider>
 );
-}
-return content;
 };
 export default MyProfileScreen;
 const styles = StyleSheet.create({
@@ -3656,123 +4202,10 @@ color: '#fff',
 fontSize: 16,
 fontWeight: '600',
 },
-headerContainer: {
-paddingHorizontal: 20,
-paddingVertical: 20,
-borderBottomLeftRadius: 20,
-borderBottomRightRadius: 20,
-marginBottom: 10,
-},
-headerTopRow: {
-flexDirection: 'row',
-justifyContent: 'space-between',
-alignItems: 'center',
-},
-headerTitle: {
-fontSize: 24,
-fontWeight: '700',
-color: COLORS.textLight,
-},
-headerActionButton: {
-padding: 8,
-},
-profileInfoContainer: {
-alignItems: 'center',
-marginTop: 15,
-marginHorizontal: 20,
-},
-profilePictureWrapper: {
-position: 'relative',
-marginBottom: 10,
-},
-profilePicture: {
-width: (width - 100) / 2,
-height: (width - 100) / 2,
-borderRadius: (width - 100) / 4,
-backgroundColor: '#eee',
-borderWidth: 2,
-borderColor: '#fff',
-},
-profilePlaceholder: {
-width: (width - 100) / 2,
-height: (width - 100) / 2,
-borderRadius: (width - 100) / 4,
-backgroundColor: '#eee',
-alignItems: 'center',
-justifyContent: 'center',
-borderWidth: 2,
-borderColor: '#fff',
-},
-cameraIconWrapper: {
-position: 'absolute',
-bottom: 0,
-right: 10,
-backgroundColor: COLORS.primary,
-borderRadius: 16,
-padding: 4,
-},
-bioText: {
-fontSize: 14,
-color: COLORS.textLight,
-textAlign: 'center',
-marginVertical: 10,
-lineHeight: 20,
-},
-bioPlaceholder: {
-fontSize: 14,
-color: COLORS.textLight,
-fontStyle: 'italic',
-textAlign: 'center',
-marginVertical: 10,
-lineHeight: 20,
-},
-locationContainer: {
-width: '100%',
-alignItems: 'center',
-marginTop: 15,
-},
-locationLabel: {
-fontSize: 16,
-fontWeight: '600',
-color: COLORS.textLight,
-marginBottom: 8,
-},
-mapContainer: {
-width: '100%',
-height: (width - 40) / 2,
-borderRadius: 8,
-overflow: 'hidden',
-backgroundColor: '#ddd',
-marginBottom: 10,
-},
-map: {
-...StyleSheet.absoluteFillObject,
-},
-noLocationText: {
-fontSize: 14,
-color: COLORS.textLight,
-marginBottom: 10,
-},
-locationButton: {
-flexDirection: 'row',
-alignItems: 'center',
-paddingHorizontal: 10,
-paddingVertical: 6,
-borderWidth: 1,
-borderColor: COLORS.primary,
-borderRadius: 8,
-backgroundColor: '#fff',
-marginTop: 10,
-},
-locationButtonText: {
-color: COLORS.primary,
-fontSize: 14,
-marginLeft: 5,
-fontWeight: '600',
-},
 plantsSectionWrapper: {
 paddingHorizontal: 10,
-paddingTop: 10,
+paddingTop: 20,
+paddingBottom: 15,
 },
 plantsSectionHeader: {
 flexDirection: 'row',
@@ -3792,7 +4225,7 @@ alignItems: 'center',
 },
 addPlantButtonText: {
 fontSize: 14,
-color: COLORS.primary,
+color: COLORS.accentGreen,
 marginLeft: 5,
 fontWeight: '600',
 },
@@ -3811,7 +4244,7 @@ paddingHorizontal: 20,
 backgroundColor: '#fff',
 },
 viewToggleOptionActive: {
-backgroundColor: COLORS.primary,
+backgroundColor: COLORS.accentGreen,
 },
 viewToggleText: {
 fontSize: 14,
@@ -3826,107 +4259,11 @@ flexDirection: 'row',
 flexWrap: 'wrap',
 justifyContent: 'center',
 },
-plantCardThumbnail: {
-width: (width - 80) / 3,
-backgroundColor: COLORS.cardBg,
-borderRadius: 8,
-margin: 8,
-overflow: 'hidden',
-...Platform.select({
-ios: {
-shadowColor: '#000',
-shadowOpacity: 0.1,
-shadowRadius: 5,
-},
-android: {
-elevation: 3,
-},
-}),
-},
-thumbImage: {
-width: '100%',
-aspectRatio: 3 / 4,
-},
-plantPlaceholder: {
-width: '100%',
-height: 120,
-backgroundColor: '#eee',
-justifyContent: 'center',
-alignItems: 'center',
-},
-thumbTextWrapper: {
-padding: 8,
-alignItems: 'center',
-},
-thumbPlantName: {
-fontSize: 14,
-fontWeight: '600',
-color: COLORS.textDark,
-},
 fullViewContainer: {
 width: '100%',
 },
-plantCardFull: {
+plantCardWrapper: {
 marginBottom: 15,
-width: '100%',
-borderRadius: 8,
-overflow: 'hidden',
-...Platform.select({
-ios: {
-shadowColor: '#000',
-shadowOpacity: 0.12,
-shadowRadius: 5,
-shadowOffset: { width: 0, height: 3 },
-},
-android: {
-elevation: 3,
-},
-}),
-},
-fullImageContainer: {
-width: '100%',
-position: 'relative',
-},
-fullImage: {
-width: '100%',
-aspectRatio: 3 / 4,
-},
-fullImageOverlay: {
-...StyleSheet.absoluteFillObject,
-justifyContent: 'flex-end',
-},
-overlayContent: {
-padding: 10,
-paddingTop: 100,
-},
-fullPlantName: {
-fontSize: 18,
-fontWeight: '700',
-color: '#fff',
-marginBottom: 6,
-},
-tagRow: {
-flexDirection: 'row',
-flexWrap: 'wrap',
-marginBottom: 6,
-},
-tag: {
-backgroundColor: COLORS.primary,
-borderRadius: 12,
-paddingHorizontal: 8,
-paddingVertical: 4,
-marginRight: 6,
-marginBottom: 6,
-},
-tagText: {
-color: '#fff',
-fontSize: 12,
-fontWeight: '600',
-},
-fullDescription: {
-color: '#fff',
-fontSize: 14,
-fontWeight: '400',
 },
 noPlantsContainer: {
 justifyContent: 'center',
@@ -4068,10 +4405,10 @@ return (
 <SafeAreaProvider style={styles.safeArea}>
 <LinearGradient
 colors={[COLORS.primary, COLORS.secondary]}
-style={styles.gradientHeader}
+style={headerStyles.headerGradient}
 >
-<View style={styles.headerRow}>
-<Text style={styles.headerTitle}>{t('Settings')}</Text>
+<View style={headerStyles.headerRow}>
+<Text style={headerStyles.headerTitle}>{t('Settings')}</Text>
 <MaterialIcons name="settings" size={24} color="#fff" />
 </View>
 </LinearGradient>
@@ -4277,23 +4614,6 @@ safeArea: {
 flex: 1,
 backgroundColor: COLORS.background,
 },
-gradientHeader: {
-paddingHorizontal: 20,
-paddingVertical: 16,
-borderBottomLeftRadius: 20,
-borderBottomRightRadius: 20,
-marginBottom: 10,
-},
-headerRow: {
-flexDirection: 'row',
-justifyContent: 'space-between',
-alignItems: 'center',
-},
-headerTitle: {
-fontSize: 24,
-fontWeight: '700',
-color: '#fff',
-},
 scrollContent: {
 paddingBottom: 40,
 paddingHorizontal: 20,
@@ -4329,19 +4649,19 @@ langButton: {
 paddingVertical: 8,
 paddingHorizontal: 12,
 borderWidth: 1,
-borderColor: COLORS.primary,
+borderColor: COLORS.accentGreen,
 borderRadius: 20,
 marginRight: 10,
 },
 langButtonSelected: {
-backgroundColor: COLORS.primary,
+backgroundColor: COLORS.accentGreen,
 },
 langButtonText: {
 fontSize: 14,
-color: COLORS.primary,
+color: COLORS.accentGreen,
 },
 langButtonTextSelected: {
-color: '#fff',
+color: COLORS.textLight,
 fontWeight: '600',
 },
 toggleRow: {
@@ -4356,7 +4676,7 @@ color: COLORS.textDark,
 },
 changeButton: {
 borderWidth: 1,
-borderColor: COLORS.primary,
+borderColor: COLORS.accentGreen,
 borderRadius: 8,
 paddingVertical: 8,
 paddingHorizontal: 12,
@@ -4364,7 +4684,7 @@ alignSelf: 'flex-start',
 marginTop: 6,
 },
 changeButtonText: {
-color: COLORS.primary,
+color: COLORS.accentGreen,
 fontSize: 14,
 fontWeight: '600',
 },
@@ -4405,7 +4725,7 @@ color: '#fff',
 logoutButton: {
 flexDirection: 'row',
 alignItems: 'center',
-backgroundColor: COLORS.primary,
+backgroundColor: COLORS.accentGreen,
 borderRadius: 8,
 paddingVertical: 8,
 paddingHorizontal: 12,
@@ -4420,7 +4740,7 @@ fontWeight: '600',
 deleteButton: {
 flexDirection: 'row',
 alignItems: 'center',
-backgroundColor: COLORS.accent,
+backgroundColor: COLORS.accentRed,
 borderRadius: 8,
 paddingVertical: 8,
 paddingHorizontal: 12,
@@ -4442,9 +4762,7 @@ alignItems: 'center',
 View,
 Text,
 StyleSheet,
-TouchableOpacity,
 ScrollView,
-ActivityIndicator,
 Platform,
 } from 'react-native';
 PlantStage,
@@ -4457,42 +4775,6 @@ PropagationEase,
 PetFriendly,
 Extras,
 } from '../../../types/enums';
-const MultiSelectTagGroup = <T extends string>({
-values,
-selectedValues,
-onToggle,
-}: {
-values: T[];
-selectedValues: T[];
-onToggle: (val: T) => void;
-}) => {
-return (
-<View style={styles.tagGroupContainer}>
-{values.map((val) => {
-const isSelected = selectedValues.includes(val);
-return (
-<TouchableOpacity
-key={String(val)}
-style={[
-styles.singleTag,
-isSelected && styles.singleTagSelected,
-]}
-onPress={() => onToggle(val)}
->
-<Text
-style={[
-styles.singleTagText,
-isSelected && styles.singleTagTextSelected,
-]}
->
-{val}
-</Text>
-</TouchableOpacity>
-);
-})}
-</View>
-);
-};
 const SetUserPreferencesScreen: React.FC = () => {
 const navigation = useNavigation();
 const {
@@ -4525,17 +4807,6 @@ setSelectedPetFriendly(preferences.preferedPetFriendly || []);
 setSelectedExtras(preferences.preferedExtras || []);
 }
 }, [preferences]);
-const handleToggle = <T extends string>(
-value: T,
-selectedList: T[],
-setList: React.Dispatch<React.SetStateAction<T[]>>
-) => {
-if (selectedList.includes(value)) {
-setList(selectedList.filter((v) => v !== value));
-} else {
-setList([...selectedList, value]);
-}
-};
 const handleCancel = () => {
 navigation.goBack();
 };
@@ -4578,14 +4849,21 @@ return (
 }
 return (
 <View style={styles.container}>
-{}
 <LinearGradient
 colors={[COLORS.primary, COLORS.secondary]}
 style={styles.gradientBackground}
 >
-{}
-<View style={styles.headerRow}>
-<Text style={styles.headerTitle}>User Preferences</Text>
+<View style={headerStyles.headerAboveScroll}>
+<View style={headerStyles.headerColumn1}>
+<Ionicons
+name="chevron-back"
+size={30}
+color={COLORS.textLight}
+style={headerStyles.headerBackButton}
+onPress={() => navigation.goBack()}
+/>
+<Text style={headerStyles.headerTitle}>User Preferences</Text>
+</View>
 <MaterialIcons name="settings" size={24} color="#fff" />
 </View>
 <ScrollView
@@ -4593,112 +4871,131 @@ contentContainerStyle={styles.scrollContent}
 showsVerticalScrollIndicator={false}
 >
 <View style={styles.formContainer}>
-{}
 {error && <Text style={styles.errorText}>{error}</Text>}
-{}
-{}
 <Text style={styles.label}>Preferred Plant Stages:</Text>
-<MultiSelectTagGroup
+<TagGroup
+mode="multiple"
 values={Object.values(PlantStage)}
 selectedValues={selectedStages}
-onToggle={(val) =>
-handleToggle(val, selectedStages, setSelectedStages)
+onToggleMulti={(val) =>
+setSelectedStages((prev) =>
+prev.includes(val)
+? prev.filter((v) => v !== val)
+: [...prev, val]
+)
 }
 />
-{}
 <Text style={styles.label}>Preferred Categories:</Text>
-<MultiSelectTagGroup
+<TagGroup
+mode="multiple"
 values={Object.values(PlantCategory)}
 selectedValues={selectedCategories}
-onToggle={(val) =>
-handleToggle(val, selectedCategories, setSelectedCategories)
+onToggleMulti={(val) =>
+setSelectedCategories((prev) =>
+prev.includes(val)
+? prev.filter((v) => v !== val)
+: [...prev, val]
+)
 }
 />
-{}
 <Text style={styles.label}>Watering Need:</Text>
-<MultiSelectTagGroup
+<TagGroup
+mode="multiple"
 values={Object.values(WateringNeed)}
 selectedValues={selectedWatering}
-onToggle={(val) =>
-handleToggle(val, selectedWatering, setSelectedWatering)
+onToggleMulti={(val) =>
+setSelectedWatering((prev) =>
+prev.includes(val)
+? prev.filter((v) => v !== val)
+: [...prev, val]
+)
 }
 />
-{}
 <Text style={styles.label}>Light Requirement:</Text>
-<MultiSelectTagGroup
+<TagGroup
+mode="multiple"
 values={Object.values(LightRequirement)}
 selectedValues={selectedLightReq}
-onToggle={(val) =>
-handleToggle(val, selectedLightReq, setSelectedLightReq)
+onToggleMulti={(val) =>
+setSelectedLightReq((prev) =>
+prev.includes(val)
+? prev.filter((v) => v !== val)
+: [...prev, val]
+)
 }
 />
-{}
 <Text style={styles.label}>Size:</Text>
-<MultiSelectTagGroup
+<TagGroup
+mode="multiple"
 values={Object.values(Size)}
 selectedValues={selectedSize}
-onToggle={(val) =>
-handleToggle(val, selectedSize, setSelectedSize)
+onToggleMulti={(val) =>
+setSelectedSize((prev) =>
+prev.includes(val)
+? prev.filter((v) => v !== val)
+: [...prev, val]
+)
 }
 />
-{}
 <Text style={styles.label}>Indoor/Outdoor:</Text>
-<MultiSelectTagGroup
+<TagGroup
+mode="multiple"
 values={Object.values(IndoorOutdoor)}
 selectedValues={selectedIndoorOutdoor}
-onToggle={(val) =>
-handleToggle(val, selectedIndoorOutdoor, setSelectedIndoorOutdoor)
+onToggleMulti={(val) =>
+setSelectedIndoorOutdoor((prev) =>
+prev.includes(val)
+? prev.filter((v) => v !== val)
+: [...prev, val]
+)
 }
 />
-{}
 <Text style={styles.label}>Propagation Ease:</Text>
-<MultiSelectTagGroup
+<TagGroup
+mode="multiple"
 values={Object.values(PropagationEase)}
 selectedValues={selectedPropagationEase}
-onToggle={(val) =>
-handleToggle(val, selectedPropagationEase, setSelectedPropagationEase)
+onToggleMulti={(val) =>
+setSelectedPropagationEase((prev) =>
+prev.includes(val)
+? prev.filter((v) => v !== val)
+: [...prev, val]
+)
 }
 />
-{}
 <Text style={styles.label}>Pet Friendly:</Text>
-<MultiSelectTagGroup
+<TagGroup
+mode="multiple"
 values={Object.values(PetFriendly)}
 selectedValues={selectedPetFriendly}
-onToggle={(val) =>
-handleToggle(val, selectedPetFriendly, setSelectedPetFriendly)
+onToggleMulti={(val) =>
+setSelectedPetFriendly((prev) =>
+prev.includes(val)
+? prev.filter((v) => v !== val)
+: [...prev, val]
+)
 }
 />
-{}
 <Text style={styles.label}>Extras:</Text>
-<MultiSelectTagGroup
+<TagGroup
+mode="multiple"
 values={Object.values(Extras)}
 selectedValues={selectedExtras}
-onToggle={(val) =>
-handleToggle(val, selectedExtras, setSelectedExtras)
+onToggleMulti={(val) =>
+setSelectedExtras((prev) =>
+prev.includes(val)
+? prev.filter((v) => v !== val)
+: [...prev, val]
+)
 }
 />
-{}
-{isUpdating && (
-<ActivityIndicator
-size="small"
-color={COLORS.primary}
-style={{ marginVertical: 10 }}
+<ConfirmCancelButtons
+onConfirm={handleSave}
+confirmButtonText="Save"
+onCancel={handleCancel}
+cancelButtonText="Cancel"
+loading={isUpdating}
 />
-)}
-{}
-<View style={styles.actions}>
-<TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isUpdating}>
-<Text style={styles.saveButtonText}>
-{isUpdating ? 'Saving...' : 'Save'}
-</Text>
-</TouchableOpacity>
-<TouchableOpacity
-style={styles.cancelButton}
-onPress={handleCancel}
->
-<Text style={styles.cancelButtonText}>Cancel</Text>
-</TouchableOpacity>
-</View>
 </View>
 </ScrollView>
 </LinearGradient>
@@ -4716,18 +5013,6 @@ flex: 1,
 scrollContent: {
 paddingTop: 0,
 paddingBottom: 30,
-},
-headerRow: {
-flexDirection: 'row',
-justifyContent: 'space-between',
-alignItems: 'center',
-marginHorizontal: 20,
-marginBottom: 10,
-},
-headerTitle: {
-fontSize: 24,
-fontWeight: 'bold',
-color: '#fff',
 },
 formContainer: {
 backgroundColor: '#fff',
@@ -4758,64 +5043,6 @@ color: '#FF6F61',
 marginBottom: 10,
 fontWeight: '600',
 },
-tagGroupContainer: {
-flexDirection: 'row',
-flexWrap: 'wrap',
-marginBottom: 6,
-},
-singleTag: {
-borderWidth: 1,
-borderColor: COLORS.primary,
-borderRadius: 20,
-paddingVertical: 6,
-paddingHorizontal: 12,
-marginRight: 8,
-marginBottom: 8,
-},
-singleTagSelected: {
-backgroundColor: COLORS.primary,
-},
-singleTagText: {
-fontSize: 12,
-color: COLORS.primary,
-fontWeight: '600',
-},
-singleTagTextSelected: {
-color: '#fff',
-},
-actions: {
-flexDirection: 'column',
-justifyContent: 'flex-end',
-marginTop: 16,
-},
-cancelButton: {
-borderWidth: 1,
-borderColor: COLORS.primary,
-borderRadius: 8,
-paddingVertical: 10,
-paddingHorizontal: 16,
-margin: 10,
-marginTop: 0,
-},
-cancelButtonText: {
-fontSize: 14,
-color: COLORS.primary,
-fontWeight: '600',
-textAlign: 'center',
-},
-saveButton: {
-backgroundColor: COLORS.primary,
-borderRadius: 8,
-paddingVertical: 10,
-paddingHorizontal: 16,
-margin: 10,
-},
-saveButtonText: {
-fontSize: 14,
-color: '#fff',
-fontWeight: '600',
-textAlign: 'center',
-},
 center: {
 flex: 1,
 justifyContent: 'center',
@@ -4834,16 +5061,6 @@ Platform,
 FlatList,
 } from 'react-native';
 const { width } = Dimensions.get('window');
-const COLORS = {
-primary: '#1EAE98',
-primaryLight: '#5EE2C6',
-accent: '#FF6B6B',
-accentLight: '#FF9F9F',
-background: '#f8f8f8',
-textDark: '#333',
-textLight: '#fff',
-border: '#ddd',
-};
 interface SwipeScreenProps {}
 const SwipeScreen: React.FC<SwipeScreenProps> = () => {
 const navigation = useNavigation();
@@ -5035,14 +5252,14 @@ prefTags.push({ key: 'Extras', value: val })
 }
 return (
 <LinearGradient
-colors={[COLORS.primary, COLORS.primaryLight]}
-style={styles.headerGradient}
+colors={[COLORS.primary, COLORS.secondary]}
+style={headerStyles.headerGradient}
 >
-<View style={styles.headerTopRow}>
-<Text style={styles.headerTitle}>Explore</Text>
+<View style={headerStyles.headerRow}>
+<Text style={headerStyles.headerTitle}>Explore</Text>
 <TouchableOpacity
 onPress={handleFilterPress}
-style={styles.headerActionButton}
+style={headerStyles.headerActionButton}
 >
 <Ionicons name="options" size={24} color={COLORS.textLight} />
 </TouchableOpacity>
@@ -5165,7 +5382,7 @@ style={styles.actionButtonWrapper}
 disabled={sendingSwipes}
 >
 <LinearGradient
-colors={[COLORS.accent, COLORS.accentLight]}
+colors={[COLORS.accentRed, COLORS.accentLightRed]}
 style={styles.actionButton}
 >
 <MaterialIcons name="close" size={32} color={COLORS.textLight} />
@@ -5178,7 +5395,7 @@ style={styles.actionButtonWrapper}
 disabled={sendingSwipes}
 >
 <LinearGradient
-colors={[COLORS.primary, COLORS.primaryLight]}
+colors={[COLORS.primary, COLORS.secondary]}
 style={styles.actionButton}
 >
 <MaterialIcons
@@ -5203,6 +5420,7 @@ export default SwipeScreen;
 const styles = StyleSheet.create({
 container: {
 flex: 1,
+flexDirection: 'column',
 backgroundColor: COLORS.background,
 },
 loaderContainer: {
@@ -5235,27 +5453,6 @@ reloadButtonText: {
 color: '#fff',
 fontWeight: '600',
 },
-headerGradient: {
-paddingHorizontal: 16,
-paddingTop: 15,
-paddingBottom: 20,
-borderBottomLeftRadius: 20,
-borderBottomRightRadius: 20,
-marginBottom: 10,
-},
-headerTopRow: {
-flexDirection: 'row',
-justifyContent: 'space-between',
-alignItems: 'center',
-},
-headerTitle: {
-fontSize: 26,
-fontWeight: '700',
-color: COLORS.textLight,
-},
-headerActionButton: {
-padding: 6,
-},
 filterContainer: {
 flexDirection: 'row',
 },
@@ -5278,7 +5475,7 @@ alignItems: 'center',
 },
 tagChip: {
 flexDirection: 'row',
-backgroundColor: COLORS.accent,
+backgroundColor: COLORS.accentRed,
 paddingVertical: 2,
 paddingHorizontal: 8,
 borderRadius: 16,
@@ -5298,7 +5495,6 @@ paddingLeft: 2,
 deckContainer: {
 marginBottom: 10,
 flex: 1,
-justifyContent: 'flex-start',
 alignItems: 'center',
 right: 0,
 },
@@ -5489,6 +5685,223 @@ state.error = action.payload as string;
 }
 });
 export const { clearUserProfile } = userSlice.actions;
+// File: app\features\main\styles\headerStyles.ts
+export const headerStyles = StyleSheet.create({
+headerGradient: {
+paddingHorizontal: 20,
+paddingVertical: 15,
+marginBottom: 10,
+elevation: 10,
+backgroundColor: COLORS.background,
+},
+headerRow: {
+flexDirection: "row",
+justifyContent: "space-between",
+alignItems: "center",
+},
+headerColumn1: {
+flexDirection: "row",
+alignItems: "center",
+},
+headerTitle: {
+fontSize: 24,
+fontWeight: "700",
+color: COLORS.textLight,
+},
+headerActionButton: {
+padding: 6,
+},
+headerBackButton: {
+marginRight: 10,
+borderColor: COLORS.textLight,
+paddingRight: 10,
+borderRightWidth: 1,
+},
+headerAboveScroll: {
+flexDirection: "row",
+justifyContent: "space-between",
+alignItems: "center",
+marginHorizontal: 20,
+marginBottom: 10,
+},
+});
+// File: app\features\main\styles\profileCardStyles.ts
+export const profileCardStyles = StyleSheet.create({
+profileCardContainer: {
+borderRadius: 18,
+overflow: "hidden",
+...Platform.select({
+ios: {
+shadowColor: "#000",
+shadowOpacity: 0.12,
+shadowRadius: 6,
+shadowOffset: { width: 0, height: 3 },
+},
+android: {
+elevation: 4,
+},
+}),
+},
+profileCardInner: {
+borderRadius: 18,
+},
+profileTopContainer: {
+backgroundColor: COLORS.primary,
+height: 120,
+position: "relative",
+},
+profileBackgroundImage: {
+height: "100%",
+resizeMode: "cover",
+position: "absolute",
+bottom: 0,
+right: 0,
+left: -200,
+},
+profilePictureContainer: {
+position: "absolute",
+bottom: -75,
+left: 25,
+},
+profilePicture: {
+width: 170,
+height: 170,
+borderRadius: 40,
+borderWidth: 3,
+borderColor: "#fff",
+},
+profilePlaceholder: {
+width: 150,
+height: 150,
+borderRadius: 40,
+backgroundColor: "#eee",
+alignItems: "center",
+justifyContent: "center",
+borderWidth: 3,
+borderColor: "#fff",
+},
+cameraIconWrapper: {
+position: "absolute",
+bottom: 0,
+right: 0,
+backgroundColor: COLORS.accentGreen,
+borderRadius: 16,
+padding: 6,
+},
+profileEditButton: {
+position: "absolute",
+top: 16,
+right: 16,
+width: 35,
+height: 35,
+borderRadius: 20,
+backgroundColor: COLORS.accentGreen,
+justifyContent: "center",
+alignItems: "center",
+...Platform.select({
+ios: {
+shadowColor: "#000",
+shadowOpacity: 0.1,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 3 },
+},
+android: {
+elevation: 3,
+},
+}),
+},
+profileInfoContainer: {
+right: -190,
+},
+nameContainer: {
+marginLeft: 17,
+marginTop: 5,
+},
+editNameContainer: {
+flex: 1,
+marginRight: 15,
+backgroundColor: COLORS.cardBg1,
+borderRadius: 5,
+...Platform.select({
+ios: {
+shadowColor: "#000",
+shadowOpacity: 0.1,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 3 },
+},
+android: {
+elevation: 3,
+},
+}),
+},
+profileNameText: {
+fontSize: 18,
+fontWeight: "700",
+color: COLORS.textDark,
+margin: 3,
+},
+editableTextName: {
+borderRadius: 5,
+borderBottomWidth: 0,
+padding: 3,
+margin: 0,
+},
+profileLocationRow: {
+flexDirection: "row",
+alignItems: "center",
+marginBottom: 8,
+marginHorizontal: 20,
+},
+locationIcon: {
+marginRight: 4,
+top: 1,
+},
+profileLocationText: {
+fontSize: 14,
+color: COLORS.textDark,
+marginTop: 2,
+},
+bioContainer: {
+margin: 20,
+},
+bioContainerEdit: {
+backgroundColor: COLORS.cardBg1,
+borderRadius: 5,
+...Platform.select({
+ios: {
+shadowColor: "#000",
+shadowOpacity: 0.1,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 3 },
+},
+android: {
+elevation: 3,
+},
+}),
+},
+bioText: {
+fontSize: 14,
+color: COLORS.textDark,
+lineHeight: 20,
+margin: 5,
+},
+editableTextBio: {
+borderRadius: 5,
+borderBottomWidth: 0,
+padding: 5,
+margin: 0,
+},
+bioPlaceholder: {
+color: "#999",
+fontStyle: "italic",
+},
+errorText: {
+color: "#FF6B6B",
+marginBottom: 10,
+textAlign: "center",
+fontWeight: "600",
+},
+});
 // File: app\features\main\types\mainTypes.ts
 
 // File: app\features\onboarding\screens\OnboardingBioScreen.tsx
@@ -5888,7 +6301,25 @@ return i18n;
 "connections_none_message": "It looks like you haven't matched with anyone so far.",
 "connections_none_action": "Find Plants",
 "connections_matches_label": "{{count}} Matches",
-"connections_title": "Connections"
+"connections_title": "Connections",
+"chat_loading_conversation": "Loading conversation...",
+"chat_error_message": "An error occurred. Please try again.",
+"chat_retry_button": "Retry",
+"chat_no_matches_with_user": "No matches found with this user.",
+"chat_title": "Chat",
+"chat_no_messages_yet": "No messages yet. Say hello!",
+"chat_message_placeholder": "Type a message",
+"profile_change_picture_title": "Change Profile Picture",
+"profile_change_picture_msg": "Choose an option to change your profile picture.",
+"profile_picture_select_library": "Select from Library",
+"profile_picture_take_photo": "Take Photo",
+"profile_picture_cancel": "Cancel",
+"profile_no_bio_placeholder": "Add a bio...",
+"error_title": "Error",
+"error_could_not_open_image_library": "Could not open image library.",
+"error_camera_permission_denied": "Camera permission denied.",
+"error_could_not_open_camera": "Could not open camera.",
+"error_profile_picture_update_failed": "Profile picture update failed."
 }
 // File: app\i18n\locales\fr.json
 {
@@ -6064,6 +6495,7 @@ const icons: Record<string, number> = {
 Swipe: require('../../assets/images/swiping.png'),
 Profile: require('../../assets/images/profile.png'),
 Settings: require('../../assets/images/settings.png'),
+Connections: require('../../assets/images/connections.png'),
 };
 const MainTabNavigator = () => {
 return (
@@ -6195,7 +6627,7 @@ state.message = null;
 });
 export const { setGlobalError, clearGlobalError } = globalErrorSlice.actions;
 // File: app\theme\colors.ts
-export const COLORS = {
+export const COLORS2 = {
 primary: '#1EAE98',
 secondary:'#5EE2C6',
 accent: '#FF6B6B',
@@ -6207,14 +6639,31 @@ border: '#ddd',
 bubbleLeft: '#fff',
 bubbleRight: '#DCF8C6',
 };
-export const COLORS2 = {
+export const COLORS3 = {
 primary: '#95d0bd',
 secondary:'#6ab6a3',
-accent: '#FF6F61',
+accentGreen: '#417b6b',
+accentRed: '#FF6B6B',
+accentLightRed: '#FF9F9F',
 background: '#F2F2F2',
 textDark: '#2F4F4F',
 textLight: '#FFFFFF',
 cardBg: '#FFFFFF',
+border: '#ddd',
+bubbleLeft: '#fff',
+bubbleRight: '#DCF8C6',
+};
+export const COLORS = {
+primary: '#b0ccac',
+secondary:'#6ab6a3',
+accentGreen: '#417b6b',
+accentRed: '#FF6B6B',
+accentLightRed: '#FF9F9F',
+background: '#F2F2F2',
+textDark: '#2F4F4F',
+textLight: '#FFFFFF',
+cardBg1: '#FFFFFF',
+cardBg2: '#e1e1e1',
 border: '#ddd',
 bubbleLeft: '#fff',
 bubbleRight: '#DCF8C6',

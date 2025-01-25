@@ -156,29 +156,12 @@ export const SwipeableCard = forwardRef<SwipeableCardRef, SwipeableCardProps>(
             </View>
           </View>
 
-          <View style={styles.tagContainer}>
-            {/* Plant Name */}
-            <Text style={styles.fullPlantName} numberOfLines={1}>
-              {plant.speciesName}
-            </Text>
-
-            {/* Render all tags */}
-            {allTags.length > 0 && (
-              <View style={styles.tagRow}>
-                {allTags.map((tag) => (
-                  <View key={tag} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* Description */}
-            {plant.description ? (
-              <Text style={styles.fullDescription} numberOfLines={3}>
-                {plant.description}
-              </Text>
-            ) : null}
+          <View style={styles.plantInfoContainer}>
+            <PlantOverlay
+              speciesName={plant.speciesName}
+              description={plant.description}
+              tags={allTags}
+            />
           </View>
 
           <View style={styles.underImageExtension} />
@@ -231,7 +214,7 @@ const styles = StyleSheet.create({
     zIndex: -1,
     height: 50,
   },
-  tagContainer: {
+  plantInfoContainer: {
     padding: 5,
     position: 'absolute',
     bottom: 0,

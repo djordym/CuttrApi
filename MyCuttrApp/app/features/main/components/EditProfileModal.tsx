@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -11,23 +11,28 @@ import {
   Alert,
   Dimensions,
   Platform,
+  ImageBackground,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { userService } from '../../../api/userService';
 import { UserResponse, UserUpdateRequest } from '../../../types/apiTypes';
 import { ChangeLocationModal } from './ChangeLocationModal';
 import { COLORS } from '../../../theme/colors';
-
-const { width } = Dimensions.get('window');
+import { profileCardStyles } from '../styles/profileCardStyles';
+import { log } from '../../../utils/logger';
 
 interface EditProfileModalProps {
   visible: boolean;
   userProfile: UserResponse;
   onClose: () => void;
   onUpdated: () => void; // callback after successful update (refetch in parent)
+  cardLayout: { x: number; y: number; width: number; height: number };
 }
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({
@@ -35,19 +40,52 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   userProfile,
   onClose,
   onUpdated,
+  cardLayout,
 }) => {
   const { t } = useTranslation();
+  const screenWidth = Dimensions.get('window').width;
 
-  // Local states for name & bio
+  // Local states for name, bio, and location display
   const [name, setName] = useState(userProfile.name);
   const [bio, setBio] = useState(userProfile.bio || '');
+  const [cityCountry, setCityCountry] = useState<string>('');
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Location modal
+  // For nested ChangeLocationModal
   const [locationModalVisible, setLocationModalVisible] = useState(false);
 
-  // Handle “Change Picture”
+  // Reverse-geocode city/country for display
+  const userHasLocation =
+    userProfile.locationLatitude !== undefined &&
+    userProfile.locationLongitude !== undefined;
+
+  useEffect(() => {
+    (async () => {
+      if (userHasLocation) {
+        try {
+          const [geo] = await Location.reverseGeocodeAsync({
+            latitude: userProfile.locationLatitude!,
+            longitude: userProfile.locationLongitude!,
+          });
+          if (geo) {
+            const city = geo.city || geo.subregion || '';
+            const country = geo.country || '';
+            setCityCountry(
+              city && country ? `${city}, ${country}` : city || country
+            );
+          }
+        } catch (err) {
+          console.log('Reverse geocoding error:', err);
+          setCityCountry('');
+        }
+      } else {
+        setCityCountry('');
+      }
+    })();
+  }, [userHasLocation, userProfile]);
+
+  // ----------- Handle Profile Picture Updates -----------
   const handleChangeProfilePicture = useCallback(() => {
     Alert.alert(
       t('profile_change_picture_title'),
@@ -80,7 +118,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       }
     } catch (err) {
       console.error('pickImageFromLibrary error:', err);
-      Alert.alert('Error', 'Could not open image library.');
+      Alert.alert(t('error_title'), t('error_could_not_open_image_library'));
     }
   };
 
@@ -88,7 +126,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     try {
       const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
       if (!cameraPermission.granted) {
-        Alert.alert('Error', 'Camera permission denied.');
+        Alert.alert(t('error_title'), t('error_camera_permission_denied'));
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -102,7 +140,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       }
     } catch (err) {
       console.error('takePictureWithCamera error:', err);
-      Alert.alert('Error', 'Could not open camera.');
+      Alert.alert(t('error_title'), t('error_could_not_open_camera'));
     }
   };
 
@@ -126,14 +164,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       onUpdated();
     } catch (err) {
       console.error('Error uploading profile picture:', err);
-      Alert.alert('Error', 'Profile picture update failed.');
+      Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));
     } finally {
       setUpdating(false);
     }
   };
 
-  // Handle “Go Back” (auto-save name & bio)
-  const handleGoBack = async () => {
+  // ----------- Handle “Save” -----------
+  const handleSave = async () => {
     setUpdating(true);
     setError(null);
 
@@ -153,97 +191,141 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     }
   };
 
+  // ----------- Handle Location Modal -----------
+  const handleOpenSetLocationModal = () => {
+    log.debug('Opening location modal');
+    log.debug('userProfile.locationLatitude', userProfile.locationLatitude);
+    log.debug('userProfile.locationLongitude', userProfile.locationLongitude);
+    setLocationModalVisible(true);
+  };
+
   return (
-    <Modal visible={visible} animationType="fade" transparent>
-      <View style={styles.overlay}>
-        {/* This container visually replicates the “profile card” style */}
-        <View style={styles.modalCard}>
-          {/* Scrollable content if you have smaller screens */}
-          <View style={styles.contentWrapper}>
-            {/* Top portion: background accent + “profile pic” */}
-            <View style={styles.modalTopContainer}>
-              <View style={styles.modalPictureContainer}>
+    <Modal visible={visible} animationType="none" transparent>
+      <View style={styles.modalOverlay}>
+        {/* Card positioned absolutely where the user’s profile card was */}
+        <View
+          style={[
+            profileCardStyles.profileCardContainer,
+            {
+              position: 'absolute',
+              top: cardLayout.y,
+              left: cardLayout.x,
+              width: cardLayout.width,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={[COLORS.cardBg1, COLORS.cardBg2]}
+            style={profileCardStyles.profileCardInner}
+          >
+            {/* Top portion + background image + picture */}
+            <View style={profileCardStyles.profileTopContainer}>
+              <ImageBackground
+                source={require('../../../../assets/images/profileBackground.png')}
+                style={profileCardStyles.profileBackgroundImage}
+              />
+              <View style={profileCardStyles.profilePictureContainer}>
                 {userProfile.profilePictureUrl ? (
                   <Image
                     source={{ uri: userProfile.profilePictureUrl }}
-                    style={styles.modalPicture}
+                    style={profileCardStyles.profilePicture}
                   />
                 ) : (
-                  <View style={styles.modalPlaceholder}>
+                  <View style={profileCardStyles.profilePlaceholder}>
                     <Ionicons name="person-circle-outline" size={90} color="#ccc" />
                   </View>
                 )}
-                {/* Button to change picture */}
+
+                {/* Camera icon to change picture */}
                 <TouchableOpacity
-                  style={styles.cameraIconWrapper}
+                  style={profileCardStyles.cameraIconWrapper}
                   onPress={handleChangeProfilePicture}
+                  disabled={updating}
                 >
                   <Ionicons name="camera" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
+
+              {/* “Save” checkmark in the top-right corner */}
+              <TouchableOpacity
+                onPress={handleSave}
+                style={profileCardStyles.profileEditButton}
+                disabled={updating}
+              >
+                <MaterialIcons name="check" size={20} color={COLORS.textLight} />
+              </TouchableOpacity>
             </View>
 
-            {/* Middle portion: name, bio, location line */}
-            <View style={styles.modalBody}>
-              {/* Name input */}
-              <Text style={styles.label}>{t('edit_profile_name_label')}</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                accessibilityLabel={t('edit_profile_name_label')}
-              />
-
-              {/* Bio input */}
-              <Text style={styles.label}>{t('edit_profile_bio_label')}</Text>
-              <TextInput
-                style={[styles.input, { height: 80 }]}
-                value={bio}
-                onChangeText={setBio}
-                multiline
-                accessibilityLabel={t('edit_profile_bio_label')}
-              />
-
-              {/* Show any error here */}
-              {error && <Text style={styles.errorText}>{error}</Text>}
-
-              {/* “Change Location” button */}
-              <View style={styles.locationContainer}>
-                <Ionicons name="location-outline" size={18} color={COLORS.accentGreen} />
+            {/* Middle portion: name / location */}
+            <View style={profileCardStyles.profileInfoContainer}>
+              <View
+                style={[
+                  profileCardStyles.nameContainer,
+                  profileCardStyles.editNameContainer,
+                  { maxWidth: (screenWidth * 0.9 - 215)},
+                ]}
+              >
+                <TextInput
+                  style={[
+                    profileCardStyles.profileNameText,
+                    profileCardStyles.editableTextName,
+                  ]}
+                  value={name}
+                  maxLength={16}
+                  onChangeText={setName}
+                  placeholder={t('edit_profile_name_label')}
+                  placeholderTextColor="#999"
+                />
+              </View>
+              <View style={profileCardStyles.profileLocationRow}>
+                {/* Tapping location opens the location modal */}
+                <Ionicons
+                  name="location-sharp"
+                  size={16}
+                  color={COLORS.accentLightRed}
+                  style={profileCardStyles.locationIcon}
+                />
                 <TouchableOpacity
-                  onPress={() => setLocationModalVisible(true)}
-                  style={styles.locationButton}
+                  onPress={handleOpenSetLocationModal}
+                  style={{ flex: 1 }}
                 >
-                  <Text style={styles.locationButtonText}>
-                    {t('profile_change_location_button')}
+                  <Text style={[profileCardStyles.profileLocationText, { textDecorationLine: 'underline', color: COLORS.accentRed }]} numberOfLines={1}>
+                    {cityCountry || t('profile_no_location')}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
 
-          {/* Updating indicator */}
-          {updating && (
-            <ActivityIndicator
-              size="small"
-              color={COLORS.accentGreen}
-              style={{ marginTop: 10 }}
-            />
-          )}
+            {/* Bio: multiline text input */}
+            <View
+              style={[
+                profileCardStyles.bioContainer,
+                profileCardStyles.bioContainerEdit,
+              ]}
+            >
+              <TextInput
+                style={[
+                  profileCardStyles.bioText,
+                  profileCardStyles.editableTextBio,
+                  !bio && profileCardStyles.bioPlaceholder,
+                ]}
+                multiline
+                maxLength={1000}
+                value={bio}
+                onChangeText={setBio}
+                placeholder={t('profile_no_bio_placeholder')}
+                placeholderTextColor="#999"
+              />
+            </View>
 
-          {/* “Go Back” = auto-save */}
-          <TouchableOpacity
-            style={styles.goBackButton}
-            onPress={handleGoBack}
-            disabled={updating}
-          >
-            <Ionicons name="arrow-back-outline" size={18} color="#fff" />
-            <Text style={styles.goBackButtonText}>{t('go_back_button_label')}</Text>
-          </TouchableOpacity>
+            {/* Error / spinner */}
+            {error && <Text style={profileCardStyles.errorText}>{error}</Text>}
+            
+          </LinearGradient>
         </View>
       </View>
 
-      {/* Nested ChangeLocationModal */}
+      {/* Location modal */}
       <ChangeLocationModal
         visible={locationModalVisible}
         initialLatitude={userProfile.locationLatitude}
@@ -259,127 +341,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    borderRadius: 16,
-    backgroundColor: '#FFF',
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.25,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 5,
-      },
-    }),
-    alignItems: 'center',
-    paddingBottom: 16,
-  },
-  contentWrapper: {
-    width: '100%',
-  },
-  modalTopContainer: {
-    backgroundColor: COLORS.primary,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  modalPictureContainer: {
-    position: 'absolute',
-    bottom: -40,
-  },
-  modalPicture: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#eee',
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  modalPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#eee',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  cameraIconWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    right: -10,
-    backgroundColor: COLORS.accentGreen,
-    borderRadius: 16,
-    padding: 6,
-  },
-  modalBody: {
-    marginTop: 50,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    marginBottom: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 16,
-    fontSize: 14,
-  },
-  errorText: {
-    color: '#FF6B6B',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    marginBottom: 10,
-  },
-  locationButton: {
-    marginLeft: 6,
-    borderWidth: 1,
-    borderColor: COLORS.accentGreen,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  locationButtonText: {
-    color: COLORS.accentGreen,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  goBackButton: {
-    marginTop: 10,
-    backgroundColor: COLORS.accentGreen,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  goBackButtonText: {
-    marginLeft: 6,
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
   },
 });

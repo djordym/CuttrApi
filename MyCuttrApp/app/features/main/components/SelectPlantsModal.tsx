@@ -17,6 +17,7 @@ import { PlantResponse } from '../../../types/apiTypes';
 import { t } from 'i18next';
 import { COLORS } from '../../../theme/colors';
 import ConfirmCancelButtons from './ConfirmCancelButtons';
+import { PlantThumbnail } from './PlantThumbnail';
 
 interface SelectPlantsModalProps {
   visible: boolean;
@@ -82,7 +83,7 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Select Plants</Text>
+          
 
           {isLoading && (
             <View style={styles.loadingContainer}>
@@ -112,6 +113,7 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
                 </View>
               ) : (
                 <ScrollView style={styles.scrollArea}>
+                  <Text style={styles.modalTitle}>Select Plants</Text>
                   <Text style={styles.titleText}>
                     Select the plants you want to trade for. Tap on a plant to select it.
                   </Text>
@@ -119,46 +121,29 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
                     {myPlants.map((plant: PlantResponse) => {
                       const isSelected = selectedPlantIds.includes(plant.plantId);
                       return (
-                        <TouchableOpacity
+                        <PlantThumbnail
                           key={plant.plantId}
+                          plant={plant}
+                          isSelected={isSelected}
                           onPress={() => handleToggleSelect(plant.plantId)}
-                          activeOpacity={0.9}
-                          style={[
-                            styles.plantCardThumbnail,
-                            isSelected && styles.plantCardThumbnailSelected,
-                          ]}
-                        >
-                          {plant.imageUrl ? (
-                            <Image
-                              source={{ uri: plant.imageUrl }}
-                              style={styles.thumbImage}
-                              resizeMode="contain"
-                            />
-                          ) : (
-                            <View style={styles.plantPlaceholder}>
-                              <Ionicons name="leaf" size={40} color={COLORS.primary} />
-                            </View>
-                          )}
-                          <View style={styles.thumbTextWrapper}>
-                            <Text style={styles.thumbPlantName} numberOfLines={1}>
-                              {plant.speciesName}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
+                        />
                       );
                     })}
+                  </View>
+                  <View style={styles.actionbuttons}>
+                  <ConfirmCancelButtons
+                    onConfirm={handleConfirm}
+                    onCancel={onClose}
+                    confirmButtonText="Confirm"
+                    cancelButtonText="Cancel"
+                  />
                   </View>
                 </ScrollView>
               )}
             </>
           )}
 
-          <ConfirmCancelButtons
-            onConfirm={handleConfirm}
-            onCancel={onClose}
-            confirmButtonText="Confirm"
-            cancelButtonText="Cancel"
-          />
+          
 
         </View>
       </View>
@@ -177,9 +162,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.textLight,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    paddingTop: 20,
-    paddingBottom: 10,
-    paddingHorizontal: 16,
     maxHeight: '85%',
     ...Platform.select({
       ios: {
@@ -197,13 +179,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.textDark,
-    marginBottom: 12,
     textAlign: 'center',
+    marginTop: 15,
   },
   titleText: {
     fontSize: 14,
     color: COLORS.textDark,
-    marginBottom: 10,
+    margin: 10,
     textAlign: 'center',
   },
   loadingContainer: {
@@ -245,53 +227,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   scrollArea: {
-    marginVertical: 10,
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
-  plantCardThumbnail: {
-    width: (width - 70) / 3, // 3 items across, with some spacing
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 8,
-    marginBottom: 15,
-    marginRight: 10,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  plantCardThumbnailSelected: {
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  thumbImage: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-  },
-  plantPlaceholder: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#eee',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  thumbTextWrapper: {
-    padding: 8,
-    alignItems: 'center',
-  },
-  thumbPlantName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textDark,
+  actionbuttons: {
+    marginHorizontal: 17,
+    marginBottom: 17,
+    marginTop: 5,
   },
 });
