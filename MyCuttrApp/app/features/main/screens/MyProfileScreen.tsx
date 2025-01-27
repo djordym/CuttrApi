@@ -83,6 +83,9 @@ const MyProfileScreen: React.FC = () => {
     });
   };
 
+  const OnDelete = () => {
+    
+
   // Reverse-geocode for city / country
   useEffect(() => {
     (async () => {
@@ -117,7 +120,7 @@ const MyProfileScreen: React.FC = () => {
   // Rendering plants
   const renderPlantItem = (item: PlantResponse) => {
     if (!showFullSize) {
-      return <PlantThumbnail key={item.plantId} plant={item} />;
+      return <PlantThumbnail key={item.plantId} plant={item} selectable deletable onPress={OnDelete}/>;
     } else {
       return (
         <View key={item.plantId} style={styles.plantCardWrapper}>
@@ -220,7 +223,7 @@ const MyProfileScreen: React.FC = () => {
             {/* Name, location, bio */}
             <View style={profileCardStyles.profileInfoContainer}>
               <View style={profileCardStyles.nameContainer}>
-              <Text style={profileCardStyles.profileNameText}>{userProfile.name}</Text>
+                <Text style={profileCardStyles.profileNameText}>{userProfile.name}</Text>
               </View>
               <View style={profileCardStyles.profileLocationRow}>
                 <Ionicons
@@ -235,15 +238,15 @@ const MyProfileScreen: React.FC = () => {
               </View>
             </View>
             <View style={profileCardStyles.bioContainer}>
-            <Text
-              style={[
-                profileCardStyles.bioText,
-                !userProfile.bio && profileCardStyles.bioPlaceholder,
-              ]}
-            >
-              {userProfile.bio ? userProfile.bio : t('profile_no_bio_placeholder')}
-            </Text>
-          </View>
+              <Text
+                style={[
+                  profileCardStyles.bioText,
+                  !userProfile.bio && profileCardStyles.bioPlaceholder,
+                ]}
+              >
+                {userProfile.bio ? userProfile.bio : t('profile_no_bio_placeholder')}
+              </Text>
+            </View>
           </LinearGradient>
         </View>
 
@@ -260,7 +263,7 @@ const MyProfileScreen: React.FC = () => {
               accessibilityRole="button"
               accessibilityLabel={t('profile_add_plant_button')}
             >
-              <Ionicons name="add-circle" size={24} color={COLORS.accentGreen} />
+              <Ionicons name="add-circle" size={24} color={COLORS.textLight} />
               <Text style={styles.addPlantButtonText}>
                 {t('profile_add_plant_button')}
               </Text>
@@ -268,19 +271,18 @@ const MyProfileScreen: React.FC = () => {
           </View>
 
           {/* Toggle between Thumbnails and Full view */}
-          <View style={styles.viewToggleContainer}>
+          <View style={styles.viewToggleRow}>
             <TouchableOpacity
               onPress={() => setShowFullSize(false)}
               style={[
-                styles.viewToggleOption,
-                !showFullSize && styles.viewToggleOptionActive,
+                styles.segmentButton,
+                !showFullSize && styles.segmentButtonActive,
               ]}
-              activeOpacity={0.9}
             >
               <Text
                 style={[
-                  styles.viewToggleText,
-                  !showFullSize && styles.viewToggleTextActive,
+                  styles.segmentButtonText,
+                  !showFullSize && styles.segmentButtonTextActive,
                 ]}
               >
                 {t('Thumbnails')}
@@ -289,22 +291,20 @@ const MyProfileScreen: React.FC = () => {
             <TouchableOpacity
               onPress={() => setShowFullSize(true)}
               style={[
-                styles.viewToggleOption,
-                showFullSize && styles.viewToggleOptionActive,
+                styles.segmentButton,
+                showFullSize && styles.segmentButtonActive,
               ]}
-              activeOpacity={0.9}
             >
               <Text
                 style={[
-                  styles.viewToggleText,
-                  showFullSize && styles.viewToggleTextActive,
+                  styles.segmentButtonText,
+                  showFullSize && styles.segmentButtonTextActive,
                 ]}
               >
                 {t('Full Size')}
               </Text>
             </TouchableOpacity>
           </View>
-
           {/* Plants List */}
           {myPlants && myPlants.length > 0 ? (
             <View style={showFullSize ? styles.fullViewContainer : styles.thumbViewContainer}>
@@ -372,7 +372,6 @@ const styles = StyleSheet.create({
 
   // ---- Plants Section ----
   plantsSectionWrapper: {
-    paddingHorizontal: 10,
     paddingTop: 20,
     paddingBottom: 15,
   },
@@ -381,7 +380,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
   },
   plantsSectionTitle: {
     fontSize: 20,
@@ -391,39 +390,56 @@ const styles = StyleSheet.create({
   addPlantButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: COLORS.accentGreen, // or any brand color
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 3 },
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   addPlantButtonText: {
+    color: COLORS.textLight,
     fontSize: 14,
-    color: COLORS.accentGreen,
-    marginLeft: 5,
     fontWeight: '600',
+    marginLeft: 6,
   },
 
   // Toggle for Thumbnails / Full
-  viewToggleContainer: {
+  viewToggleRow: {
     flexDirection: 'row',
-    alignSelf: 'center',
-    borderColor: COLORS.border,
-    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.textLight,
     borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 12,
+    alignSelf: 'center',
+    padding: 3,
+    marginBottom: 15,
   },
-  viewToggleOption: {
-    paddingVertical: 8,
+  segmentButton: {
     paddingHorizontal: 20,
-    backgroundColor: '#fff',
+    paddingVertical: 8,
+    borderRadius: 18,
+    
   },
-  viewToggleOptionActive: {
+  segmentButtonActive: {
     backgroundColor: COLORS.accentGreen,
   },
-  viewToggleText: {
+  segmentButtonText: {
     fontSize: 14,
-    color: COLORS.textDark,
     fontWeight: '600',
+    color: COLORS.textDark,
   },
-  viewToggleTextActive: {
-    color: '#fff',
+  segmentButtonTextActive: {
+    color: COLORS.textLight,
   },
 
   // Different layouts for the plant items
@@ -434,6 +450,7 @@ const styles = StyleSheet.create({
   },
   fullViewContainer: {
     width: '100%',
+    paddingHorizontal: 20,
   },
   plantCardWrapper: {
     marginBottom: 15,

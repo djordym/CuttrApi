@@ -324,17 +324,17 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 renderItem={({ item }) => (
-                  <View style={styles.tagChip}>
-                    <Text style={styles.tagChipText}>{item.value}</Text>
                     <TouchableOpacity
                       style={styles.removeTagButton}
                       onPress={() =>
                         handleRemoveSinglePreference(item.key, item.value)
                       }
                     >
+                  <View style={styles.tagChip}>
+                    <Text style={styles.tagChipText}>{item.value}</Text>
                       <Ionicons name="close-circle" size={16} color="#fff" />
-                    </TouchableOpacity>
                   </View>
+                    </TouchableOpacity>
                 )}
               />
             </View>

@@ -36,11 +36,12 @@ import { COLORS } from '../../../theme/colors';
 import { headerStyles } from '../styles/headerStyles';
 import { PlantCardWithInfo } from '../components/PlantCardWithInfo';
 import { MessageBubble } from '../components/MessageBubble';
-import ChatShelf from '../components/ChatShelf';
+import ChatShelf, {ChatShelfRef} from '../components/ChatShelf';
 
 // Types
 import { MessageRequest } from '../../../types/apiTypes';
 import { MatchResponse, MessageResponse } from '../../../types/apiTypes';
+import { log } from '../../../utils/logger';
 
 const ChatScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -136,6 +137,14 @@ const ChatScreen: React.FC = () => {
     });
   }, [activeMatchId, inputText, sendMessage]);
 
+  const activeShelfRef = useRef<ChatShelfRef>(null);
+
+  // OnFocus: close the active shelf
+  const handleInputFocus = useCallback(() => {3
+    log.debug('Input focused, closing shelf');
+    activeShelfRef.current?.closeShelf();
+  }, []);
+
   // Current match data
   const currentMatch = useMemo(() => {
     if (!relevantMatches || !activeMatchId) return null;
@@ -173,6 +182,9 @@ const ChatScreen: React.FC = () => {
       </SafeAreaProvider>
     );
   }
+
+
+  
 
   // Render tabs for each relevant match
   const renderMatchTabs = () => {
@@ -276,6 +288,7 @@ const ChatScreen: React.FC = () => {
             <ChatShelf
               plant1={match.plant1}
               plant2={match.plant2}
+              ref={activeMatchId === match.matchId ? activeShelfRef : null}
             />
           </View>
         ))}
@@ -313,6 +326,7 @@ const ChatScreen: React.FC = () => {
             onChangeText={setInputText}
             placeholder={t('chat_message_placeholder')}
             multiline
+            onFocus={handleInputFocus}
           />
           {isSending ? (
             <ActivityIndicator

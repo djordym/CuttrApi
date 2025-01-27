@@ -1,6 +1,11 @@
-// File: src/features/main/components/ChatShelf.tsx
-
-import React, { useState, useRef, useCallback, memo } from 'react';
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  memo,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import {
   Animated,
   Easing,
@@ -11,119 +16,123 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Theme & Components
 import { COLORS } from '../../../theme/colors';
 import { PlantCardWithInfo } from './PlantCardWithInfo';
 import { PlantResponse } from '../../../types/apiTypes';
 import { log } from '../../../utils/logger';
+
+export interface ChatShelfRef {
+  toggleShelf: () => void;
+  openShelf: () => void;
+  closeShelf: () => void;
+}
 
 interface ChatShelfProps {
   plant1?: PlantResponse;
   plant2?: PlantResponse;
 }
 
-/**
- * A collapsible/expandable shelf that shows two PlantCardWithInfo side by side.
- * It measures its full height so it can animate from fully open to collapsed.
- */
-const ChatShelf: React.FC<ChatShelfProps> = memo(({ plant1, plant2 }) => {
-  // Track whether shelf is expanded or collapsed.
-  const [isShelfOpen, setIsShelfOpen] = useState(true);
+// Wrap with forwardRef to expose imperative methods
+const ChatShelf = forwardRef<ChatShelfRef, ChatShelfProps>(
+  function ChatShelf({ plant1, plant2 }, ref) {
+    const [isShelfOpen, setIsShelfOpen] = useState(true);
+    const [maxShelfHeight, setMaxShelfHeight] = useState<number>(0);
+    const shelfAnim = useRef(new Animated.Value(0)).current;
 
-  // The maximum content height measured so far.
-  // We accumulate the largest measured height to cover dynamic changes.
-  const [maxShelfHeight, setMaxShelfHeight] = useState<number>(0);
-
-  // Animated value controlling the shelf height
-  const shelfAnim = useRef(new Animated.Value(0)).current;
-
-  /**
-   * Whenever the shelf content re-renders (due to dynamic content like images/text),
-   * onLayout will fire. We always store the largest measured height so we
-   * can animate properly even if the shelf grows after initial render.
-   */
-  const handleShelfLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      const { height } = event.nativeEvent.layout;
-      log.debug('Measured layout height:', height);
-
-      // Only update if we have a new maximum.
-      // If height is bigger than anything we've had, store it and set the animation value if open.
-      if (height > maxShelfHeight) {
-        setMaxShelfHeight(height);
-
-        // If the shelf is currently open, we also reset the shelfAnim to the new max height
-        // so the UI doesn't jump or show partial content.
-        if (isShelfOpen) {
-          shelfAnim.setValue(height);
+    const handleShelfLayout = useCallback(
+      (event: LayoutChangeEvent) => {
+        const { height } = event.nativeEvent.layout;
+        log.debug('Measured layout height:', height);
+        if (height > maxShelfHeight) {
+          setMaxShelfHeight(height);
+          // Keep shelf fully open if we are currently open
+          if (isShelfOpen) {
+            shelfAnim.setValue(height);
+          }
         }
+      },
+      [isShelfOpen, maxShelfHeight, shelfAnim]
+    );
+
+    // The actual animation
+    const animateTo = useCallback(
+      (toValue: number) => {
+        Animated.timing(shelfAnim, {
+          toValue,
+          duration: 300,
+          easing: Easing.ease,
+          useNativeDriver: false,
+        }).start();
+      },
+      [shelfAnim]
+    );
+
+    const toggleShelf = useCallback(() => {
+      if (!maxShelfHeight) return; // if not measured, skip
+      const collapsedHeight = styles.shelfToggleButton.height;
+      const targetValue = isShelfOpen ? collapsedHeight : maxShelfHeight;
+      animateTo(targetValue);
+      setIsShelfOpen(!isShelfOpen);
+    }, [isShelfOpen, maxShelfHeight, animateTo]);
+
+    const closeShelf = useCallback(() => {
+      if (!maxShelfHeight) return;
+      if (isShelfOpen) {
+        const collapsedHeight = styles.shelfToggleButton.height;
+        animateTo(collapsedHeight);
+        setIsShelfOpen(false);
       }
-    },
-    [isShelfOpen, maxShelfHeight, shelfAnim]
-  );
+    }, [isShelfOpen, maxShelfHeight, animateTo]);
 
-  /**
-   * Toggle between fully open (maxShelfHeight) and collapsed (toggleButtonHeight).
-   */
-  const toggleShelf = useCallback(() => {
-    // We don’t toggle if we haven’t measured anything yet
-    // (i.e., maxShelfHeight = 0 likely means not measured).
-    if (!maxShelfHeight) return;
+    const openShelf = useCallback(() => {
+      if (!maxShelfHeight) return;
+      if (!isShelfOpen) {
+        animateTo(maxShelfHeight);
+        setIsShelfOpen(true);
+      }
+    }, [isShelfOpen, maxShelfHeight, animateTo]);
 
-    // Collapsed height is the toggle button’s height.
-    const collapsedHeight = styles.shelfToggleButton.height;
-    const targetValue = isShelfOpen ? collapsedHeight : maxShelfHeight;
+    /**
+     * Expose these methods via useImperativeHandle
+     */
+    useImperativeHandle(ref, () => ({
+      toggleShelf,
+      closeShelf,
+      openShelf,
+    }));
 
-    Animated.timing(shelfAnim, {
-      toValue: targetValue,
-      duration: 300,
-      easing: Easing.ease,
-      useNativeDriver: false, // We’re animating height, so it must be false
-    }).start(() => {
-      // Flip the shelf state after the animation completes
-      setIsShelfOpen((prev) => !prev);
-    });
-  }, [isShelfOpen, maxShelfHeight, shelfAnim]);
+    // If not yet measured, don't force any height. Otherwise, animate the height with shelfAnim.
+    const containerStyle = maxShelfHeight > 0 ? { height: shelfAnim } : undefined;
 
-  /**
-   * If we haven't measured yet (maxShelfHeight === 0), we let the container "shrink-wrap"
-   * until onLayout can measure. Once measured, containerStyle enforces the animated height.
-   */
-  const containerStyle =
-    maxShelfHeight > 0 ? { height: shelfAnim } : undefined;
-
-  return (
-    <Animated.View style={[styles.animatedShelf, containerStyle]}>
-      {/* 
-        The content we measure. Use onLayout here so we can know the full height 
-        once it has rendered or changed. 
-      */}
-      <View style={styles.shelfInnerContainer} onLayout={handleShelfLayout}>
-        <View style={styles.plantCardWrapper}>
-          {plant1 && <PlantCardWithInfo plant={plant1} compact />}
+    return (
+      <Animated.View style={[styles.animatedShelf, containerStyle]}>
+        <View style={styles.shelfInnerContainer} onLayout={handleShelfLayout}>
+          <View style={styles.plantCardWrapper}>
+            {plant1 && <PlantCardWithInfo plant={plant1} compact />}
+          </View>
+          <View style={styles.plantCardWrapper}>
+            {plant2 && <PlantCardWithInfo plant={plant2} compact />}
+          </View>
         </View>
-        <View style={styles.plantCardWrapper}>
-          {plant2 && <PlantCardWithInfo plant={plant2} compact />}
-        </View>
-      </View>
 
-      {/* The toggle handle pinned at the bottom */}
-      <TouchableOpacity
-        style={styles.shelfToggleButton}
-        onPress={toggleShelf}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name={isShelfOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
-          size={10}
-          color="#fff"
-        />
-      </TouchableOpacity>
-    </Animated.View>
-  );
-});
+        {/* The toggle handle pinned at the bottom */}
+        <TouchableOpacity
+          style={styles.shelfToggleButton}
+          onPress={toggleShelf}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={isShelfOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
+            size={10}
+            color="#fff"
+          />
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+);
 
-export default ChatShelf;
+export default memo(ChatShelf);
 
 const styles = StyleSheet.create({
   animatedShelf: {

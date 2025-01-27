@@ -27,10 +27,10 @@ export default TextInputField;
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 10,
     borderWidth:1,
     borderColor:'#ccc',
     borderRadius:8,
+    marginTop:10,
   },
   input: {
     padding:12,

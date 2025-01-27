@@ -1,93 +1,133 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Image, TouchableOpacity } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import TextInputField from '../../../components/common/TextInputField';
-import BrandedButton from '../../../components/common/BrandedButton';
-import ErrorMessage from '../../../components/feedback/ErrorMessage';
-import { registerThunk } from '../store/authSlice';
-import { RootState } from '../../../store';
+import {
+  View,
+  Text,
+  Image,
+  KeyboardAvoidingView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Platform,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { UserRegistrationRequest } from '../../../types/apiTypes';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { log } from '../../../utils/logger';
+import { LinearGradient } from 'expo-linear-gradient';
 
+import { useAppSelector, useAppDispatch } from '../../../store/hooks';
+import { RootState } from '../../../store';
+import { registerThunk } from '../store/authSlice';
+import TextInputField from '../../../components/common/TextInputField';
+import ErrorMessage from '../../../components/feedback/ErrorMessage';
+
+import { COLORS } from '../../../theme/colors';
+import { log } from '../../../utils/logger';
+import { UserRegistrationRequest } from '../../../types/apiTypes';
+
+// Import the shared auth styles
+import { authStyles as styles } from '../styles/authStyles'; // <- Adjust path if needed
 
 const RegisterScreen = () => {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   const { status, error } = useAppSelector((state: RootState) => state.auth);
-  const dispatch = useAppDispatch();
-  const navigation = useNavigation();
 
   const handleRegister = async () => {
-    //create user registration request
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      Alert.alert(t('error_title'), t('Please fill all fields.'));
+      return;
+    }
     const userRegistrationRequest: UserRegistrationRequest = {
-      email: email,
-      password: password,
-      name: name,
+      email: email.trim(),
+      password: password.trim(),
+      name: name.trim(),
     };
     log.debug('Pressed register button, userRegistrationRequest:', userRegistrationRequest);
     await dispatch(registerThunk(userRegistrationRequest));
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior="padding">
-      <Image source={require('../../../../assets/images/logo.png')} style={styles.logo} />
-      <Text style={styles.title}>{t('create_account')}</Text>
-      <ErrorMessage message={error} />
+    <LinearGradient
+      colors={[COLORS.primary, COLORS.secondary]}
+      style={styles.gradientBackground}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardAvoid}
+        >
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../../../assets/images/logo.png')}
+              style={styles.logo}
+            />
+          </View>
 
-      <TextInputField
-        value={name}
-        onChangeText={setName}
-        placeholder={t('name')}
-      />
-      <TextInputField
-        value={email}
-        onChangeText={setEmail}
-        placeholder={t('email')}
-      />
-      <TextInputField
-        value={password}
-        onChangeText={setPassword}
-        placeholder={t('password')}
-        secureTextEntry
-      />
+          <View style={styles.cardContainer}>
+            <Text style={styles.title}>{t('create_account')}</Text>
 
-      <BrandedButton title={t('register')} onPress={handleRegister} disabled={status === 'loading'} />
-      <TouchableOpacity onPress={() => navigation.navigate('Login' as never)}>
-        <Text style={styles.link}>{t('have_account_login')}</Text>
-      </TouchableOpacity>
-    </KeyboardAvoidingView>
+            <ErrorMessage message={error} />
+
+            {/* Name */}
+            <TextInputField
+              value={name}
+              onChangeText={setName}
+              placeholder={t('name')}
+            />
+
+            {/* Email */}
+            <TextInputField
+              value={email}
+              onChangeText={setEmail}
+              placeholder={t('email')}
+            />
+
+            {/* Password */}
+            <TextInputField
+              value={password}
+              onChangeText={setPassword}
+              placeholder={t('password')}
+              secureTextEntry
+            />
+
+            {/* Submit */}
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={handleRegister}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color={COLORS.accentGreen} />
+              ) : (
+                <Text style={styles.confirmButtonText}>
+                  {t('register_button')}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Already have account */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Login' as never)}
+              style={styles.navLinkContainer}
+            >
+              <Text style={styles.navLinkText}>
+                {t('have_account_login')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
 export default RegisterScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex:1,
-    justifyContent:'center',
-    padding:20,
-    backgroundColor:'#fff'
-  },
-  logo: {
-    width:100,
-    height:100,
-    alignSelf:'center',
-    marginBottom:20
-  },
-  title: {
-    fontSize:24,
-    fontWeight:'700',
-    textAlign:'center',
-    marginBottom:20
-  },
-  link: {
-    color:'#1EAE98',
-    textAlign:'center',
-    marginTop:20
-  }
-});

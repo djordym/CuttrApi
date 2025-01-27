@@ -2,8 +2,9 @@
 import { useQuery } from 'react-query';
 import { plantService } from '../../../api/plantService';
 import { PlantResponse } from '../../../types/apiTypes';
-import { useSelector } from 'react-redux';
+import { useSelector} from 'react-redux';
 import { RootState } from '../../../store';
+import { useMutation, useQueryClient} from 'react-query';
 
 export const useUserPlants = (userId: number) => {
   return useQuery(['userPlants', userId], () => plantService.getUserPlants(userId), {
@@ -13,8 +14,9 @@ export const useUserPlants = (userId: number) => {
 };
 
 export const useMyPlants = () => {
+    const queryClient = useQueryClient();
     const { userId } = useSelector((state: RootState) => state.auth);
-    return useQuery<PlantResponse[], Error>(
+    const query = useQuery<PlantResponse[], Error>(
       ['myPlants', userId],
       () => {
         if (!userId) throw new Error('User not logged in');
@@ -25,4 +27,18 @@ export const useMyPlants = () => {
         staleTime: 1000 * 60 * 5
       }
     );
+
+    const mutation = useMutation(
+      (plantId: number) => plantService.deleteMyPlant(plantId),
+      {
+        onSettled: () => queryClient.invalidateQueries(['myPlants', userId])
+      }
+    );
+
+    return {
+      ...query,
+      deletePlant: mutation.mutate,
+      isDeleting: mutation.isLoading
+    };
+
   };

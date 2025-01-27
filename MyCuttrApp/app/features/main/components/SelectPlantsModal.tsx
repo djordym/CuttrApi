@@ -125,6 +125,7 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
                           key={plant.plantId}
                           plant={plant}
                           isSelected={isSelected}
+                          selectable={true}
                           onPress={() => handleToggleSelect(plant.plantId)}
                         />
                       );
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: COLORS.accent,
+    color: COLORS.textDark,
     marginBottom: 10,
     textAlign: 'center',
   },

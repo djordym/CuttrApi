@@ -140,5 +140,7 @@
   "error_could_not_open_image_library": "Could not open image library.",
   "error_camera_permission_denied": "Camera permission denied.",
   "error_could_not_open_camera": "Could not open camera.",
-  "error_profile_picture_update_failed": "Profile picture update failed."
+  "error_profile_picture_update_failed": "Profile picture update failed.",
+  "login_button": "Login",
+  "register_button": "Register"
 }
