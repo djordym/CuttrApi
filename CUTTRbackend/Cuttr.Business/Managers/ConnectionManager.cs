@@ -40,7 +40,13 @@ namespace Cuttr.Business.Managers
         {
             var connections = await _connectionRepository.GetConnectionsByUserIdAsync(userId);
             // Map to response DTO
-            return connections.Select(conn => BusinessToContractMapper.MapToConnectionResponse(conn));
+            var connResponses = connections.Select(conn => BusinessToContractMapper.MapToConnectionResponse(conn));
+            //add number of matches to each response
+            foreach (var conn in connResponses)
+            {
+                conn.NumberOfMatches = await _connectionRepository.GetNumberOfMatchesAsync(conn.ConnectionId);
+            }
+            return connResponses;
         }
 
         public async Task<ConnectionResponse> GetConnectionByIdAsync(int connectionId, int userId)
@@ -181,22 +187,17 @@ namespace Cuttr.Business.Managers
             }
 
             // 3) Update status according to request.NewStatus
-            var newStatus = request.NewStatus?.Trim();
-            if (string.IsNullOrEmpty(newStatus))
-            {
-                throw new BusinessException("Invalid status update request (no NewStatus provided).");
-            }
 
-            switch (newStatus.ToLower())
+            switch (request.NewStatus)
             {
-                case "accepted":
+                case Enums.TradeProposalStatus.Accepted:
                     proposal.TradeProposalStatus = Enums.TradeProposalStatus.Accepted;
                     proposal.AcceptedAt = DateTime.UtcNow;
                     proposal.DeclinedAt = null;
                     proposal.CompletedAt = null;
                     break;
 
-                case "declined":
+                case Enums.TradeProposalStatus.Rejected:
                     proposal.TradeProposalStatus = Enums.TradeProposalStatus.Rejected;
                     proposal.DeclinedAt = DateTime.UtcNow;
                     // Typically you might clear accepted/completed 
@@ -205,7 +206,7 @@ namespace Cuttr.Business.Managers
                     proposal.CompletedAt = null;
                     break;
 
-                case "completed":
+                case Enums.TradeProposalStatus.Completed:
                     if (proposal.TradeProposalStatus != Enums.TradeProposalStatus.Accepted)
                     {
                         throw new BusinessException("Cannot mark proposal as 'Completed' if it has not been 'Accepted'.");

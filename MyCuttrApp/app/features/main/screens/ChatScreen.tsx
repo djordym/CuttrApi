@@ -70,10 +70,7 @@ const ChatScreen: React.FC = () => {
     if (!myMatches || !userProfile) return [];
     const myUserId = userProfile.userId;
     return myMatches.filter((m) => {
-      return (
-        (m.user1.userId === myUserId && m.user2.userId === otherUserId) ||
-        (m.user2.userId === myUserId && m.user1.userId === otherUserId)
-      );
+      return 'hello';
     });
   }, [myMatches, userProfile, otherUserId]);
 
@@ -126,7 +123,7 @@ const ChatScreen: React.FC = () => {
     const text = inputText.trim();
     setInputText('');
     const messageData: MessageRequest = {
-      matchId: activeMatchId,
+      connectionId: activeMatchId,
       messageText: text,
     };
     sendMessage(messageData, {

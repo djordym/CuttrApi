@@ -106,30 +106,17 @@ namespace Cuttr.Business.Managers
                     SwipeResponse swipeResponse = new SwipeResponse { IsMatch = oppositeSwipe != null };
 
                     // 5. If there's a match, create it, also create a connection if there is not yet one
+                    // 5. If there's a match, create it, also create a connection if there is not yet one
                     if (swipeResponse.IsMatch)
                     {
-                        //MATCH
-                        bool isSwiperUserFirst = swiperPlant.UserId < swipedPlant.UserId;
-
-                        var match = new Match
-                        {
-                            PlantId1 = isSwiperUserFirst ? swiperPlant.PlantId : swipedPlant.PlantId,
-                            PlantId2 = isSwiperUserFirst ? swipedPlant.PlantId : swiperPlant.PlantId,
-                            UserId1 = isSwiperUserFirst ? swiperPlant.UserId : swipedPlant.UserId,
-                            UserId2 = isSwiperUserFirst ? swipedPlant.UserId : swiperPlant.UserId,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        var addedMatch = await _matchRepository.AddMatchAsync(match);
-                        if (addedMatch != null) swipeResponse.Match = BusinessToContractMapper.MapToMatchResponse(addedMatch);
-
-                        //CONNECTION
+                        // CONNECTION
                         // Check if a connection already exists for these two users
                         var swiperUserId = swiperPlant.UserId;
                         var swipedUserId = swipedPlant.UserId;
 
                         var existingConnection = await _connectionRepository.GetConnectionByUsersAsync(swiperUserId, swipedUserId);
 
+                        Connection currentConnection;
                         if (existingConnection == null)
                         {
                             // No existing connection -> create a new one
@@ -141,22 +128,51 @@ namespace Cuttr.Business.Managers
                                 IsActive = true
                             };
 
-                            var addedConnection = await _connectionRepository.CreateConnectionAsync(newConnection);
+                            currentConnection = await _connectionRepository.CreateConnectionAsync(newConnection);
 
                             // Map domain object to a response for the client
-                            swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(addedConnection);
+                            swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(currentConnection);
                         }
                         else
                         {
-                            // A connection already exists, so just map it back
+                            // A connection already exists
+                            currentConnection = existingConnection;
                             swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(existingConnection);
                         }
 
-                    }
+                        // Ensure the connection is valid
+                        if (currentConnection == null || currentConnection.ConnectionId == 0)
+                            throw new BusinessException("Connection not properly established.");
 
-                    
-                        
-                    
+                        // MATCH
+                        // Assign PlantId1 and PlantId2 based on the ordering in the connection
+                        int plantId1, plantId2;
+
+                        if (currentConnection.UserId1 == swiperUserId)
+                        {
+                            plantId1 = swiperPlant.PlantId;
+                            plantId2 = swipedPlant.PlantId;
+                        }
+                        else
+                        {
+                            plantId1 = swipedPlant.PlantId;
+                            plantId2 = swiperPlant.PlantId;
+                        }
+
+                        var match = new Match
+                        {
+                            PlantId1 = plantId1,
+                            PlantId2 = plantId2,
+                            ConnectionId = currentConnection.ConnectionId,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        var addedMatch = await _matchRepository.AddMatchAsync(match);
+                        if (addedMatch != null)
+                        {
+                            swipeResponse.Match = BusinessToContractMapper.MapToMatchResponse(addedMatch);
+                        }
+                    }
 
                     responses.Add(swipeResponse);
                 }

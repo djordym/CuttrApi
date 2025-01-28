@@ -23,16 +23,16 @@ namespace Cuttr.Business.Managers
             _logger = logger;
         }
 
-        public async Task<IEnumerable<MatchResponse>> GetMatchesByUserIdAsync(int userId)
+        public async Task<IEnumerable<MatchResponse>> GetMatchesByConnectionIdAsync(int connectionId)
         {
             try
             {
-                var matches = await _matchRepository.GetMatchesByUserIdAsync(userId);
+                var matches = await _matchRepository.GetMatchesByConnectionIdAsync(connectionId);
                 return BusinessToContractMapper.MapToMatchResponse(matches);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving matches for user with ID {userId}.");
+                _logger.LogError(ex, $"Error retrieving matches for user with ID {connectionId}.");
                 throw new BusinessException("Error retrieving matches.", ex);
             }
         }

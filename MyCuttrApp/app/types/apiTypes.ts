@@ -1,11 +1,11 @@
-import { PlantStage, PlantCategory, WateringNeed, LightRequirement, Size, IndoorOutdoor, PropagationEase, PetFriendly, Extras } from './enums';
+import { PlantStage, PlantCategory, WateringNeed, LightRequirement, Size, IndoorOutdoor, PropagationEase, PetFriendly, Extras, TradeProposalStatus } from './enums';
 
 export interface RefreshTokenRequest {
     refreshToken: string;
 }
 
 export interface MessageRequest {
-    matchId: number;
+    connectionId: number;
     messageText: string;
 }
 
@@ -80,6 +80,15 @@ export interface UserRegistrationRequest {
     name: string;
 }
 
+export interface TradeProposalRequest{
+    userPlantIds: number[];
+    otherPlantIds: number[];
+}
+
+export interface UpdateTradeProposalStatusRequest{
+    newStatus: TradeProposalStatus;
+}
+
 export interface UserUpdateRequest {
     name: string;
     bio: string;
@@ -94,16 +103,15 @@ export interface AuthTokenResponse {
 
 export interface MatchResponse {
     matchId: number;
+    connectionId: number;
     plant1: PlantResponse;
     plant2: PlantResponse;
-    user1: UserResponse;
-    user2: UserResponse;
     isClosed: boolean;    
 }
 
 export interface MessageResponse {
     messageId: number;
-    matchId: number;
+    connectionId: number;
     senderUserId: number;
     messageText: string;
     sentAt: Date;
@@ -171,3 +179,25 @@ export interface UserResponse {
     locationLatitude?: number;
     locationLongitude?: number;
 }
+
+export interface ConnectionResponse {
+    connectionId: number;
+    user1: UserResponse;
+    user2: UserResponse;
+    numberOfMatches: number;
+}
+
+export interface TradeProposalResponse{
+    tradeProposalId: number;
+    connectionId: number;
+    plantsProposedByUser1: PlantResponse[];
+    plantsProposedByUser2: PlantResponse[];
+    tradeProposalStatus: TradeProposalStatus;
+    createdAt: Date;
+    acceptedAt: Date;
+    declinedAt: Date;
+    completedAt: Date;
+    connection: ConnectionResponse;
+}
+
+

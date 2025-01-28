@@ -333,6 +333,7 @@ const MyProfileScreen: React.FC = () => {
     </SafeAreaProvider>
   );
 };
+};
 
 export default MyProfileScreen;
 

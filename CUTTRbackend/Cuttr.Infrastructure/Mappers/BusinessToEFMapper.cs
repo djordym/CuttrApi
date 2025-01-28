@@ -148,13 +148,9 @@ namespace Cuttr.Infrastructure.Mappers
                 MatchId = match.MatchId,
                 PlantId1 = match.PlantId1,
                 PlantId2 = match.PlantId2,
-                UserId1 = match.UserId1,
-                UserId2 = match.UserId2,
+                ConnectionId = match.ConnectionId,
                 Plant1 = MapToPlantEFWithoutUser(match.Plant1),
                 Plant2 = MapToPlantEFWithoutUser(match.Plant2),
-                User1 = MapToUserEFWithoutPlants(match.User1),
-                User2 = MapToUserEFWithoutPlants(match.User2),
-                Messages = match.Messages?.Select(MapToMessageEF).ToList(),
                 CreatedAt = match.CreatedAt,
             };
         }

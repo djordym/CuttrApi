@@ -1,6 +1,6 @@
 // File: app/features/main/screens/ConnectionsScreen.tsx
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,24 +16,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 
-// Hooks
-import { useUserMatches } from '../hooks/useUserMatches';
-import { useUserProfile } from '../hooks/useUser';
-import { COLORS } from '../../../theme/colors';
-// Types
-import { MatchResponse, UserResponse } from '../../../types/apiTypes';
 import { LinearGradient } from 'expo-linear-gradient';
-import { headerStyles } from '../styles/headerStyles';
 
-// Example branding colors
-// const COLORS = {
-//   primary: '#1EAE98',
-//   background: '#F8F8F8',
-//   textDark: '#2F4F4F',
-//   border: '#ddd',
-//   textLight: '#fff',
-//   accent: '#FF6F61',
-// };
+// Hooks
+import { useConnections } from '../hooks/useConnections';  // <-- NEW HOOK
+import { useUserProfile } from '../hooks/useUser';         // We still need userId for logic
+
+// Types
+import { ConnectionResponse, UserResponse } from '../../../types/apiTypes';
+
+// Theme & Styles
+import { COLORS } from '../../../theme/colors';
+import { headerStyles } from '../styles/headerStyles';
 
 const { width } = Dimensions.get('window');
 
@@ -41,21 +35,23 @@ const ConnectionsScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
 
+  // Fetch the current user's profile to identify myUserId
   const {
     data: userProfile,
     isLoading: loadingProfile,
     isError: errorProfile,
   } = useUserProfile();
 
+  // Fetch the user's connections
   const {
-    data: matches,
-    isLoading: loadingMatches,
-    isError: errorMatches,
-    refetch: refetchMatches,
-  } = useUserMatches();
+    data: connections,
+    isLoading: loadingConnections,
+    isError: errorConnections,
+    refetch: refetchConnections,
+  } = useConnections();
 
+  // If we haven't loaded the user yet, handle loading state
   if (!userProfile) {
-    // Handle loading/error state for user profile
     return (
       <SafeAreaProvider style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -67,43 +63,18 @@ const ConnectionsScreen: React.FC = () => {
   const myUserId = userProfile.userId;
 
   /**
-   * Group matches by "other user" so we can show a single conversation entry per unique user.
-   */
-  const groupedConversations = useMemo(() => {
-    if (!matches || !myUserId) return [];
-
-    // Map<otherUserId, MatchResponse[]>
-    const map = new Map<number, MatchResponse[]>();
-
-    for (const m of matches) {
-      // Identify which user is "other"
-      const otherUserId =
-        m.user1.userId === myUserId ? m.user2.userId : m.user1.userId;
-      if (!map.has(otherUserId)) {
-        map.set(otherUserId, []);
-      }
-      map.get(otherUserId)!.push(m);
-    }
-
-    // Convert the map to a simple array for FlatList
-    return Array.from(map.entries()).map(([otherUserId, matchList]) => ({
-      otherUserId,
-      matchList,
-    }));
-  }, [matches, myUserId]);
-
-  /**
-   * Navigate to a details or conversation screen for the tapped user.
+   * Navigate to a details or conversation screen for the selected connection.
    */
   const handleConversationPress = useCallback(
-    (otherUserId: number) => {
-      navigation.navigate('Chat' as never, { otherUserId } as never);
+    (connectionId: number) => {
+      // For example, navigate to a "Chat" screen that knows how to fetch messages by connection
+      navigation.navigate('Chat' as never, { connectionId } as never);
     },
     [navigation]
   );
 
-  // ---------- RENDER LOGIC ----------
-  if (loadingProfile || loadingMatches) {
+  // ------------ RENDER LOGIC ------------
+  if (loadingProfile || loadingConnections) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -112,104 +83,116 @@ const ConnectionsScreen: React.FC = () => {
     );
   }
 
-  if (errorProfile || errorMatches) {
+  if (errorProfile || errorConnections) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
         <Text style={styles.errorText}>{t('connections_error')}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={refetchMatches}>
+        <TouchableOpacity style={styles.retryButton} onPress={refetchConnections}>
           <Text style={styles.retryButtonText}>{t('connections_retry_button')}</Text>
         </TouchableOpacity>
       </SafeAreaProvider>
     );
   }
 
-  const renderEmptyState = () => {
+  // If no connections, show empty state
+  if (!connections || connections.length === 0) {
     return (
-      <View style={styles.emptyStateContainer}>
-        {/* Optionally use a placeholder illustration or icon */}
-        <Ionicons name="people-outline" size={64} color={COLORS.accentGreen} style={{ marginBottom: 20 }} />
-        
-        <Text style={styles.emptyStateTitle}>{t('connections_none_title')}</Text>
-        <Text style={styles.emptyStateMessage}>
-          {t('connections_none_message')}
-        </Text>
-
-        <TouchableOpacity
-          style={styles.emptyStateButton}
-          onPress={() => {
-            // Possibly navigate to the Swipe screen or adjust filters
-            navigation.navigate('SwipeScreen' as never);
-          }}
+      <SafeAreaProvider style={styles.container}>
+        <LinearGradient
+          style={headerStyles.headerGradient}
+          colors={[COLORS.primary, COLORS.secondary]}
         >
-          <Text style={styles.emptyStateButtonText}>
-            {t('connections_none_action')}
+          <Text style={headerStyles.headerTitle}>
+            {t('connections_title', 'Connections')}
           </Text>
-        </TouchableOpacity>
-      </View>
+        </LinearGradient>
+
+        <View style={styles.emptyStateContainer}>
+          <Ionicons
+            name="people-outline"
+            size={64}
+            color={COLORS.accentGreen}
+            style={{ marginBottom: 20 }}
+          />
+          <Text style={styles.emptyStateTitle}>{t('connections_none_title')}</Text>
+          <Text style={styles.emptyStateMessage}>
+            {t('connections_none_message')}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.emptyStateButton}
+            onPress={() => {
+              // Possibly navigate to a "Swipe" or "Browse" screen
+              navigation.navigate('SwipeScreen' as never);
+            }}
+          >
+            <Text style={styles.emptyStateButtonText}>
+              {t('connections_none_action')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaProvider>
     );
-  };
+  }
 
   return (
     <SafeAreaProvider style={styles.container}>
       {/* Header */}
-      <LinearGradient style={headerStyles.headerGradient} colors={[COLORS.primary, COLORS.secondary]}>
+      <LinearGradient
+        style={headerStyles.headerGradient}
+        colors={[COLORS.primary, COLORS.secondary]}
+      >
         <Text style={headerStyles.headerTitle}>
           {t('connections_title', 'Connections')}
         </Text>
       </LinearGradient>
 
-      {/* If no matches or empty grouping, show empty state */}
-      {(!groupedConversations || groupedConversations.length === 0) && (
-        renderEmptyState()
-      )}
+      {/* Connections list */}
+      <FlatList
+        data={connections}
+        keyExtractor={(item) => item.connectionId.toString()}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        renderItem={({ item }) => {
+          const connection: ConnectionResponse = item;
+          
+          // Identify the other user
+          const isUser1Me = connection.user1.userId === myUserId;
+          const otherUser: UserResponse = isUser1Me
+            ? connection.user2
+            : connection.user1;
 
-      {/* If we have data, render the list */}
-      {groupedConversations && groupedConversations.length > 0 && (
-        <FlatList
-          data={groupedConversations}
-          keyExtractor={(item) => item.otherUserId.toString()}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          renderItem={({ item }) => {
-            const { otherUserId, matchList } = item;
-            const firstMatch = matchList[0];
-
-            // Identify the "other user" object for display
-            const isUser1Me = firstMatch.user1.userId === myUserId;
-            const otherUser: UserResponse = isUser1Me
-              ? firstMatch.user2
-              : firstMatch.user1;
-
-            // For future: you could find the "latest message" in this conversation, etc.
-            return (
-              <TouchableOpacity
-                style={styles.rowContainer}
-                onPress={() => handleConversationPress(otherUserId)}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={
-                    otherUser.profilePictureUrl
-                      ? { uri: otherUser.profilePictureUrl }
-                      : require('../../../../assets/images/icon.png') // fallback placeholder
-                  }
-                  style={styles.avatar}
-                />
-                <View style={styles.textSection}>
-                  <Text style={styles.userName}>{otherUser.name}</Text>
-                  <Text style={styles.matchCount}>
-                    {t('connections_matches_label', { count: matchList.length })}
-                  </Text>
-                </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={24}
-                  color={COLORS.textDark}
-                />
-              </TouchableOpacity>
-            );
-          }}
-        />
-      )}
+          return (
+            <TouchableOpacity
+              style={styles.rowContainer}
+              onPress={() => handleConversationPress(connection.connectionId)}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={
+                  otherUser.profilePictureUrl
+                    ? { uri: otherUser.profilePictureUrl }
+                    : require('../../../../assets/images/icon.png') // fallback
+                }
+                style={styles.avatar}
+              />
+              <View style={styles.textSection}>
+                <Text style={styles.userName}>{otherUser.name}</Text>
+                {/* Using connection.numberOfMatches to show match info if relevant */}
+                <Text style={styles.matchCount}>
+                  {t('connections_matches_label', {
+                    count: connection.numberOfMatches,
+                  })}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={24}
+                color={COLORS.textDark}
+              />
+            </TouchableOpacity>
+          );
+        }}
+      />
     </SafeAreaProvider>
   );
 };
@@ -247,7 +230,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  
   rowContainer: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -9,7 +9,7 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
 {
     public interface IMatchRepository
     {
-        Task<IEnumerable<Match>> GetMatchesByUserIdAsync(int userId);
+        Task<IEnumerable<Match>> GetMatchesByConnectionIdAsync(int connectionId);
         Task<Match> GetMatchByIdAsync(int matchId);
         // Other methods if necessary
         Task<Match> AddMatchAsync(Match match);

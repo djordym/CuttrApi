@@ -15,8 +15,8 @@ namespace Cuttr.Business.Contracts.Outputs
 
         // E.g. JSON or child rows that reference which plants 
         // are being traded on each side
-        public List<PlantResponse> ItemsProposedByUser1 { get; set; }
-        public List<PlantResponse> ItemsProposedByUser2 { get; set; }
+        public List<PlantResponse> PlantsProposedByUser1 { get; set; }
+        public List<PlantResponse> PlantsProposedByUser2 { get; set; }
 
         // If you keep it simpler: just store a single "PlantId from user1" 
         // and "PlantId from user2" if it's strictly 1-1 trades.

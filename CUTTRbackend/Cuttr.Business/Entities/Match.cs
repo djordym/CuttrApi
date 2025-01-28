@@ -14,9 +14,7 @@ namespace Cuttr.Business.Entities
 
         public int PlantId2 { get; set; }
 
-        public int UserId1 { get; set; }
-
-        public int UserId2 { get; set; }
+        public int ConnectionId { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
@@ -25,11 +23,6 @@ namespace Cuttr.Business.Entities
 
         public Plant Plant2 { get; set; }
 
-        public User User1 { get; set; }
-
-        public User User2 { get; set; }
-
         // Messages in the match
-        public List<Message> Messages { get; set; }
     }
 }

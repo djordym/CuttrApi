@@ -22,14 +22,12 @@ namespace Cuttr.Api.Controllers
         }
 
         // GET: api/matches/me
-        [HttpGet("me")]
-        public async Task<IActionResult> GetMatches()
+        [HttpGet("{connectionId}")]
+        public async Task<IActionResult> GetMatches(int connectionId)
         {
-            int userId = 0;
             try
             {
-                userId = User.GetUserId();
-                var matches = await _matchManager.GetMatchesByUserIdAsync(userId);
+                var matches = await _matchManager.GetMatchesByConnectionIdAsync(connectionId);
                 return Ok(matches);
             }
             catch (BusinessException ex)
@@ -69,9 +67,6 @@ namespace Cuttr.Api.Controllers
                 _logger.LogError(ex, $"Error retrieving match with ID {matchId}.");
                 return BadRequest(ex.Message);
             }
-        }
-
-        
-
+        }        
     }
 }

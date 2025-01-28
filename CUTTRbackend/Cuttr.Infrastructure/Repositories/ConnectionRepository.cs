@@ -148,6 +148,14 @@ namespace Cuttr.Infrastructure.Repositories
 
             return EFToBusinessMapper.MapToConnection(efConnection);
         }
+        public async Task<int> GetNumberOfMatchesAsync(int connectionId)
+        {
+            var count = await _context.Matches
+                .Where(m => m.ConnectionId == connectionId)
+                .CountAsync();
+
+            return count;
+        }
     }
 }
 

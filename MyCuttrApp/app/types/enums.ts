@@ -78,4 +78,11 @@ export enum PlantStage {
 	GroundCover = "GroundCover",
 	Rare = "Rare"
   }
+
+  export enum TradeProposalStatus {
+	Pending = "Pending",
+	Accepted = "Accepted",
+	Rejected = "Rejected",
+	Completed = "Completed"
+  }
   

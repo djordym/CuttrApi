@@ -23,7 +23,7 @@ namespace Cuttr.Infrastructure.Repositories
             _logger = logger;
         }
 
-        public async Task<IEnumerable<Match>> GetMatchesByUserIdAsync(int userId)
+        public async Task<IEnumerable<Match>> GetMatchesByConnectionIdAsync(int connectionId)
         {
             try
             {
@@ -31,16 +31,14 @@ namespace Cuttr.Infrastructure.Repositories
                     .AsNoTracking()
                     .Include(m => m.Plant1)
                     .Include(m => m.Plant2)
-                    .Include(m => m.User1)
-                    .Include(m => m.User2)
-                    .Where(m => m.UserId1 == userId || m.UserId2 == userId)
+                    .Where(m => m.ConnectionId == connectionId)
                     .ToListAsync();
 
                 return efMatches.Select(EFToBusinessMapper.MapToMatch);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An error occurred while retrieving matches for user with ID {userId}.");
+                _logger.LogError(ex, $"An error occurred while retrieving matches for connection with ID {connectionId}.");
                 throw new RepositoryException("An error occurred while retrieving matches.", ex);
             }
         }
@@ -53,8 +51,6 @@ namespace Cuttr.Infrastructure.Repositories
                     .AsNoTracking()
                     .Include(m => m.Plant1)
                     .Include(m => m.Plant2)
-                    .Include(m => m.User1)
-                    .Include(m => m.User2)
                     .FirstOrDefaultAsync(m => m.MatchId == matchId);
 
                 return EFToBusinessMapper.MapToMatch(efMatch);
@@ -83,5 +79,6 @@ namespace Cuttr.Infrastructure.Repositories
                 throw new RepositoryException("An error occurred while adding a match.", ex);
             }
         }
+
     }
 }

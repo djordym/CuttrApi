@@ -193,13 +193,9 @@ namespace Cuttr.Infrastructure.Mappers
                 MatchId = efMatch.MatchId,
                 PlantId1 = efMatch.PlantId1,
                 PlantId2 = efMatch.PlantId2,
-                UserId1 = efMatch.UserId1,
-                UserId2 = efMatch.UserId2,
+                ConnectionId = efMatch.ConnectionId,
                 Plant1 = MapToPlantWithoutUser(efMatch.Plant1),
                 Plant2 = MapToPlantWithoutUser(efMatch.Plant2),
-                User1 = MapToUserWithoutPlants(efMatch.User1),
-                User2 = MapToUserWithoutPlants(efMatch.User2),
-                Messages = efMatch.Messages?.Select(MapToMessage).ToList(),
                 CreatedAt = efMatch.CreatedAt,
             };
         }

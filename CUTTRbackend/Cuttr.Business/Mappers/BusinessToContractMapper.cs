@@ -125,8 +125,8 @@ namespace Cuttr.Business.Mappers
             {
                 TradeProposalId = tp.TradeProposalId,
                 ConnectionId = tp.ConnectionId,
-                ItemsProposedByUser1 = (tp.ItemsProposedByUser1).Select(MapToPlantResponse).ToList(),
-                ItemsProposedByUser2 = (tp.ItemsProposedByUser2).Select(MapToPlantResponse).ToList(),
+                PlantsProposedByUser1 = (tp.ItemsProposedByUser1).Select(MapToPlantResponse).ToList(),
+                PlantsProposedByUser2 = (tp.ItemsProposedByUser2).Select(MapToPlantResponse).ToList(),
                 TradeProposalStatus = tp.TradeProposalStatus,
                 CreatedAt = tp.CreatedAt,
                 AcceptedAt = tp.AcceptedAt,
@@ -162,10 +162,9 @@ namespace Cuttr.Business.Mappers
             return new MatchResponse
             {
                 MatchId = match.MatchId,
+                ConnectionId = match.ConnectionId,
                 Plant1 = MapToPlantResponse(match.Plant1),
                 Plant2 = MapToPlantResponse(match.Plant2),
-                User1 = MapToUserResponse(match.User1),
-                User2 = MapToUserResponse(match.User2)
             };
         }
 

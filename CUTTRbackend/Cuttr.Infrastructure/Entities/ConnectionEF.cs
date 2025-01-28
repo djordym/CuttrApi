@@ -30,6 +30,7 @@ namespace Cuttr.Infrastructure.Entities
         [ForeignKey("UserId2")]
         public virtual UserEF User2 { get; set; }
 
+        public virtual ICollection<MatchEF> Matches { get; set; }
         public virtual ICollection<MessageEF> Messages { get; set; }
         public List<TradeProposalEF> TradeProposals { get; set; }
     }

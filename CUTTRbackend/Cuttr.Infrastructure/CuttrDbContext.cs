@@ -137,14 +137,9 @@ namespace Cuttr.Infrastructure
                       .HasForeignKey(m => m.PlantId2)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasOne(m => m.User1)
-                      .WithMany()
-                      .HasForeignKey(m => m.UserId1)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(m => m.User2)
-                      .WithMany()
-                      .HasForeignKey(m => m.UserId2)
+                entity.HasOne(m => m.Connection)
+                      .WithMany(m => m.Matches)
+                      .HasForeignKey(m => m.ConnectionId)
                       .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(m => new { m.PlantId1, m.PlantId2 })

@@ -9,7 +9,7 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
     public interface IMatchManager
     {
-        Task<IEnumerable<MatchResponse>> GetMatchesByUserIdAsync(int userId);
+        Task<IEnumerable<MatchResponse>> GetMatchesByConnectionIdAsync(int userId);
         Task<MatchResponse> GetMatchByIdAsync(int matchId);
     }
 }

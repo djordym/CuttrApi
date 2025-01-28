@@ -21,11 +21,8 @@ namespace Cuttr.Infrastructure.Entities
         public int PlantId2 { get; set; }
 
         [Required]
-        public int UserId1 { get; set; } // Owner of PlantId1
-
-        [Required]
-        public int UserId2 { get; set; } // Owner of PlantId2
-
+        public int ConnectionId { get; set; }
+        
         public DateTime CreatedAt { get; set; } // MatchedAt
 
         // Navigation properties
@@ -35,12 +32,8 @@ namespace Cuttr.Infrastructure.Entities
         [ForeignKey("PlantId2")]
         public virtual PlantEF Plant2 { get; set; }
 
-        [ForeignKey("UserId1")]
-        public virtual UserEF User1 { get; set; }
+        [ForeignKey("ConnectionId")]
+        public virtual ConnectionEF Connection { get; set; }
 
-        [ForeignKey("UserId2")]
-        public virtual UserEF User2 { get; set; }
-
-        public virtual ICollection<MessageEF> Messages { get; set; }
     }
 }

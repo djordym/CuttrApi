@@ -19,5 +19,6 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
         Task<Connection> CreateConnectionAsync(Connection connection);
         Task<Connection> UpdateConnectionAsync(Connection connection);
         Task<Connection> GetConnectionByUsersAsync(int swiperUserId, int swipedUserId);
+        Task<int> GetNumberOfMatchesAsync(int connectionId);
     }
 }
