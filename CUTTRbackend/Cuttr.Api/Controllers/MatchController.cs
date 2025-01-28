@@ -48,25 +48,25 @@ namespace Cuttr.Api.Controllers
         }
 
         // GET: api/matches/{matchId}
-        [AllowAnonymous]
-        [HttpGet("{matchId}")]
-        public async Task<IActionResult> GetMatchById(int matchId)
-        {
-            try
-            {
-                var match = await _matchManager.GetMatchByIdAsync(matchId);
-                return Ok(match);
-            }
-            catch (NotFoundException ex)
-            {
-                _logger.LogWarning(ex, $"Match with ID {matchId} not found.");
-                return NotFound(ex.Message);
-            }
-            catch (BusinessException ex)
-            {
-                _logger.LogError(ex, $"Error retrieving match with ID {matchId}.");
-                return BadRequest(ex.Message);
-            }
-        }        
+        //[AllowAnonymous]
+        //[HttpGet("{matchId}")]
+        //public async Task<IActionResult> GetMatchById(int matchId)
+        //{
+        //    try
+        //    {
+        //        var match = await _matchManager.GetMatchByIdAsync(matchId);
+        //        return Ok(match);
+        //    }
+        //    catch (NotFoundException ex)
+        //    {
+        //        _logger.LogWarning(ex, $"Match with ID {matchId} not found.");
+        //        return NotFound(ex.Message);
+        //    }
+        //    catch (BusinessException ex)
+        //    {
+        //        _logger.LogError(ex, $"Error retrieving match with ID {matchId}.");
+        //        return BadRequest(ex.Message);
+        //    }
+        //}        
     }
 }

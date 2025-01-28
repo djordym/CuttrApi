@@ -123,6 +123,7 @@ const queryClient = new QueryClient();
           text: t('Yes'),
           style: 'destructive',
           onPress: async () => {
+            queryClient.invalidateQueries(['likablePlants']);
             queryClient.clear();
             store.dispatch(logout());
           }

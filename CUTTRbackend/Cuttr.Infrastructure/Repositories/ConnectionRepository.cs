@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Cuttr.Infrastructure.Repositories
@@ -17,146 +16,188 @@ namespace Cuttr.Infrastructure.Repositories
         private readonly CuttrDbContext _context;
         private readonly ILogger<ConnectionRepository> _logger;
 
-        //public ConnectionRepository(CuttrDbContext context, ILogger<ConnectionRepository> logger)
-        //{
-        //    _context = context;
-        //    _logger = logger;
-        //}
-
-        //public async Task<IEnumerable<Connection>> GetMatchesByUserIdAsync(int userId)
-        //{
-        //    try
-        //    {
-        //        var efMatches = await _context.Connections
-        //            .AsNoTracking()
-        //            .Include(m => m.Plant1)
-        //            .Include(m => m.Plant2)
-        //            .Include(m => m.User1)
-        //            .Include(m => m.User2)
-        //            .Where(m => m.UserId1 == userId || m.UserId2 == userId)
-        //            .ToListAsync();
-
-        //        return efMatches.Select(EFToBusinessMapper.MapToMatch);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, $"An error occurred while retrieving matches for user with ID {userId}.");
-        //        throw new RepositoryException("An error occurred while retrieving matches.", ex);
-        //    }
-        //}
-
-        //public async Task<Connection> GetMatchByIdAsync(int matchId)
-        //{
-        //    try
-        //    {
-        //        var efMatch = await _context.Connections
-        //            .AsNoTracking()
-        //            .Include(m => m.Plant1)
-        //            .Include(m => m.Plant2)
-        //            .Include(m => m.User1)
-        //            .Include(m => m.User2)
-        //            .FirstOrDefaultAsync(m => m.MatchId == matchId);
-
-        //        return EFToBusinessMapper.MapToMatch(efMatch);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, $"An error occurred while retrieving match with ID {matchId}.");
-        //        throw new RepositoryException("An error occurred while retrieving match.", ex);
-        //    }
-        //}
-        //public async Task<Connection> AddMatchAsync(Connection match)
-        //{
-        //    try
-        //    {
-        //        var efMatch = BusinessToEFMapper.MapToMatchEF(match);
-
-        //        await _context.Connections.AddAsync(efMatch);
-        //        await _context.SaveChangesAsync();
-        //        _context.Entry(efMatch).State = EntityState.Detached;
-
-        //        return EFToBusinessMapper.MapToMatch(efMatch);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "An error occurred while adding a match.");
-        //        throw new RepositoryException("An error occurred while adding a match.", ex);
-        //    }
-        //}
+        public ConnectionRepository(CuttrDbContext context, ILogger<ConnectionRepository> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
 
         public async Task<Connection> GetConnectionByIdAsync(int connectionId)
         {
-            // Load the EF entity (including navigation to the two users if needed)
-            var ef = await _context.Connections
-                .Include(c => c.User1)
-                .Include(c => c.User2)
-                .FirstOrDefaultAsync(c => c.ConnectionId == connectionId);
+            _logger.LogInformation("Retrieving connection with ID {ConnectionId}.", connectionId);
+            try
+            {
+                var efConnection = await _context.Connections
+                    .Include(c => c.User1)
+                    .Include(c => c.User2)
+                    .FirstOrDefaultAsync(c => c.ConnectionId == connectionId);
 
-            if (ef == null) return null;
-            _context.Entry(ef).State = EntityState.Detached;
-            // Convert EF entity to domain model
-            return EFToBusinessMapper.MapToConnection(ef);
+                if (efConnection == null)
+                {
+                    _logger.LogWarning("Connection with ID {ConnectionId} not found.", connectionId);
+                    return null;
+                }
+
+                // Detach the entity to prevent tracking
+                _context.Entry(efConnection).State = EntityState.Detached;
+
+                var connection = EFToBusinessMapper.MapToConnection(efConnection);
+                _logger.LogInformation("Successfully retrieved connection with ID {ConnectionId}.", connectionId);
+                return connection;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving connection with ID {ConnectionId}.", connectionId);
+                throw new RepositoryException("An error occurred while retrieving the connection.", ex);
+            }
         }
 
         public async Task<IEnumerable<Connection>> GetConnectionsByUserIdAsync(int userId)
         {
-            var efConnections = await _context.Connections
-                .Where(c => c.UserId1 == userId || c.UserId2 == userId)
-                .Include(c => c.User1)
-                .Include(c => c.User2)
-                .ToListAsync();
-            _context.Entry(efConnections).State = EntityState.Detached;
-            return efConnections.Select(EFToBusinessMapper.MapToConnection);
+            _logger.LogInformation("Retrieving connections for user with ID {UserId}.", userId);
+            try
+            {
+                var efConnections = await _context.Connections
+                    .Where(c => c.UserId1 == userId || c.UserId2 == userId)
+                    .Include(c => c.User1)
+                    .Include(c => c.User2)
+                    .ToListAsync();
+
+                if (efConnections == null || !efConnections.Any())
+                {
+                    _logger.LogInformation("No connections found for user with ID {UserId}.", userId);
+                    return Enumerable.Empty<Connection>();
+                }
+
+                // Detach entities to prevent tracking
+                foreach (var efConnection in efConnections)
+                {
+                    _context.Entry(efConnection).State = EntityState.Detached;
+                }
+
+                var connections = efConnections.Select(EFToBusinessMapper.MapToConnection);
+                _logger.LogInformation("Successfully retrieved {Count} connections for user with ID {UserId}.", connections.Count(), userId);
+                return connections;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving connections for user with ID {UserId}.", userId);
+                throw new RepositoryException("An error occurred while retrieving connections.", ex);
+            }
         }
 
         public async Task<Connection> CreateConnectionAsync(Connection connection)
         {
-            // Convert domain model -> EF entity
-            var ef = BusinessToEFMapper.MapToConnectionEF(connection);
+            _logger.LogInformation("Creating a new connection between User1 ID {UserId1} and User2 ID {UserId2}.", connection.UserId1, connection.UserId2);
+            try
+            {
+                var efConnection = BusinessToEFMapper.MapToConnectionEF(connection);
+                await _context.Connections.AddAsync(efConnection);
+                await _context.SaveChangesAsync();
 
-            // EF insert
-            _context.Connections.Add(ef);
-            await _context.SaveChangesAsync();
-            _context.Entry(ef).State = EntityState.Detached;
+                // Detach the entity to prevent tracking
+                _context.Entry(efConnection).State = EntityState.Detached;
 
-            // After saving, ef.ConnectionId is populated
-            return EFToBusinessMapper.MapToConnection(ef);
+                var createdConnection = EFToBusinessMapper.MapToConnection(efConnection);
+                _logger.LogInformation("Successfully created connection with ID {ConnectionId}.", createdConnection.ConnectionId);
+                return createdConnection;
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "A database error occurred while creating a new connection between User1 ID {UserId1} and User2 ID {UserId2}.", connection.UserId1, connection.UserId2);
+                throw new RepositoryException("A database error occurred while creating the connection.", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while creating a new connection between User1 ID {UserId1} and User2 ID {UserId2}.", connection.UserId1, connection.UserId2);
+                throw new RepositoryException("An error occurred while creating the connection.", ex);
+            }
         }
 
         public async Task<Connection> UpdateConnectionAsync(Connection connection)
         {
-            // Usually you'd load the existing EF entity from DB, then update fields.
-            // For brevity, here's a direct approach if you trust the domain object.
-            var ef = BusinessToEFMapper.MapToConnectionEF(connection);
+            _logger.LogInformation("Updating connection with ID {ConnectionId}.", connection.ConnectionId);
+            try
+            {
+                var efConnection = BusinessToEFMapper.MapToConnectionEF(connection);
 
-            // EF update
-            _context.Connections.Update(ef);
-            await _context.SaveChangesAsync();
-            _context.Entry(ef).State = EntityState.Detached;
+                _context.Connections.Update(efConnection);
+                await _context.SaveChangesAsync();
 
-            return EFToBusinessMapper.MapToConnection(ef);
+                // Detach the entity to prevent tracking
+                _context.Entry(efConnection).State = EntityState.Detached;
+
+                var updatedConnection = EFToBusinessMapper.MapToConnection(efConnection);
+                _logger.LogInformation("Successfully updated connection with ID {ConnectionId}.", connection.ConnectionId);
+                return updatedConnection;
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogError(ex, "A concurrency error occurred while updating connection with ID {ConnectionId}.", connection.ConnectionId);
+                throw new RepositoryException("A concurrency error occurred while updating the connection.", ex);
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "A database error occurred while updating connection with ID {ConnectionId}.", connection.ConnectionId);
+                throw new RepositoryException("A database error occurred while updating the connection.", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating connection with ID {ConnectionId}.", connection.ConnectionId);
+                throw new RepositoryException("An error occurred while updating the connection.", ex);
+            }
         }
 
         public async Task<Connection> GetConnectionByUsersAsync(int userId1, int userId2)
         {
-            var efConnection = await _context.Connections
-                .Include(c => c.User1)
-                .Include(c => c.User2)
-                .FirstOrDefaultAsync(c => (c.UserId1 == userId1 && c.UserId2 == userId2) || (c.UserId1 == userId2 && c.UserId2 == userId1));
+            _logger.LogInformation("Retrieving connection between User1 ID {UserId1} and User2 ID {UserId2}.", userId1, userId2);
+            try
+            {
+                var efConnection = await _context.Connections
+                    .Include(c => c.User1)
+                    .Include(c => c.User2)
+                    .FirstOrDefaultAsync(c =>
+                        (c.UserId1 == userId1 && c.UserId2 == userId2) ||
+                        (c.UserId1 == userId2 && c.UserId2 == userId1));
 
-            _context.Entry(efConnection).State = EntityState.Detached;
+                if (efConnection == null)
+                {
+                    _logger.LogWarning("Connection between User1 ID {UserId1} and User2 ID {UserId2} not found.", userId1, userId2);
+                    return null;
+                }
 
-            return EFToBusinessMapper.MapToConnection(efConnection);
+                // Detach the entity to prevent tracking
+                _context.Entry(efConnection).State = EntityState.Detached;
+
+                var connection = EFToBusinessMapper.MapToConnection(efConnection);
+                _logger.LogInformation("Successfully retrieved connection between User1 ID {UserId1} and User2 ID {UserId2}.", userId1, userId2);
+                return connection;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving connection between User1 ID {UserId1} and User2 ID {UserId2}.", userId1, userId2);
+                throw new RepositoryException("An error occurred while retrieving the connection.", ex);
+            }
         }
+
         public async Task<int> GetNumberOfMatchesAsync(int connectionId)
         {
-            var count = await _context.Matches
-                .Where(m => m.ConnectionId == connectionId)
-                .CountAsync();
+            _logger.LogInformation("Retrieving number of matches for connection ID {ConnectionId}.", connectionId);
+            try
+            {
+                var count = await _context.Matches
+                    .Where(m => m.ConnectionId == connectionId)
+                    .CountAsync();
 
-            return count;
+                _logger.LogInformation("Connection ID {ConnectionId} has {Count} matches.", connectionId, count);
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving number of matches for connection ID {ConnectionId}.", connectionId);
+                throw new RepositoryException("An error occurred while retrieving the number of matches.", ex);
+            }
         }
+
     }
 }
-
-

@@ -218,20 +218,20 @@ namespace Cuttr.Infrastructure.Mappers
                 SenderUser = MapToUserWithoutPlants(efMessage.SenderUser),
             };
         }
-        public static Connection MapToConnection(ConnectionEF efMatch)
+        public static Connection MapToConnection(ConnectionEF efConnection)
         {
-            if (efMatch == null)
+            if (efConnection == null)
                 return null;
 
             return new Connection
             {
-                ConnectionId = efMatch.ConnectionId,
-                UserId1 = efMatch.UserId1,
-                UserId2 = efMatch.UserId2,
-                User1 = MapToUserWithoutPlants(efMatch.User1),
-                User2 = MapToUserWithoutPlants(efMatch.User2),
-                Messages = efMatch.Messages?.Select(MapToMessage).ToList(),
-                CreatedAt = efMatch.CreatedAt,
+                ConnectionId = efConnection.ConnectionId,
+                UserId1 = efConnection.UserId1,
+                UserId2 = efConnection.UserId2,
+                User1 = MapToUserWithoutPlants(efConnection.User1),
+                User2 = MapToUserWithoutPlants(efConnection.User2),
+                Messages = efConnection.Messages?.Select(MapToMessage).ToList(),
+                CreatedAt = efConnection.CreatedAt,
             };
         }
 

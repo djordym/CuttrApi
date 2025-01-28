@@ -18,11 +18,14 @@ export const useLikablePlants = () => {
   const mutation = useMutation( 
     (data: SwipeRequest[]) => swipeService.sendSwipes(data),
     {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['userMatches']);
-      }
+      onSuccess: (swipeResponse) => {
+        //if response.IsMatch is true, then we need to refetch the connections
+        if (swipeResponse.isMatch) {
+          queryClient.invalidateQueries(['myConnections']);
+        }
+      
     }
-  );
+  });
 
   return {
     ...query,

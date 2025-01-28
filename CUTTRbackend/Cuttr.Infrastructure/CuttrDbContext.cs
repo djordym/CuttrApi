@@ -145,7 +145,6 @@ namespace Cuttr.Infrastructure
                 entity.HasIndex(m => new { m.PlantId1, m.PlantId2 })
                       .IsUnique();
 
-                entity.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
             });
 
             // ===============================

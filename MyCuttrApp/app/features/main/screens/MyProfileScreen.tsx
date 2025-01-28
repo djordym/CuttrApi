@@ -30,7 +30,6 @@ import { PlantThumbnail } from '../components/PlantThumbnail';
 import { headerStyles } from '../styles/headerStyles';
 import { profileCardStyles } from '../styles/profileCardStyles';
 
-
 const MyProfileScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
@@ -84,7 +83,8 @@ const MyProfileScreen: React.FC = () => {
   };
 
   const OnDelete = () => {
-    
+    // Implement delete functionality here
+  };
 
   // Reverse-geocode for city / country
   useEffect(() => {
@@ -120,7 +120,15 @@ const MyProfileScreen: React.FC = () => {
   // Rendering plants
   const renderPlantItem = (item: PlantResponse) => {
     if (!showFullSize) {
-      return <PlantThumbnail key={item.plantId} plant={item} selectable deletable onPress={OnDelete}/>;
+      return (
+        <PlantThumbnail
+          key={item.plantId}
+          plant={item}
+          selectable
+          deletable
+          onPress={OnDelete}
+        />
+      );
     } else {
       return (
         <View key={item.plantId} style={styles.plantCardWrapper}>
@@ -332,8 +340,7 @@ const MyProfileScreen: React.FC = () => {
       </ScrollView>
     </SafeAreaProvider>
   );
-};
-};
+}; 
 
 export default MyProfileScreen;
 
