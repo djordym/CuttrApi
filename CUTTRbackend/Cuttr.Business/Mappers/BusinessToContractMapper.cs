@@ -55,25 +55,7 @@ namespace Cuttr.Business.Mappers
             return plants?.Select(MapToPlantResponse);
         }
 
-        public static MatchResponse MapToMatchResponse(Match match)
-        {
-            if (match == null)
-                return null;
-
-            return new MatchResponse
-            {
-                MatchId = match.MatchId,
-                Plant1 = MapToPlantResponse(match.Plant1),
-                Plant2 = MapToPlantResponse(match.Plant2),
-                User1 = MapToUserResponse(match.User1),
-                User2 = MapToUserResponse(match.User2)
-            };
-        }
-
-        public static IEnumerable<MatchResponse> MapToMatchResponse(IEnumerable<Match> matches)
-        {
-            return matches?.Select(MapToMatchResponse);
-        }
+        
 
         public static MessageResponse MapToMessageResponse(Message message)
         {
@@ -83,7 +65,7 @@ namespace Cuttr.Business.Mappers
             return new MessageResponse
             {
                 MessageId = message.MessageId,
-                MatchId = message.MatchId,
+                ConnectionId = message.ConnectionId,
                 SenderUserId = message.SenderUserId,
                 MessageText = message.MessageText,
                 SentAt = message.SentAt,
@@ -133,6 +115,63 @@ namespace Cuttr.Business.Mappers
                 PreferedPetFriendly = preferences.PreferedPetFriendly,
                 PreferedExtras = preferences.PreferedExtras
             };
+        }
+
+        public static TradeProposalResponse MapToTradeProposalResponse(TradeProposal tp)
+        {
+            if (tp == null)
+                return null;
+            return new TradeProposalResponse
+            {
+                TradeProposalId = tp.TradeProposalId,
+                ConnectionId = tp.ConnectionId,
+                ItemsProposedByUser1 = (tp.ItemsProposedByUser1).Select(MapToPlantResponse).ToList(),
+                ItemsProposedByUser2 = (tp.ItemsProposedByUser2).Select(MapToPlantResponse).ToList(),
+                TradeProposalStatus = tp.TradeProposalStatus,
+                CreatedAt = tp.CreatedAt,
+                AcceptedAt = tp.AcceptedAt,
+                DeclinedAt = tp.DeclinedAt,
+                CompletedAt = tp.CompletedAt,
+                Connection = MapToConnectionResponse(tp.Connection)
+            };
+        }
+
+        public static ConnectionResponse MapToConnectionResponse(Connection match)
+        {
+            if (match == null)
+                return null;
+
+            return new ConnectionResponse
+            {
+                ConnectionId = match.ConnectionId,
+                User1 = MapToUserResponse(match.User1),
+                User2 = MapToUserResponse(match.User2)
+            };
+        }
+
+        public static IEnumerable<ConnectionResponse> MapToConnectionResponse(IEnumerable<Connection> matches)
+        {
+            return matches?.Select(MapToConnectionResponse);
+        }
+
+        public static MatchResponse MapToMatchResponse(Match match)
+        {
+            if (match == null)
+                return null;
+
+            return new MatchResponse
+            {
+                MatchId = match.MatchId,
+                Plant1 = MapToPlantResponse(match.Plant1),
+                Plant2 = MapToPlantResponse(match.Plant2),
+                User1 = MapToUserResponse(match.User1),
+                User2 = MapToUserResponse(match.User2)
+            };
+        }
+
+        public static IEnumerable<MatchResponse> MapToMatchResponse(IEnumerable<Match> matches)
+        {
+            return matches?.Select(MapToMatchResponse);
         }
     }
 }

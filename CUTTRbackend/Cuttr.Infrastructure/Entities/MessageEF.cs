@@ -15,7 +15,7 @@ namespace Cuttr.Infrastructure.Entities
         public int MessageId { get; set; }
 
         [Required]
-        public int MatchId { get; set; }
+        public int ConnectionId { get; set; }
 
         [Required]
         public int SenderUserId { get; set; }
@@ -29,7 +29,7 @@ namespace Cuttr.Infrastructure.Entities
 
         // Navigation properties
         [ForeignKey("MatchId")]
-        public virtual MatchEF Match { get; set; }
+        public virtual ConnectionEF Connection { get; set; }
 
         [ForeignKey("SenderUserId")]
         public virtual UserEF SenderUser { get; set; }

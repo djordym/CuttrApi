@@ -89,7 +89,7 @@ namespace Cuttr.Business.Mappers
 
             return new Message
             {
-                MatchId = request.MatchId,
+                ConnectionId = request.ConnectionId,
                 SenderUserId = senderUserId,
                 MessageText = request.MessageText,
                 SentAt = DateTime.UtcNow,

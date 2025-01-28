@@ -8,7 +8,7 @@ namespace Cuttr.Business.Contracts.Inputs
 {
     public class MessageRequest
     {
-        public int MatchId { get; set; }
+        public int ConnectionId { get; set; }
         public string MessageText { get; set; }
     }
 

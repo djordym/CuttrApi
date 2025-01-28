@@ -1,4 +1,5 @@
-﻿using Cuttr.Business.Contracts.Inputs;
+﻿using Azure;
+using Cuttr.Business.Contracts.Inputs;
 using Cuttr.Business.Contracts.Outputs;
 using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
@@ -21,19 +22,22 @@ namespace Cuttr.Business.Managers
         private readonly ILogger<SwipeManager> _logger;
         private readonly IUserRepository _userRepository;
         private readonly IMatchRepository _matchRepository;
+        private readonly IConnectionRepository _connectionRepository;
 
         public SwipeManager(
             ISwipeRepository swipeRepository,
             IPlantRepository plantRepository,
             IUserRepository userRepository,
             ILogger<SwipeManager> logger,
-        IMatchRepository matchRepository)
+        IMatchRepository matchRepository,
+        IConnectionRepository connectionRepository)
         {
             _swipeRepository = swipeRepository;
             _plantRepository = plantRepository;
             _logger = logger;
             _userRepository = userRepository;
             _matchRepository = matchRepository;
+            _connectionRepository = connectionRepository;
         }
 
         public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests, int userId)
@@ -99,11 +103,12 @@ namespace Cuttr.Business.Managers
                         );
                     }
 
-                    var response = new SwipeResponse { IsMatch = oppositeSwipe != null };
+                    SwipeResponse swipeResponse = new SwipeResponse { IsMatch = oppositeSwipe != null };
 
-                    // 5. If there's a match, create it
-                    if (response.IsMatch)
+                    // 5. If there's a match, create it, also create a connection if there is not yet one
+                    if (swipeResponse.IsMatch)
                     {
+                        //MATCH
                         bool isSwiperUserFirst = swiperPlant.UserId < swipedPlant.UserId;
 
                         var match = new Match
@@ -116,10 +121,44 @@ namespace Cuttr.Business.Managers
                         };
 
                         var addedMatch = await _matchRepository.AddMatchAsync(match);
-                        response.Match = BusinessToContractMapper.MapToMatchResponse(addedMatch);
+                        if (addedMatch != null) swipeResponse.Match = BusinessToContractMapper.MapToMatchResponse(addedMatch);
+
+                        //CONNECTION
+                        // Check if a connection already exists for these two users
+                        var swiperUserId = swiperPlant.UserId;
+                        var swipedUserId = swipedPlant.UserId;
+
+                        var existingConnection = await _connectionRepository.GetConnectionByUsersAsync(swiperUserId, swipedUserId);
+
+                        if (existingConnection == null)
+                        {
+                            // No existing connection -> create a new one
+                            var newConnection = new Connection
+                            {
+                                UserId1 = swiperUserId,
+                                UserId2 = swipedUserId,
+                                CreatedAt = DateTime.UtcNow,
+                                IsActive = true
+                            };
+
+                            var addedConnection = await _connectionRepository.CreateConnectionAsync(newConnection);
+
+                            // Map domain object to a response for the client
+                            swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(addedConnection);
+                        }
+                        else
+                        {
+                            // A connection already exists, so just map it back
+                            swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(existingConnection);
+                        }
+
                     }
 
-                    responses.Add(response);
+                    
+                        
+                    
+
+                    responses.Add(swipeResponse);
                 }
                 catch (NotFoundException)
                 {

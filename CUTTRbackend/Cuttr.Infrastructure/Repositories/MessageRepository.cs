@@ -48,7 +48,7 @@ namespace Cuttr.Infrastructure.Repositories
             {
                 var efMessages = await _context.Messages
                     .AsNoTracking()
-                    .Where(m => m.MatchId == matchId)
+                    .Where(m => m.ConnectionId == matchId)
                     .OrderBy(m => m.CreatedAt)
                     .ToListAsync();
 

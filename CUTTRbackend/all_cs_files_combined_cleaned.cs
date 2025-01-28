@@ -243,6 +243,180 @@ return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error
 }
 }
 }
+//ConnectionController
+namespace Cuttr.Api.Controllers
+{
+[ApiController]
+[Route("api/connections")]
+[Authorize]
+public class ConnectionController : ControllerBase
+{
+private readonly IConnectionManager _connectionManager;
+private readonly ILogger<ConnectionController> _logger;
+public ConnectionController(
+IConnectionManager connectionManager,
+ILogger<ConnectionController> logger
+)
+{
+_connectionManager = connectionManager;
+_logger = logger;
+}
+[HttpGet("me")]
+public async Task<IActionResult> GetMyConnections()
+{
+try
+{
+int userId = User.GetUserId();
+var connections = await _connectionManager.GetConnectionsForUserAsync(userId);
+return Ok(connections);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Error retrieving connections.");
+return BadRequest(ex.Message);
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while retrieving connections.");
+return StatusCode(500, "An unexpected error occurred.");
+}
+}
+[HttpGet("{connectionId}")]
+public async Task<IActionResult> GetConnection(int connectionId)
+{
+try
+{
+int userId = User.GetUserId();
+var connection = await _connectionManager.GetConnectionByIdAsync(connectionId, userId);
+return Ok(connection);
+}
+catch (NotFoundException ex)
+{
+_logger.LogWarning(ex, $"Connection with ID {connectionId} not found.");
+return NotFound(ex.Message);
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access to connection.");
+return Forbid(ex.Message);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, $"Error retrieving connection with ID {connectionId}.");
+return BadRequest(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while retrieving the connection.");
+return StatusCode(500, "An unexpected error occurred.");
+}
+}
+[HttpGet("{connectionId}/proposals")]
+public async Task<IActionResult> GetTradeProposals(int connectionId)
+{
+try
+{
+int userId = User.GetUserId();
+var proposals = await _connectionManager.GetTradeProposalsAsync(connectionId, userId);
+return Ok(proposals);
+}
+catch (NotFoundException ex)
+{
+_logger.LogWarning(ex, $"Connection with ID {connectionId} not found.");
+return NotFound(ex.Message);
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access to trade proposals.");
+return Forbid(ex.Message);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, $"Error retrieving trade proposals for connection {connectionId}.");
+return BadRequest(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while retrieving trade proposals.");
+return StatusCode(500, "An unexpected error occurred.");
+}
+}
+[HttpPost("{connectionId}/proposals")]
+public async Task<IActionResult> CreateTradeProposal(int connectionId, [FromBody] TradeProposalRequest request)
+{
+try
+{
+int userId = User.GetUserId();
+var createdProposal = await _connectionManager.CreateTradeProposalAsync(connectionId, userId, request);
+return Ok(createdProposal);
+}
+catch (NotFoundException ex)
+{
+_logger.LogWarning(ex, $"Connection with ID {connectionId} not found.");
+return NotFound(ex.Message);
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt to create a trade proposal.");
+return Forbid(ex.Message);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Error creating trade proposal.");
+return BadRequest(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while creating the trade proposal.");
+return StatusCode(500, "An unexpected error occurred.");
+}
+}
+[HttpPut("{connectionId}/proposals/{proposalId}/status")]
+public async Task<IActionResult> UpdateTradeProposalStatus(
+int connectionId,
+int proposalId,
+[FromBody] UpdateTradeProposalStatusRequest request
+)
+{
+try
+{
+int userId = User.GetUserId();
+await _connectionManager.UpdateTradeProposalStatusAsync(
+connectionId,
+proposalId,
+userId,
+request
+);
+return NoContent();
+}
+catch (NotFoundException ex)
+{
+_logger.LogWarning(ex, $"Proposal with ID {proposalId} or Connection with ID {connectionId} not found.");
+return NotFound(ex.Message);
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt to update trade proposal status.");
+return Forbid(ex.Message);
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Error updating trade proposal status.");
+return BadRequest(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while updating the trade proposal status.");
+return StatusCode(500, "An unexpected error occurred.");
+}
+}
+}
+}
 //MatchController
 namespace Cuttr.Api.Controllers
 {
@@ -319,14 +493,14 @@ public MessageController(IMessageManager messageManager, ILogger<MessageControll
 _messageManager = messageManager;
 _logger = logger;
 }
-[HttpPost("/me")]
+[HttpPost("me")]
 public async Task<IActionResult> SendMessage([FromBody] MessageRequest request)
 {
 int senderUserId = 0;
 try
 {
 senderUserId = User.GetUserId();
-var messageResponse = await _messageManager.SendMessageAsync(request, senderUserId);
+MessageResponse messageResponse = await _messageManager.SendMessageAsync(request, senderUserId);
 return Ok(messageResponse);
 }
 catch (NotFoundException ex)
@@ -547,6 +721,34 @@ return Unauthorized(ex.Message);
 catch (Exception ex)
 {
 _logger.LogError(ex, "An unexpected error occurred while retrieving the plants.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
+}
+[AllowAnonymous]
+[HttpPost("seed")]
+public async Task<IActionResult> SeedPlants([FromBody] List<SeedPlantRequest> request)
+{
+try
+{
+foreach(var plant in request)
+{
+await _plantManager.SeedPlantAsync(plant);
+}
+return Ok();
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Error seeding plants.");
+return BadRequest(ex.Message);
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An unexpected error occurred while seeding plants.");
 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
@@ -855,6 +1057,42 @@ _logger.LogError(ex, "An unexpected error occurred while updating the location."
 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
+[AllowAnonymous]
+[HttpPost("seed")]
+public async Task<IActionResult> SeedRegisterUsers([FromBody] List<UserRegistrationRequest> requests)
+{
+try
+{
+foreach(var request in requests)
+{
+await _userManager.RegisterUserAsync(request);
+}
+return Ok();
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Error seeding users.");
+return BadRequest(ex.Message);
+}
+}
+[AllowAnonymous]
+[HttpPost("seed/locations")]
+public async Task<IActionResult> SeedUpdateLocations([FromBody] List<UpdateLocationRequest> requests)
+{
+try
+{
+foreach(var request in requests)
+{
+await _userManager.UpdateUserLocationAsync(request.UserId, request.Latitude, request.Longitude);
+}
+return Ok();
+}
+catch (BusinessException ex)
+{
+_logger.LogError(ex, "Error seeding locations.");
+return BadRequest(ex.Message);
+}
+}
 }
 }
 //UserPreferencesController
@@ -1047,7 +1285,7 @@ namespace Cuttr.Business.Contracts.Inputs
 {
 public class MessageRequest
 {
-public int MatchId { get; set; }
+public int ConnectionId { get; set; }
 public string MessageText { get; set; }
 }
 }
@@ -1107,6 +1345,26 @@ public string Reason { get; set; }
 public string Comments { get; set; }
 }
 }
+//SeedPlantRequest
+namespace Cuttr.Business.Contracts.Inputs
+{
+public class SeedPlantRequest
+{
+public int UserId { get; set; }
+public string SpeciesName { get; set; }
+public string? Description { get; set; }
+public PlantStage PlantStage { get; set; }
+public PlantCategory? PlantCategory { get; set; }
+public WateringNeed? WateringNeed { get; set; }
+public LightRequirement? LightRequirement { get; set; }
+public Size? Size { get; set; }
+public IndoorOutdoor? IndoorOutdoor { get; set; }
+public PropagationEase? PropagationEase { get; set; }
+public PetFriendly? PetFriendly { get; set; }
+public List<Extras>? Extras { get; set; } = new List<Extras>();
+public string ImageUrl { get; set; }
+}
+}
 //SwipeRequest
 namespace Cuttr.Business.Contracts.Inputs
 {
@@ -1117,11 +1375,31 @@ public int SwipedPlantId { get; set; }
 public bool IsLike { get; set; }
 }
 }
+//TradeProposalRequest
+namespace Cuttr.Business.Contracts.Inputs
+{
+public class TradeProposalRequest
+{
+public List<int> UserPlantIds { get; set; }
+public List<int> OtherPlantIds { get; set; }
+public string AdditionalNotes { get; set; }
+}
+}
+//UpdateTradeProposalStatusRequest
+namespace Cuttr.Business.Contracts.Inputs
+{
+public class UpdateTradeProposalStatusRequest
+{
+public string NewStatus { get; set; }
+public string Reason { get; set; }
+}
+}
 //UpdateUserLocationRequest
 namespace Cuttr.Business.Contracts.Inputs
 {
 public class UpdateLocationRequest
 {
+public int UserId { get; set; }
 public double Latitude { get; set; }
 public double Longitude { get; set; }
 }
@@ -1190,6 +1468,16 @@ public string TokenType { get; set; } = "Bearer";
 public int ExpiresIn { get; set; }
 }
 }
+//ConnectionResponse
+namespace Cuttr.Business.Contracts.Outputs
+{
+public class ConnectionResponse
+{
+public int ConnectionId { get; set; }
+public UserResponse User1 { get; set; }
+public UserResponse User2 { get; set; }
+}
+}
 //MatchResponse
 namespace Cuttr.Business.Contracts.Outputs
 {
@@ -1208,7 +1496,7 @@ namespace Cuttr.Business.Contracts.Outputs
 public class MessageResponse
 {
 public int MessageId { get; set; }
-public int MatchId { get; set; }
+public int ConnectionId { get; set; }
 public int SenderUserId { get; set; }
 public string MessageText { get; set; }
 public DateTime SentAt { get; set; }
@@ -1256,7 +1544,25 @@ namespace Cuttr.Business.Contracts.Outputs
 public class SwipeResponse
 {
 public bool IsMatch { get; set; }
+public ConnectionResponse Connection { get; set; }
 public MatchResponse Match { get; set; }
+}
+}
+//TradeProposalResponse
+namespace Cuttr.Business.Contracts.Outputs
+{
+public class TradeProposalResponse
+{
+public int TradeProposalId { get; set; }
+public int ConnectionId { get; set; }
+public List<PlantResponse> ItemsProposedByUser1 { get; set; }
+public List<PlantResponse> ItemsProposedByUser2 { get; set; }
+public TradeProposalStatus TradeProposalStatus { get; set; }
+public DateTime CreatedAt { get; set; }
+public DateTime? AcceptedAt { get; set; }
+public DateTime? DeclinedAt { get; set; }
+public DateTime? CompletedAt { get; set; }
+public ConnectionResponse Connection { get; set; }
 }
 }
 //UserLoginResponse
@@ -1301,6 +1607,22 @@ public double? LocationLatitude { get; set; }
 public double? LocationLongitude { get; set; }
 }
 }
+//Connection
+namespace Cuttr.Business.Entities
+{
+public class Connection
+{
+public int ConnectionId { get; set; }
+public int UserId1 { get; set; }
+public int UserId2 { get; set; }
+public DateTime CreatedAt { get; set; }
+public User User1 { get; set; }
+public User User2 { get; set; }
+public bool IsActive { get; set; }
+public List<Message> Messages { get; set; }
+public List<TradeProposal> TradeProposals { get; set; }
+}
+}
 //Match
 namespace Cuttr.Business.Entities
 {
@@ -1325,12 +1647,12 @@ namespace Cuttr.Business.Entities
 public class Message
 {
 public int MessageId { get; set; }
-public int MatchId { get; set; }
+public int ConnectionId { get; set; }
 public int SenderUserId { get; set; }
 public string MessageText { get; set; }
 public DateTime SentAt { get; set; }
 public bool IsRead { get; set; }
-public Match Match { get; set; }
+public Connection Connection { get; set; }
 public User SenderUser { get; set; }
 }
 }
@@ -1353,6 +1675,7 @@ public PropagationEase? PropagationEase { get; set; }
 public PetFriendly? PetFriendly { get; set; }
 public List<Extras> Extras { get; set; }
 public string? ImageUrl { get; set; }
+public bool IsClosed { get; set; }
 public User User { get; set; }
 }
 }
@@ -1397,6 +1720,25 @@ public int SwipedPlantId { get; set; }
 public bool IsLike { get; set; }
 public Plant SwiperPlant { get; set; }
 public Plant SwipedPlant { get; set; }
+}
+}
+//TradeProposal
+namespace Cuttr.Business.Entities
+{
+public class TradeProposal
+{
+public int TradeProposalId { get; set; }
+public int ConnectionId { get; set; }
+public List<int> PlantIdsProposedByUser1 { get; set; }
+public List<int> PlantIdsProposedByUser2 { get; set; }
+public List<Plant> ItemsProposedByUser1 { get; set; }
+public List<Plant> ItemsProposedByUser2 { get; set; }
+public TradeProposalStatus TradeProposalStatus { get; set; }
+public DateTime CreatedAt { get; set; }
+public DateTime? AcceptedAt { get; set; }
+public DateTime? DeclinedAt { get; set; }
+public DateTime? CompletedAt { get; set; }
+public Connection Connection { get; set; }
 }
 }
 //User
@@ -1520,6 +1862,14 @@ GroundCover,
 Rare
 }
 }
+//TradeProposalStatus
+namespace Cuttr.Business.Enums
+{
+public enum TradeProposalStatus
+{
+Pending, Accepted, Rejected, Completed
+}
+}
 //AuthenticationException
 namespace Cuttr.Business.Exceptions
 {
@@ -1578,6 +1928,18 @@ Task<AuthTokenResponse> RefreshTokenAsync(string refreshToken);
 Task LogoutUserAsync(int userId);
 }
 }
+//IConnectionManager
+namespace Cuttr.Business.Interfaces.ManagerInterfaces
+{
+public interface IConnectionManager
+{
+Task<TradeProposalResponse> CreateTradeProposalAsync(int connectionId, int userId, TradeProposalRequest request);
+Task<ConnectionResponse> GetConnectionByIdAsync(int connectionId, int userId);
+Task<IEnumerable<ConnectionResponse>> GetConnectionsForUserAsync(int userId);
+Task<IEnumerable<TradeProposalResponse>> GetTradeProposalsAsync(int connectionId, int userId);
+Task UpdateTradeProposalStatusAsync(int connectionId, int proposalId, int userId, UpdateTradeProposalStatusRequest request);
+}
+}
 //IMatchManager
 namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
@@ -1606,6 +1968,7 @@ Task<PlantResponse> GetPlantByIdAsync(int plantId);
 Task<PlantResponse> UpdatePlantAsync(int plantId, int userId, PlantRequest request);
 Task DeletePlantAsync(int plantId, int userId);
 Task<IEnumerable<PlantResponse>> GetPlantsByUserIdAsync(int userId);
+Task SeedPlantAsync(SeedPlantRequest plant);
 }
 }
 //IReportManager
@@ -1645,6 +2008,18 @@ public interface IUserPreferencesManager
 {
 Task<UserPreferencesResponse> GetUserPreferencesAsync(int userId);
 Task<UserPreferencesResponse> CreateOrUpdateUserPreferencesAsync(int userId, UserPreferencesRequest request);
+}
+}
+//IConnectionRepository
+namespace Cuttr.Business.Interfaces.RepositoryInterfaces
+{
+public interface IConnectionRepository
+{
+Task<Connection> GetConnectionByIdAsync(int connectionId);
+Task<IEnumerable<Connection>> GetConnectionsByUserIdAsync(int userId);
+Task<Connection> CreateConnectionAsync(Connection connection);
+Task<Connection> UpdateConnectionAsync(Connection connection);
+Task<Connection> GetConnectionByUsersAsync(int swiperUserId, int swipedUserId);
 }
 }
 //IMatchRepository
@@ -1707,6 +2082,19 @@ public interface ISwipeRepository
 Task AddSwipeAsync(Swipe swipe);
 Task<Swipe> GetSwipeAsync(int swiperPlantId, int swipedPlantId, bool isLike);
 Task<bool> HasSwipeAsync(int swiperPlantId, int swipedPlantId);
+Task<Swipe> GetSwipeForPairAsync(int swiperPlantId, int swipedPlantId);
+Task UpdateSwipeAsync(Swipe swipe);
+}
+}
+//ITradeProposalRepository
+namespace Cuttr.Business.Managers
+{
+public interface ITradeProposalRepository
+{
+Task<TradeProposal> GetByIdAsync(int proposalId);
+Task<IEnumerable<TradeProposal>> GetByConnectionIdAsync(int connectionId);
+Task<TradeProposal> CreateAsync(TradeProposal proposal);
+Task<TradeProposal> UpdateAsync(TradeProposal proposal);
 }
 }
 //IUserPreferencesRepository
@@ -1880,6 +2268,142 @@ return Convert.ToBase64String(hashBytes);
 }
 }
 }
+//ConnectionManager
+namespace Cuttr.Business.Managers
+{
+public class ConnectionManager : IConnectionManager
+{
+private readonly IConnectionRepository _connectionRepository;
+private readonly IMessageRepository _messageRepository;
+private readonly ITradeProposalRepository _tradeProposalRepository;
+private readonly IPlantRepository _plantRepository;
+private readonly ILogger<ConnectionManager> _logger;
+public ConnectionManager(
+IConnectionRepository connectionRepository,
+IMessageRepository messageRepository,
+ITradeProposalRepository tradeProposalRepository,
+IPlantRepository plantRepository,
+ILogger<ConnectionManager> logger)
+{
+_connectionRepository = connectionRepository;
+_messageRepository = messageRepository;
+_tradeProposalRepository = tradeProposalRepository;
+_plantRepository = plantRepository;
+_logger = logger;
+}
+public async Task<IEnumerable<ConnectionResponse>> GetConnectionsForUserAsync(int userId)
+{
+var connections = await _connectionRepository.GetConnectionsByUserIdAsync(userId);
+return connections.Select(conn => BusinessToContractMapper.MapToMatchResponse(conn));
+}
+public async Task<ConnectionResponse> GetConnectionByIdAsync(int connectionId, int userId)
+{
+var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
+if (connection == null)
+{
+throw new NotFoundException($"Connection with ID {connectionId} not found.");
+}
+EnsureUserIsParticipantOfConnection(connection, userId);
+return BusinessToContractMapper.MapToMatchResponse(connection);
+}
+public async Task<IEnumerable<TradeProposalResponse>> GetTradeProposalsAsync(int connectionId, int userId)
+{
+var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
+if (connection == null)
+{
+throw new NotFoundException($"Connection with ID {connectionId} not found.");
+}
+EnsureUserIsParticipantOfConnection(connection, userId);
+IEnumerable<TradeProposal> proposals = await _tradeProposalRepository.GetByConnectionIdAsync(connectionId);
+return proposals
+.OrderByDescending(tp => tp.CreatedAt)
+.Select(tp => BusinessToContractMapper.MapToTradeProposalResponse(tp));
+}
+public async Task<TradeProposalResponse> CreateTradeProposalAsync(
+int connectionId,
+int userId,
+TradeProposalRequest request)
+{
+var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
+if (connection == null)
+{
+throw new NotFoundException($"Connection with ID {connectionId} not found.");
+}
+EnsureUserIsParticipantOfConnection(connection, userId);
+var newProposal = new TradeProposal
+{
+ConnectionId = connectionId,
+TradeProposalStatus = Enums.TradeProposalStatus.Pending,
+CreatedAt = DateTime.UtcNow,
+PlantIdsProposedByUser1 = (userId == connection.UserId1) ? request.UserPlantIds : request.OtherPlantIds,
+PlantIdsProposedByUser2 = (userId == connection.UserId2) ? request.UserPlantIds : request.OtherPlantIds,
+};
+await _tradeProposalRepository.CreateAsync(newProposal);
+return BusinessToContractMapper.MapToTradeProposalResponse(newProposal);
+}
+public async Task UpdateTradeProposalStatusAsync(
+int connectionId,
+int proposalId,
+int userId,
+UpdateTradeProposalStatusRequest request)
+{
+var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
+if (connection == null)
+{
+throw new NotFoundException($"Connection with ID {connectionId} not found.");
+}
+EnsureUserIsParticipantOfConnection(connection, userId);
+var proposal = await _tradeProposalRepository.GetByIdAsync(proposalId);
+if (proposal == null || proposal.ConnectionId != connectionId)
+{
+throw new NotFoundException($"Trade proposal with ID {proposalId} not found in connection {connectionId}.");
+}
+var newStatus = request.NewStatus?.Trim();
+if (string.IsNullOrEmpty(newStatus))
+{
+throw new BusinessException("Invalid status update request (no NewStatus provided).");
+}
+switch (newStatus.ToLower())
+{
+case "accepted":
+proposal.TradeProposalStatus = Enums.TradeProposalStatus.Accepted;
+proposal.AcceptedAt = DateTime.UtcNow;
+proposal.DeclinedAt = null;
+proposal.CompletedAt = null;
+break;
+case "declined":
+proposal.TradeProposalStatus = Enums.TradeProposalStatus.Rejected;
+proposal.DeclinedAt = DateTime.UtcNow;
+proposal.AcceptedAt = null;
+proposal.CompletedAt = null;
+break;
+case "completed":
+if (proposal.TradeProposalStatus != Enums.TradeProposalStatus.Accepted)
+{
+throw new BusinessException("Cannot mark proposal as 'Completed' if it has not been 'Accepted'.");
+}
+proposal.TradeProposalStatus = Enums.TradeProposalStatus.Completed;
+proposal.CompletedAt = DateTime.UtcNow;
+break;
+default:
+throw new BusinessException($"Unknown status '{request.NewStatus}'. Allowed: Accepted, Declined, Completed.");
+}
+await _tradeProposalRepository.UpdateAsync(proposal);
+}
+private void EnsureUserIsParticipantOfConnection(Connection connection, int userId)
+{
+if (connection.UserId1 != userId && connection.UserId2 != userId)
+{
+throw new UnauthorizedAccessException(
+$"User {userId} is not a participant of connection {connection.ConnectionId}."
+);
+}
+}
+private async Task MarkPlantsAsTraded(TradeProposal proposal)
+{
+}
+}
+}
 //MatchManager
 namespace Cuttr.Business.Managers
 {
@@ -1934,24 +2458,24 @@ namespace Cuttr.Business.Managers
 public class MessageManager : IMessageManager
 {
 private readonly IMessageRepository _messageRepository;
-private readonly IMatchRepository _matchRepository;
+private readonly IConnectionRepository _connectionRepository;
 private readonly ILogger<MessageManager> _logger;
 public MessageManager(
 IMessageRepository messageRepository,
-IMatchRepository matchRepository,
+IConnectionRepository matchRepository,
 ILogger<MessageManager> logger)
 {
 _messageRepository = messageRepository;
-_matchRepository = matchRepository;
+_connectionRepository = matchRepository;
 _logger = logger;
 }
 public async Task<MessageResponse> SendMessageAsync(MessageRequest request, int senderUserId)
 {
 try
 {
-var match = await _matchRepository.GetMatchByIdAsync(request.MatchId);
+var match = await _connectionRepository.GetConnectionByIdAsync(request.ConnectionId);
 if (match == null)
-throw new NotFoundException($"Match with ID {request.MatchId} not found.");
+throw new NotFoundException($"Match with ID {request.ConnectionId} not found.");
 if (match.UserId1 != senderUserId && match.UserId2 != senderUserId)
 throw new BusinessException("Sender user is not part of the match.");
 var message = ContractToBusinessMapper.MapToMessage(request, senderUserId);
@@ -1976,7 +2500,7 @@ public async Task<IEnumerable<MessageResponse>> GetMessagesByMatchIdAsync(int ma
 {
 try
 {
-var match = await _matchRepository.GetMatchByIdAsync(matchId);
+var match = await _connectionRepository.GetConnectionByIdAsync(matchId);
 if (match == null)
 throw new NotFoundException($"Match with ID {matchId} not found.");
 if (match.UserId1 != userId && match.UserId2 != userId)
@@ -2138,6 +2662,26 @@ _logger.LogError(ex, $"Error retrieving plants for user with ID {userId}.");
 throw new BusinessException("Error retrieving plants.", ex);
 }
 }
+public async Task SeedPlantAsync(SeedPlantRequest request)
+{
+var plant = new Plant
+{
+UserId = request.UserId,
+SpeciesName = request.SpeciesName,
+Description = request.Description,
+PlantStage = request.PlantStage,
+WateringNeed = request.WateringNeed,
+LightRequirement = request.LightRequirement,
+Size = request.Size,
+IndoorOutdoor = request.IndoorOutdoor,
+PropagationEase = request.PropagationEase,
+PetFriendly = request.PetFriendly,
+Extras = request.Extras,
+ImageUrl = request.ImageUrl
+};
+await _plantRepository.AddPlantAsync(plant);
+return;
+}
 }
 }
 //ReportManager
@@ -2200,16 +2744,22 @@ private readonly ISwipeRepository _swipeRepository;
 private readonly IPlantRepository _plantRepository;
 private readonly ILogger<SwipeManager> _logger;
 private readonly IUserRepository _userRepository;
+private readonly IMatchRepository _matchRepository;
+private readonly IConnectionRepository _connectionRepository;
 public SwipeManager(
 ISwipeRepository swipeRepository,
 IPlantRepository plantRepository,
 IUserRepository userRepository,
-ILogger<SwipeManager> logger)
+ILogger<SwipeManager> logger,
+IMatchRepository matchRepository,
+IConnectionRepository connectionRepository)
 {
 _swipeRepository = swipeRepository;
 _plantRepository = plantRepository;
 _logger = logger;
 _userRepository = userRepository;
+_matchRepository = matchRepository;
+_connectionRepository = connectionRepository;
 }
 public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests, int userId)
 {
@@ -2227,18 +2777,36 @@ throw new NotFoundException($"Swiped plant with ID {request.SwipedPlantId} not f
 var user = await _userRepository.GetUserByIdAsync(userId);
 if (swiperPlant.UserId != userId)
 throw new Exceptions.UnauthorizedAccessException("Swiper plant does not belong to the user.");
-var swipe = ContractToBusinessMapper.MapToSwipe(request);
-await _swipeRepository.AddSwipeAsync(swipe);
+var existingSwipe = await _swipeRepository.GetSwipeForPairAsync(
+request.SwiperPlantId,
+request.SwipedPlantId
+);
+if (existingSwipe == null)
+{
+var newSwipe = ContractToBusinessMapper.MapToSwipe(request);
+await _swipeRepository.AddSwipeAsync(newSwipe);
+}
+else
+{
+if (!existingSwipe.IsLike && request.IsLike)
+{
+existingSwipe.IsLike = true;
+await _swipeRepository.UpdateSwipeAsync(existingSwipe);
+}
+}
+bool finalIsLike = request.IsLike ||
+(existingSwipe != null && existingSwipe.IsLike);
 Swipe oppositeSwipe = null;
-if (request.IsLike)
+if (finalIsLike)
 {
 oppositeSwipe = await _swipeRepository.GetSwipeAsync(
 request.SwipedPlantId,
 request.SwiperPlantId,
-true);
+true
+);
 }
-var response = new SwipeResponse { IsMatch = oppositeSwipe != null };
-if (response.IsMatch)
+SwipeResponse swipeResponse = new SwipeResponse { IsMatch = oppositeSwipe != null };
+if (swipeResponse.IsMatch)
 {
 bool isSwiperUserFirst = swiperPlant.UserId < swipedPlant.UserId;
 var match = new Match
@@ -2249,8 +2817,29 @@ UserId1 = isSwiperUserFirst ? swiperPlant.UserId : swipedPlant.UserId,
 UserId2 = isSwiperUserFirst ? swipedPlant.UserId : swiperPlant.UserId,
 CreatedAt = DateTime.UtcNow
 };
+var addedMatch = await _matchRepository.AddMatchAsync(match);
+if (addedMatch != null) swipeResponse.Match = BusinessToContractMapper.MapToMatchResponse(addedMatch);
+var swiperUserId = swiperPlant.UserId;
+var swipedUserId = swipedPlant.UserId;
+var existingConnection = await _connectionRepository.GetConnectionByUsersAsync(swiperUserId, swipedUserId);
+if (existingConnection == null)
+{
+var newConnection = new Connection
+{
+UserId1 = swiperUserId,
+UserId2 = swipedUserId,
+CreatedAt = DateTime.UtcNow,
+IsActive = true
+};
+var addedConnection = await _connectionRepository.CreateConnectionAsync(newConnection);
+swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(addedConnection);
 }
-responses.Add(response);
+else
+{
+swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(existingConnection);
+}
+}
+responses.Add(swipeResponse);
 }
 catch (NotFoundException)
 {
@@ -2656,23 +3245,6 @@ public static IEnumerable<PlantResponse> MapToPlantResponse(IEnumerable<Plant> p
 {
 return plants?.Select(MapToPlantResponse);
 }
-public static MatchResponse MapToMatchResponse(Match match)
-{
-if (match == null)
-return null;
-return new MatchResponse
-{
-MatchId = match.MatchId,
-Plant1 = MapToPlantResponse(match.Plant1),
-Plant2 = MapToPlantResponse(match.Plant2),
-User1 = MapToUserResponse(match.User1),
-User2 = MapToUserResponse(match.User2)
-};
-}
-public static IEnumerable<MatchResponse> MapToMatchResponse(IEnumerable<Match> matches)
-{
-return matches?.Select(MapToMatchResponse);
-}
 public static MessageResponse MapToMessageResponse(Message message)
 {
 if (message == null)
@@ -2680,7 +3252,7 @@ return null;
 return new MessageResponse
 {
 MessageId = message.MessageId,
-MatchId = message.MatchId,
+ConnectionId = message.ConnectionId,
 SenderUserId = message.SenderUserId,
 MessageText = message.MessageText,
 SentAt = message.SentAt,
@@ -2724,6 +3296,56 @@ PreferedPropagationEase = preferences.PreferedPropagationEase,
 PreferedPetFriendly = preferences.PreferedPetFriendly,
 PreferedExtras = preferences.PreferedExtras
 };
+}
+public static TradeProposalResponse MapToTradeProposalResponse(TradeProposal tp)
+{
+if (tp == null)
+return null;
+return new TradeProposalResponse
+{
+TradeProposalId = tp.TradeProposalId,
+ConnectionId = tp.ConnectionId,
+ItemsProposedByUser1 = (tp.ItemsProposedByUser1).Select(MapToPlantResponse).ToList(),
+ItemsProposedByUser2 = (tp.ItemsProposedByUser2).Select(MapToPlantResponse).ToList(),
+TradeProposalStatus = tp.TradeProposalStatus,
+CreatedAt = tp.CreatedAt,
+AcceptedAt = tp.AcceptedAt,
+DeclinedAt = tp.DeclinedAt,
+CompletedAt = tp.CompletedAt,
+Connection = MapToConnectionResponse(tp.Connection)
+};
+}
+public static ConnectionResponse MapToConnectionResponse(Connection match)
+{
+if (match == null)
+return null;
+return new ConnectionResponse
+{
+ConnectionId = match.ConnectionId,
+User1 = MapToUserResponse(match.User1),
+User2 = MapToUserResponse(match.User2)
+};
+}
+public static IEnumerable<ConnectionResponse> MapToConnectionResponse(IEnumerable<Connection> matches)
+{
+return matches?.Select(MapToConnectionResponse);
+}
+public static MatchResponse MapToMatchResponse(Match match)
+{
+if (match == null)
+return null;
+return new MatchResponse
+{
+MatchId = match.MatchId,
+Plant1 = MapToPlantResponse(match.Plant1),
+Plant2 = MapToPlantResponse(match.Plant2),
+User1 = MapToUserResponse(match.User1),
+User2 = MapToUserResponse(match.User2)
+};
+}
+public static IEnumerable<MatchResponse> MapToMatchResponse(IEnumerable<Match> matches)
+{
+return matches?.Select(MapToMatchResponse);
 }
 }
 }
@@ -2802,7 +3424,7 @@ if (request == null)
 return null;
 return new Message
 {
-MatchId = request.MatchId,
+ConnectionId = request.ConnectionId,
 SenderUserId = senderUserId,
 MessageText = request.MessageText,
 SentAt = DateTime.UtcNow,
@@ -2835,7 +3457,7 @@ PreferedExtras = request.PreferedExtras
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c8c7fba12c66504407d5c072b603348b48e662ce")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -3151,6 +3773,27 @@ public interface IUpdatedAt
 DateTime UpdatedAt { get; set; }
 }
 }
+//ConnectionEF
+namespace Cuttr.Infrastructure.Entities
+{
+public class ConnectionEF : ICreatedAt
+{
+[Key]
+public int ConnectionId { get; set; }
+[Required]
+public int UserId1 { get; set; }
+[Required]
+public int UserId2 { get; set; }
+public bool isActive { get; set; }
+public DateTime CreatedAt { get; set; }
+[ForeignKey("UserId1")]
+public virtual UserEF User1 { get; set; }
+[ForeignKey("UserId2")]
+public virtual UserEF User2 { get; set; }
+public virtual ICollection<MessageEF> Messages { get; set; }
+public List<TradeProposalEF> TradeProposals { get; set; }
+}
+}
 //MatchEF
 namespace Cuttr.Infrastructure.Entities
 {
@@ -3186,7 +3829,7 @@ public class MessageEF : ICreatedAt
 [Key]
 public int MessageId { get; set; }
 [Required]
-public int MatchId { get; set; }
+public int ConnectionId { get; set; }
 [Required]
 public int SenderUserId { get; set; }
 [Required]
@@ -3194,7 +3837,7 @@ public string MessageText { get; set; }
 public DateTime CreatedAt { get; set; }
 public bool IsRead { get; set; }
 [ForeignKey("MatchId")]
-public virtual MatchEF Match { get; set; }
+public virtual ConnectionEF Connection { get; set; }
 [ForeignKey("SenderUserId")]
 public virtual UserEF SenderUser { get; set; }
 }
@@ -3236,6 +3879,7 @@ public string Extras { get; set; }
 public string ImageUrl { get; set; }
 public DateTime CreatedAt { get; set; }
 public DateTime UpdatedAt { get; set; }
+public bool IsTraded { get; set; }
 [ForeignKey("UserId")]
 public virtual UserEF User { get; set; }
 }
@@ -3296,6 +3940,29 @@ public DateTime CreatedAt { get; set; }
 public virtual PlantEF SwiperPlant { get; set; }
 [ForeignKey("SwipedPlantId")]
 public virtual PlantEF SwipedPlant { get; set; }
+}
+}
+//TradeProposalEF
+namespace Cuttr.Infrastructure.Entities
+{
+public class TradeProposalEF
+{
+[Key]
+public int TradeProposalId { get; set; }
+public int ConnectionId { get; set; }
+public string PlantIdsProposedByUser1 { get; set; }
+public string PlantIdsProposedByUser2 { get; set; }
+[NotMapped]
+public List<PlantEF> ItemsProposedByUser1 { get; set; } = new();
+[NotMapped]
+public List<PlantEF> ItemsProposedByUser2 { get; set; } = new();
+public string TradeProposalStatus { get; set; }
+public DateTime CreatedAt { get; set; }
+public DateTime? AcceptedAt { get; set; }
+public DateTime? DeclinedAt { get; set; }
+public DateTime? CompletedAt { get; set; }
+[ForeignKey("ConnectionId")]
+public ConnectionEF Connection { get; set; }
 }
 }
 //UserEF
@@ -3492,7 +4159,7 @@ return null;
 return new MessageEF
 {
 MessageId = message.MessageId,
-MatchId = message.MatchId,
+ConnectionId = message.ConnectionId,
 SenderUserId = message.SenderUserId,
 MessageText = message.MessageText,
 IsRead = message.IsRead,
@@ -3517,6 +4184,21 @@ ReportedUser = MapToUserEFWithoutPlants(report.ReportedUser),
 CreatedAt = report.CreatedAt,
 };
 }
+public static ConnectionEF MapToConnectionEF(Connection match)
+{
+if (match == null)
+return null;
+return new ConnectionEF
+{
+ConnectionId = match.ConnectionId,
+UserId1 = match.UserId1,
+UserId2 = match.UserId2,
+User1 = MapToUserEFWithoutPlants(match.User1),
+User2 = MapToUserEFWithoutPlants(match.User2),
+Messages = match.Messages?.Select(MapToMessageEF).ToList(),
+CreatedAt = match.CreatedAt,
+};
+}
 public static UserPreferencesEF MapToUserPreferencesEF(UserPreferences preferences)
 {
 if (preferences == null)
@@ -3534,6 +4216,24 @@ PreferedIndoorOutdoor = SerializePreferedIndoorOutdoors(preferences.PreferedIndo
 PreferedPropagationEase = SerializePreferedPropagationEases(preferences.PreferedPropagationEase),
 PreferedPetFriendly = SerializePreferedPetFriendlies(preferences.PreferedPetFriendly),
 PreferedExtras = SerializeExtras(preferences.PreferedExtras),
+};
+}
+public static TradeProposalEF MapToTradeProposalEF(TradeProposal tp)
+{
+if (tp == null)
+return null;
+return new TradeProposalEF
+{
+TradeProposalId = tp.TradeProposalId,
+ConnectionId = tp.ConnectionId,
+PlantIdsProposedByUser1 = tp.PlantIdsProposedByUser1 != null ? SerializePlantIds(tp.PlantIdsProposedByUser1) : null,
+PlantIdsProposedByUser2 = tp.PlantIdsProposedByUser2 != null ? SerializePlantIds(tp.PlantIdsProposedByUser2) : null,
+TradeProposalStatus = tp.TradeProposalStatus.ToString(),
+CreatedAt = tp.CreatedAt,
+AcceptedAt = tp.AcceptedAt,
+DeclinedAt = tp.DeclinedAt,
+CompletedAt = tp.CompletedAt,
+Connection = MapToConnectionEF(tp.Connection)
 };
 }
 public static string SerializePreferedPlantStages(List<PlantStage> plantStages)
@@ -3589,6 +4289,12 @@ public static string SerializeExtras(List<Extras> extras)
 if (extras == null || !extras.Any())
 return "";
 return System.Text.Json.JsonSerializer.Serialize(extras);
+}
+public static string SerializePlantIds(List<int> plantIds)
+{
+if (plantIds == null || !plantIds.Any())
+return "";
+return System.Text.Json.JsonSerializer.Serialize(plantIds);
 }
 }
 }
@@ -3700,7 +4406,6 @@ return new User
 {
 UserId = efUser.UserId,
 Email = efUser.Email,
-PasswordHash = efUser.PasswordHash,
 Name = efUser.Name,
 ProfilePictureUrl = efUser.ProfilePictureUrl,
 Bio = efUser.Bio,
@@ -3747,12 +4452,27 @@ return null;
 return new Message
 {
 MessageId = efMessage.MessageId,
-MatchId = efMessage.MatchId,
+ConnectionId = efMessage.ConnectionId,
 SenderUserId = efMessage.SenderUserId,
 MessageText = efMessage.MessageText,
 IsRead = efMessage.IsRead,
 SentAt = efMessage.CreatedAt,
 SenderUser = MapToUserWithoutPlants(efMessage.SenderUser),
+};
+}
+public static Connection MapToConnection(ConnectionEF efMatch)
+{
+if (efMatch == null)
+return null;
+return new Connection
+{
+ConnectionId = efMatch.ConnectionId,
+UserId1 = efMatch.UserId1,
+UserId2 = efMatch.UserId2,
+User1 = MapToUserWithoutPlants(efMatch.User1),
+User2 = MapToUserWithoutPlants(efMatch.User2),
+Messages = efMatch.Messages?.Select(MapToMessage).ToList(),
+CreatedAt = efMatch.CreatedAt,
 };
 }
 public static Report MapToReport(ReportEF efReport)
@@ -3789,6 +4509,26 @@ PreferedIndoorOutdoor = DeserializeIndoorOutdoor(efPreferences.PreferedIndoorOut
 PreferedPropagationEase = DeserializePropagationEase(efPreferences.PreferedPropagationEase),
 PreferedPetFriendly = DeserializePetFriendly(efPreferences.PreferedPetFriendly),
 PreferedExtras = DeserializeExtras(efPreferences.PreferedExtras),
+};
+}
+public static TradeProposal MapToTradeProposal(TradeProposalEF ef)
+{
+if (ef == null)
+return null;
+return new TradeProposal
+{
+TradeProposalId = ef.TradeProposalId,
+ConnectionId = ef.ConnectionId,
+ItemsProposedByUser1 = (ef.ItemsProposedByUser1).Select(MapToPlantWithoutUser).ToList(),
+ItemsProposedByUser2 = (ef.ItemsProposedByUser2).Select(MapToPlantWithoutUser).ToList(),
+TradeProposalStatus = !string.IsNullOrWhiteSpace(ef.TradeProposalStatus)
+? Enum.Parse<TradeProposalStatus>(ef.TradeProposalStatus)
+: TradeProposalStatus.Pending,
+CreatedAt = ef.CreatedAt,
+AcceptedAt = ef.AcceptedAt,
+DeclinedAt = ef.DeclinedAt,
+CompletedAt = ef.CompletedAt,
+Connection = MapToConnection(ef.Connection)
 };
 }
 private static List<PlantStage> DeserializePlantStage(string plantstages)
@@ -7506,7 +8246,7 @@ b.Navigation("SentMessages");
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c8c7fba12c66504407d5c072b603348b48e662ce")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -7515,6 +8255,60 @@ b.Navigation("SentMessages");
 //EFCoreSqlServerNetTopologySuite
 [assembly: Microsoft.EntityFrameworkCore.Design.DesignTimeServicesReferenceAttribute("Microsoft.EntityFrameworkCore.SqlServer.Design.Internal.SqlServerNetTopologySuite" +
 "DesignTimeServices, Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite", "Microsoft.EntityFrameworkCore.SqlServer")]
+//ConnectionRepository
+namespace Cuttr.Infrastructure.Repositories
+{
+public class ConnectionRepository : IConnectionRepository
+{
+private readonly CuttrDbContext _context;
+private readonly ILogger<ConnectionRepository> _logger;
+public async Task<Connection> GetConnectionByIdAsync(int connectionId)
+{
+var ef = await _context.Connections
+.Include(c => c.User1)
+.Include(c => c.User2)
+.FirstOrDefaultAsync(c => c.ConnectionId == connectionId);
+if (ef == null) return null;
+_context.Entry(ef).State = EntityState.Detached;
+return EFToBusinessMapper.MapToConnection(ef);
+}
+public async Task<IEnumerable<Connection>> GetConnectionsByUserIdAsync(int userId)
+{
+var efConnections = await _context.Connections
+.Where(c => c.UserId1 == userId || c.UserId2 == userId)
+.Include(c => c.User1)
+.Include(c => c.User2)
+.ToListAsync();
+_context.Entry(efConnections).State = EntityState.Detached;
+return efConnections.Select(EFToBusinessMapper.MapToConnection);
+}
+public async Task<Connection> CreateConnectionAsync(Connection connection)
+{
+var ef = BusinessToEFMapper.MapToConnectionEF(connection);
+_context.Connections.Add(ef);
+await _context.SaveChangesAsync();
+_context.Entry(ef).State = EntityState.Detached;
+return EFToBusinessMapper.MapToConnection(ef);
+}
+public async Task<Connection> UpdateConnectionAsync(Connection connection)
+{
+var ef = BusinessToEFMapper.MapToConnectionEF(connection);
+_context.Connections.Update(ef);
+await _context.SaveChangesAsync();
+_context.Entry(ef).State = EntityState.Detached;
+return EFToBusinessMapper.MapToConnection(ef);
+}
+public async Task<Connection> GetConnectionByUsersAsync(int userId1, int userId2)
+{
+var efConnection = await _context.Connections
+.Include(c => c.User1)
+.Include(c => c.User2)
+.FirstOrDefaultAsync(c => (c.UserId1 == userId1 && c.UserId2 == userId2) || (c.UserId1 == userId2 && c.UserId2 == userId1));
+_context.Entry(efConnection).State = EntityState.Detached;
+return EFToBusinessMapper.MapToConnection(efConnection);
+}
+}
+}
 //MatchRepository
 namespace Cuttr.Infrastructure.Repositories
 {
@@ -7534,9 +8328,9 @@ try
 var efMatches = await _context.Matches
 .AsNoTracking()
 .Include(m => m.Plant1)
-.ThenInclude(p => p.User)
 .Include(m => m.Plant2)
-.ThenInclude(p => p.User)
+.Include(m => m.User1)
+.Include(m => m.User2)
 .Where(m => m.UserId1 == userId || m.UserId2 == userId)
 .ToListAsync();
 return efMatches.Select(EFToBusinessMapper.MapToMatch);
@@ -7554,9 +8348,9 @@ try
 var efMatch = await _context.Matches
 .AsNoTracking()
 .Include(m => m.Plant1)
-.ThenInclude(p => p.User)
 .Include(m => m.Plant2)
-.ThenInclude(p => p.User)
+.Include(m => m.User1)
+.Include(m => m.User2)
 .FirstOrDefaultAsync(m => m.MatchId == matchId);
 return EFToBusinessMapper.MapToMatch(efMatch);
 }
@@ -7571,7 +8365,6 @@ public async Task<Match> AddMatchAsync(Match match)
 try
 {
 var efMatch = BusinessToEFMapper.MapToMatchEF(match);
-efMatch.MatchId = 0;
 await _context.Matches.AddAsync(efMatch);
 await _context.SaveChangesAsync();
 _context.Entry(efMatch).State = EntityState.Detached;
@@ -7620,7 +8413,7 @@ try
 {
 var efMessages = await _context.Messages
 .AsNoTracking()
-.Where(m => m.MatchId == matchId)
+.Where(m => m.ConnectionId == matchId)
 .OrderBy(m => m.CreatedAt)
 .ToListAsync();
 return efMessages.Select(EFToBusinessMapper.MapToMessage);
@@ -7961,6 +8754,80 @@ catch (Exception ex)
 _logger.LogError(ex, "An error occurred while checking swipe existence.");
 throw new RepositoryException("An error occurred while checking swipe existence.", ex);
 }
+}
+public async Task<Swipe> GetSwipeForPairAsync(int swiperPlantId, int swipedPlantId)
+{
+try
+{
+var efSwipe = await _context.Swipes
+.AsNoTracking()
+.FirstOrDefaultAsync(s =>
+s.SwiperPlantId == swiperPlantId &&
+s.SwipedPlantId == swipedPlantId);
+return EFToBusinessMapper.MapToSwipe(efSwipe);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while retrieving a swipe for pair.");
+throw new RepositoryException("An error occurred while retrieving a swipe for pair.", ex);
+}
+}
+public async Task UpdateSwipeAsync(Swipe swipe)
+{
+try
+{
+var efSwipe = BusinessToEFMapper.MapToSwipeEF(swipe);
+_context.Swipes.Update(efSwipe);
+await _context.SaveChangesAsync();
+_context.Entry(efSwipe).State = EntityState.Detached;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while updating a swipe.");
+throw new RepositoryException("An error occurred while updating a swipe.", ex);
+}
+}
+}
+}
+//TradeProposalRepository
+namespace Cuttr.Infrastructure.Repositories
+{
+public class TradeProposalRepository : ITradeProposalRepository
+{
+private readonly CuttrDbContext _dbContext;
+public TradeProposalRepository(CuttrDbContext dbContext)
+{
+_dbContext = dbContext;
+}
+public async Task<TradeProposal> GetByIdAsync(int proposalId)
+{
+var ef = await _dbContext.TradeProposals
+.Include(tp => tp.Connection)
+.FirstOrDefaultAsync(tp => tp.TradeProposalId == proposalId);
+if (ef == null) return null;
+return EFToBusinessMapper.MapToTradeProposal(ef);
+}
+public async Task<IEnumerable<TradeProposal>> GetByConnectionIdAsync(int connectionId)
+{
+var efList = await _dbContext.TradeProposals
+.Where(tp => tp.ConnectionId == connectionId)
+.OrderBy(tp => tp.CreatedAt)
+.ToListAsync();
+return efList.Select(EFToBusinessMapper.MapToTradeProposal);
+}
+public async Task<TradeProposal> CreateAsync(TradeProposal proposal)
+{
+var ef = BusinessToEFMapper.MapToTradeProposalEF(proposal);
+_dbContext.TradeProposals.Add(ef);
+await _dbContext.SaveChangesAsync();
+return EFToBusinessMapper.MapToTradeProposal(ef);
+}
+public async Task<TradeProposal> UpdateAsync(TradeProposal proposal)
+{
+var ef = BusinessToEFMapper.MapToTradeProposalEF(proposal);
+_dbContext.TradeProposals.Update(ef);
+await _dbContext.SaveChangesAsync();
+return EFToBusinessMapper.MapToTradeProposal(ef);
 }
 }
 }

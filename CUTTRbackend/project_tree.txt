@@ -13,14 +13,8 @@ CUTTRbackend
 │   │   └── UserPreferencesController.cs
 │   ├── Cuttr.Api.csproj
 │   ├── Cuttr.Api.csproj.user
+│   ├── Cuttr.Api.http
 │   ├── Logs
-│   │   ├── log-20241206.txt
-│   │   ├── log-20241206_001.txt
-│   │   ├── log-20241226.txt
-│   │   ├── log-20241226_001.txt
-│   │   ├── log-20241226_002.txt
-│   │   ├── log-20241226_003.txt
-│   │   ├── log-20241226_004.txt
 │   │   ├── log-20241228.txt
 │   │   ├── log-20241228_001.txt
 │   │   ├── log-20241228_002.txt
@@ -34,7 +28,24 @@ CUTTRbackend
 │   │   ├── log-20241228_010.txt
 │   │   ├── log-20241228_011.txt
 │   │   ├── log-20241228_012.txt
-│   │   └── log-20241229.txt
+│   │   ├── log-20241229.txt
+│   │   ├── log-20250109.txt
+│   │   ├── log-20250110.txt
+│   │   ├── log-20250111.txt
+│   │   ├── log-20250112.txt
+│   │   ├── log-20250113.txt
+│   │   ├── log-20250114.txt
+│   │   ├── log-20250115.txt
+│   │   ├── log-20250116.txt
+│   │   ├── log-20250117.txt
+│   │   ├── log-20250119.txt
+│   │   ├── log-20250120.txt
+│   │   ├── log-20250121.txt
+│   │   ├── log-20250122.txt
+│   │   ├── log-20250123.txt
+│   │   ├── log-20250124.txt
+│   │   ├── log-20250125.txt
+│   │   └── log-20250127.txt
 │   ├── Middleware
 │   │   ├── ExceptionHandlingMiddleware.cs
 │   │   └── LoggingMiddleware.cs
@@ -52,6 +63,7 @@ CUTTRbackend
 │   │   │   ├── PlantUpdateRequest.cs
 │   │   │   ├── RefreshTokenRequest.cs
 │   │   │   ├── ReportRequest.cs
+│   │   │   ├── SeedPlantRequest.cs
 │   │   │   ├── SwipeRequest.cs
 │   │   │   ├── UpdateUserLocationRequest.cs
 │   │   │   ├── UserLoginRequest.cs
@@ -157,6 +169,8 @@ CUTTRbackend
 │   │   ├── 20241228121555_updateUserEF.cs
 │   │   ├── 20241228121717_updateUserEF2.Designer.cs
 │   │   ├── 20241228121717_updateUserEF2.cs
+│   │   ├── 20250110130658_updatePlantEF.Designer.cs
+│   │   ├── 20250110130658_updatePlantEF.cs
 │   │   └── CuttrDbContextModelSnapshot.cs
 │   ├── Repositories
 │   │   ├── MatchRepository.cs

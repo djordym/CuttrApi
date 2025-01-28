@@ -61,6 +61,8 @@ namespace Cuttr.Infrastructure.Entities
 
         public DateTime UpdatedAt { get; set; }
 
+        public bool IsTraded { get; set; }
+
         // Navigation property
         [ForeignKey("UserId")]
         public virtual UserEF User { get; set; }

@@ -81,6 +81,8 @@ builder.Services.AddScoped<IMatchManager, MatchManager>();
 builder.Services.AddScoped<IMessageManager, MessageManager>();
 builder.Services.AddScoped<IReportManager, ReportManager>();
 builder.Services.AddScoped<IUserPreferencesManager, UserPreferencesManager>();
+builder.Services.AddScoped<IConnectionManager, ConnectionManager>();
+
 
 // Register JwtTokenGenerator
 builder.Services.AddScoped<JwtTokenGenerator>();
@@ -90,6 +92,8 @@ builder.Services.AddScoped<IAuthManager, AuthManager>();
 
 
 // Register Repository Services
+builder.Services.AddScoped<IConnectionRepository, ConnectionRepository>();
+builder.Services.AddScoped<ITradeProposalRepository, TradeProposalRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPlantRepository, PlantRepository>();
 builder.Services.AddScoped<ISwipeRepository, SwipeRepository>();

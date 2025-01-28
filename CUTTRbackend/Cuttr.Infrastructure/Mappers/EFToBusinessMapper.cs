@@ -213,13 +213,29 @@ namespace Cuttr.Infrastructure.Mappers
             return new Message
             {
                 MessageId = efMessage.MessageId,
-                MatchId = efMessage.MatchId,
+                ConnectionId = efMessage.ConnectionId,
                 SenderUserId = efMessage.SenderUserId,
                 MessageText = efMessage.MessageText,
                 IsRead = efMessage.IsRead,
                 SentAt = efMessage.CreatedAt, // Mapping CreatedAt to SentAt
                 // Optionally include SenderUser without references to prevent circular references
                 SenderUser = MapToUserWithoutPlants(efMessage.SenderUser),
+            };
+        }
+        public static Connection MapToConnection(ConnectionEF efMatch)
+        {
+            if (efMatch == null)
+                return null;
+
+            return new Connection
+            {
+                ConnectionId = efMatch.ConnectionId,
+                UserId1 = efMatch.UserId1,
+                UserId2 = efMatch.UserId2,
+                User1 = MapToUserWithoutPlants(efMatch.User1),
+                User2 = MapToUserWithoutPlants(efMatch.User2),
+                Messages = efMatch.Messages?.Select(MapToMessage).ToList(),
+                CreatedAt = efMatch.CreatedAt,
             };
         }
 
@@ -262,6 +278,28 @@ namespace Cuttr.Infrastructure.Mappers
                 PreferedPropagationEase = DeserializePropagationEase(efPreferences.PreferedPropagationEase),
                 PreferedPetFriendly = DeserializePetFriendly(efPreferences.PreferedPetFriendly),
                 PreferedExtras = DeserializeExtras(efPreferences.PreferedExtras),
+            };
+        }
+
+        public static TradeProposal MapToTradeProposal(TradeProposalEF ef)
+        {
+            if (ef == null)
+                return null;
+
+            return new TradeProposal
+            {
+                TradeProposalId = ef.TradeProposalId,
+                ConnectionId = ef.ConnectionId,
+                ItemsProposedByUser1 = (ef.ItemsProposedByUser1).Select(MapToPlantWithoutUser).ToList(),
+                ItemsProposedByUser2 = (ef.ItemsProposedByUser2).Select(MapToPlantWithoutUser).ToList(),
+                TradeProposalStatus = !string.IsNullOrWhiteSpace(ef.TradeProposalStatus)
+                        ? Enum.Parse<TradeProposalStatus>(ef.TradeProposalStatus)
+                        : TradeProposalStatus.Pending,
+                CreatedAt = ef.CreatedAt,
+                AcceptedAt = ef.AcceptedAt,
+                DeclinedAt = ef.DeclinedAt,
+                CompletedAt = ef.CompletedAt,
+                Connection = MapToConnection(ef.Connection)
             };
         }
 

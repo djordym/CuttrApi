@@ -17,16 +17,16 @@ namespace Cuttr.Business.Managers
     public class MessageManager : IMessageManager
     {
         private readonly IMessageRepository _messageRepository;
-        private readonly IMatchRepository _matchRepository;
+        private readonly IConnectionRepository _connectionRepository;
         private readonly ILogger<MessageManager> _logger;
 
         public MessageManager(
             IMessageRepository messageRepository,
-            IMatchRepository matchRepository,
+            IConnectionRepository matchRepository,
             ILogger<MessageManager> logger)
         {
             _messageRepository = messageRepository;
-            _matchRepository = matchRepository;
+            _connectionRepository = matchRepository;
             _logger = logger;
         }
 
@@ -35,9 +35,9 @@ namespace Cuttr.Business.Managers
             try
             {
                 // Validate that the match exists
-                var match = await _matchRepository.GetMatchByIdAsync(request.MatchId);
+                var match = await _connectionRepository.GetConnectionByIdAsync(request.ConnectionId);
                 if (match == null)
-                    throw new NotFoundException($"Match with ID {request.MatchId} not found.");
+                    throw new NotFoundException($"Match with ID {request.ConnectionId} not found.");
 
                 // Validate that the sender user belongs to the match
                 if (match.UserId1 != senderUserId && match.UserId2 != senderUserId)
@@ -71,7 +71,7 @@ namespace Cuttr.Business.Managers
             try
             {
                 // Validate that the match exists
-                var match = await _matchRepository.GetMatchByIdAsync(matchId);
+                var match = await _connectionRepository.GetConnectionByIdAsync(matchId);
                 if (match == null)
                     throw new NotFoundException($"Match with ID {matchId} not found.");
 

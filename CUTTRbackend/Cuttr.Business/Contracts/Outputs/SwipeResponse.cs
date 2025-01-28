@@ -10,6 +10,7 @@ namespace Cuttr.Business.Contracts.Outputs
     public class SwipeResponse
     {
         public bool IsMatch { get; set; }
+        public ConnectionResponse Connection { get; set; } // Included if IsMatch is true
         public MatchResponse Match { get; set; } // Included if IsMatch is true
     }
 }

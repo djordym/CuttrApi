@@ -10,7 +10,7 @@ namespace Cuttr.Business.Entities
     {
         public int MessageId { get; set; }
 
-        public int MatchId { get; set; }
+        public int ConnectionId { get; set; }
 
         public int SenderUserId { get; set; }
 
@@ -21,7 +21,7 @@ namespace Cuttr.Business.Entities
         public bool IsRead { get; set; }
 
         // References
-        public Match Match { get; set; }
+        public Connection Connection { get; set; }
 
         public User SenderUser { get; set; }
     }

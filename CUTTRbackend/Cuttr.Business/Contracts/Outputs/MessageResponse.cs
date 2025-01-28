@@ -9,7 +9,7 @@ namespace Cuttr.Business.Contracts.Outputs
     public class MessageResponse
     {
         public int MessageId { get; set; }
-        public int MatchId { get; set; }
+        public int ConnectionId { get; set; }
         public int SenderUserId { get; set; }
         public string MessageText { get; set; }
         public DateTime SentAt { get; set; }

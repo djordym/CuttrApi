@@ -1,16 +1,12 @@
-﻿using Cuttr.Infrastructure.Common;
-using Cuttr.Infrastructure.Entities;
+﻿using Cuttr.Infrastructure.Entities;
+using Cuttr.Infrastructure.Common;
+using Cuttr.Infrastructure.Exceptions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.SqlServer;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
-
-using NetTopologySuite;
 using NetTopologySuite.Geometries;
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Cuttr.Infrastructure
 {
@@ -21,7 +17,7 @@ namespace Cuttr.Infrastructure
         {
         }
 
-        // DbSet properties for each entity
+        // Existing DbSets
         public DbSet<UserEF> Users { get; set; }
         public DbSet<PlantEF> Plants { get; set; }
         public DbSet<SwipeEF> Swipes { get; set; }
@@ -31,200 +27,234 @@ namespace Cuttr.Infrastructure
         public DbSet<UserPreferencesEF> UserPreferences { get; set; }
         public DbSet<RefreshTokenEF> RefreshTokens { get; set; }
 
+        // New DbSets
+        public DbSet<ConnectionEF> Connections { get; set; }
+        public DbSet<TradeProposalEF> TradeProposals { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Call base method
             base.OnModelCreating(modelBuilder);
 
-            // ----------------------------
-            // UserEF Configuration
-            // ----------------------------
+            // ===============================
+            // UserEF
+            // ===============================
             modelBuilder.Entity<UserEF>(entity =>
             {
                 entity.HasIndex(u => u.Email)
-                    .IsUnique();
+                      .IsUnique();
 
                 entity.Property(u => u.Email)
-                    .IsRequired()
-                    .HasMaxLength(256);
+                      .IsRequired()
+                      .HasMaxLength(256);
 
                 entity.Property(u => u.Name)
-                    .IsRequired()
-                    .HasMaxLength(100);
+                      .IsRequired()
+                      .HasMaxLength(100);
 
                 entity.Property(u => u.Bio)
-                    .HasMaxLength(500);
+                      .HasMaxLength(500);
 
-                // Relationships
                 entity.HasMany(u => u.Plants)
-                    .WithOne(p => p.User)
-                    .HasForeignKey(p => p.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                      .WithOne(p => p.User)
+                      .HasForeignKey(p => p.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(u => u.Preferences)
-                    .WithOne(p => p.User)
-                    .HasForeignKey<UserPreferencesEF>(p => p.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                      .WithOne(p => p.User)
+                      .HasForeignKey<UserPreferencesEF>(p => p.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasMany(u => u.ReportsMade)
-                    .WithOne(r => r.ReporterUser)
-                    .HasForeignKey(r => r.ReporterUserId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithOne(r => r.ReporterUser)
+                      .HasForeignKey(r => r.ReporterUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasMany(u => u.ReportsReceived)
-                    .WithOne(r => r.ReportedUser)
-                    .HasForeignKey(r => r.ReportedUserId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithOne(r => r.ReportedUser)
+                      .HasForeignKey(r => r.ReportedUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasMany(u => u.SentMessages)
-                    .WithOne(m => m.SenderUser)
-                    .HasForeignKey(m => m.SenderUserId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithOne(m => m.SenderUser)
+                      .HasForeignKey(m => m.SenderUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
+                // Geo
                 entity.Property(u => u.Location)
-                    .HasColumnType("geography");
+                      .HasColumnType("geography");
             });
 
-            // ----------------------------
-            // PlantEF Configuration
-            // ----------------------------
+            // ===============================
+            // PlantEF
+            // ===============================
             modelBuilder.Entity<PlantEF>(entity =>
             {
                 entity.Property(p => p.SpeciesName)
-                    .IsRequired()
-                    .HasMaxLength(200);
+                      .IsRequired()
+                      .HasMaxLength(200);
 
-
-                // Relationships
                 entity.HasOne(p => p.User)
-                    .WithMany(u => u.Plants)
-                    .HasForeignKey(p => p.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                      .WithMany(u => u.Plants)
+                      .HasForeignKey(p => p.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ----------------------------
-            // SwipeEF Configuration
-            // ----------------------------
+            // ===============================
+            // SwipeEF
+            // ===============================
             modelBuilder.Entity<SwipeEF>(entity =>
             {
                 entity.HasKey(s => s.SwipeId);
 
                 entity.HasOne(s => s.SwiperPlant)
-                    .WithMany()
-                    .HasForeignKey(s => s.SwiperPlantId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(s => s.SwiperPlantId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(s => s.SwipedPlant)
-                    .WithMany()
-                    .HasForeignKey(s => s.SwipedPlantId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(s => s.SwipedPlantId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
-                // Unique constraint to prevent duplicate swipes
                 entity.HasIndex(s => new { s.SwiperPlantId, s.SwipedPlantId })
-                    .IsUnique();
+                      .IsUnique();
             });
 
-            // ----------------------------
-            // MatchEF Configuration
-            // ----------------------------
+            // ===============================
+            // MatchEF
+            // ===============================
             modelBuilder.Entity<MatchEF>(entity =>
             {
                 entity.HasKey(m => m.MatchId);
 
-                // Relationships with Plants
                 entity.HasOne(m => m.Plant1)
-                    .WithMany()
-                    .HasForeignKey(m => m.PlantId1)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(m => m.PlantId1)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(m => m.Plant2)
-                    .WithMany()
-                    .HasForeignKey(m => m.PlantId2)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(m => m.PlantId2)
+                      .OnDelete(DeleteBehavior.Restrict);
 
-                // Relationships with Users
                 entity.HasOne(m => m.User1)
-                    .WithMany()
-                    .HasForeignKey(m => m.UserId1)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(m => m.UserId1)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(m => m.User2)
-                    .WithMany()
-                    .HasForeignKey(m => m.UserId2)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(m => m.UserId2)
+                      .OnDelete(DeleteBehavior.Restrict);
 
-                // Unique constraint to prevent duplicate matches
                 entity.HasIndex(m => new { m.PlantId1, m.PlantId2 })
-                    .IsUnique();
+                      .IsUnique();
 
-                // Ensure that PlantId1 is always less than PlantId2
                 entity.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
             });
 
-            // ----------------------------
-            // MessageEF Configuration
-            // ----------------------------
+            // ===============================
+            // ConnectionEF (NEW)
+            // ===============================
+            modelBuilder.Entity<ConnectionEF>(entity =>
+            {
+                entity.HasKey(c => c.ConnectionId);
+
+                entity.HasOne(c => c.User1)
+                      .WithMany()
+                      .HasForeignKey(c => c.UserId1)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(c => c.User2)
+                      .WithMany()
+                      .HasForeignKey(c => c.UserId2)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // A Connection has many Messages
+                entity.HasMany(c => c.Messages)
+                      .WithOne(m => m.Connection)
+                      .HasForeignKey(m => m.ConnectionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // A Connection has many TradeProposals
+                entity.HasMany(c => c.TradeProposals)
+                      .WithOne(tp => tp.Connection)
+                      .HasForeignKey(tp => tp.ConnectionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ===============================
+            // MessageEF (UPDATED)
+            // ===============================
             modelBuilder.Entity<MessageEF>(entity =>
             {
                 entity.HasKey(m => m.MessageId);
 
                 entity.Property(m => m.MessageText)
-                    .IsRequired();
+                      .IsRequired();
 
-                entity.HasOne(m => m.Match)
-                    .WithMany(mt => mt.Messages)
-                    .HasForeignKey(m => m.MatchId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                // Now referencing Connection, not Match
+                entity.HasOne(m => m.Connection)
+                      .WithMany(conn => conn.Messages)
+                      .HasForeignKey(m => m.ConnectionId)
+                      .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(m => m.SenderUser)
-                    .WithMany(u => u.SentMessages)
-                    .HasForeignKey(m => m.SenderUserId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany(u => u.SentMessages)
+                      .HasForeignKey(m => m.SenderUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // ----------------------------
-            // ReportEF Configuration
-            // ----------------------------
+            // ===============================
+            // TradeProposalEF (NEW)
+            // ===============================
+            modelBuilder.Entity<TradeProposalEF>(entity =>
+            {
+                entity.HasKey(tp => tp.TradeProposalId);
+
+                entity.HasOne(tp => tp.Connection)
+                      .WithMany(c => c.TradeProposals)
+                      .HasForeignKey(tp => tp.ConnectionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ===============================
+            // ReportEF
+            // ===============================
             modelBuilder.Entity<ReportEF>(entity =>
             {
                 entity.HasKey(r => r.ReportId);
 
                 entity.Property(r => r.Reason)
-                    .IsRequired();
+                      .IsRequired();
 
                 entity.HasOne(r => r.ReporterUser)
-                    .WithMany(u => u.ReportsMade)
-                    .HasForeignKey(r => r.ReporterUserId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany(u => u.ReportsMade)
+                      .HasForeignKey(r => r.ReporterUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(r => r.ReportedUser)
-                    .WithMany(u => u.ReportsReceived)
-                    .HasForeignKey(r => r.ReportedUserId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany(u => u.ReportsReceived)
+                      .HasForeignKey(r => r.ReportedUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // ----------------------------
-            // UserPreferencesEF Configuration
-            // ----------------------------
+            // ===============================
+            // UserPreferencesEF
+            // ===============================
             modelBuilder.Entity<UserPreferencesEF>(entity =>
             {
                 entity.HasKey(p => p.UserId);
 
                 entity.HasOne(p => p.User)
-                    .WithOne(u => u.Preferences)
-                    .HasForeignKey<UserPreferencesEF>(p => p.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
+                      .WithOne(u => u.Preferences)
+                      .HasForeignKey<UserPreferencesEF>(p => p.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ----------------------------
-            // Additional Configurations
-            // ----------------------------
-
-            // Geospatial Indexing on Users for Location-based queries
-
-            // Automatically set default values for CreatedAt and UpdatedAt
+            // ===============================
+            // Apply Default Timestamps for ICreatedAt / IUpdatedAt
+            // ===============================
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 var clrType = entityType.ClrType;
@@ -232,28 +262,19 @@ namespace Cuttr.Infrastructure
                 if (typeof(ICreatedAt).IsAssignableFrom(clrType))
                 {
                     modelBuilder.Entity(clrType)
-                        .Property("CreatedAt")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                                .Property("CreatedAt")
+                                .HasDefaultValueSql("GETUTCDATE()");
                 }
 
                 if (typeof(IUpdatedAt).IsAssignableFrom(clrType))
                 {
                     modelBuilder.Entity(clrType)
-                        .Property("UpdatedAt")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                                .Property("UpdatedAt")
+                                .HasDefaultValueSql("GETUTCDATE()");
                 }
             }
         }
-        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        //{
-        //    if (!optionsBuilder.IsConfigured)
-        //    {
-        //        optionsBuilder.UseSqlServer(
-        //            "Your_Connection_String_Here",
-        //            sqlOptions => sqlOptions.UseNetTopologySuite());
-        //    }
-        //}
-        // Overriding SaveChanges to update timestamps
+
         public override int SaveChanges()
         {
             UpdateTimestamps();

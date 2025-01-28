@@ -168,7 +168,7 @@ namespace Cuttr.Infrastructure.Mappers
             return new MessageEF
             {
                 MessageId = message.MessageId,
-                MatchId = message.MatchId,
+                ConnectionId = message.ConnectionId,
                 SenderUserId = message.SenderUserId,
                 MessageText = message.MessageText,
                 IsRead = message.IsRead,
@@ -198,6 +198,23 @@ namespace Cuttr.Infrastructure.Mappers
             };
         }
 
+        public static ConnectionEF MapToConnectionEF(Connection match)
+        {
+            if (match == null)
+                return null;
+
+            return new ConnectionEF
+            {
+                ConnectionId = match.ConnectionId,
+                UserId1 = match.UserId1,
+                UserId2 = match.UserId2,
+                User1 = MapToUserEFWithoutPlants(match.User1),
+                User2 = MapToUserEFWithoutPlants(match.User2),
+                Messages = match.Messages?.Select(MapToMessageEF).ToList(),
+                CreatedAt = match.CreatedAt,
+            };
+        }
+
         // Map UserPreferences to UserPreferencesEF
         public static UserPreferencesEF MapToUserPreferencesEF(UserPreferences preferences)
         {
@@ -218,6 +235,25 @@ namespace Cuttr.Infrastructure.Mappers
                 PreferedPetFriendly = SerializePreferedPetFriendlies(preferences.PreferedPetFriendly),
                 PreferedExtras = SerializeExtras(preferences.PreferedExtras),       
                 // User is not mapped to prevent circular reference
+            };
+        }
+
+        public static TradeProposalEF MapToTradeProposalEF(TradeProposal tp)
+        {
+            if (tp == null)
+                return null;
+            return new TradeProposalEF
+            {
+                TradeProposalId = tp.TradeProposalId,
+                ConnectionId = tp.ConnectionId,
+                PlantIdsProposedByUser1 = tp.PlantIdsProposedByUser1 != null ? SerializePlantIds(tp.PlantIdsProposedByUser1) : null,
+                PlantIdsProposedByUser2 = tp.PlantIdsProposedByUser2 != null ? SerializePlantIds(tp.PlantIdsProposedByUser2) : null,
+                TradeProposalStatus = tp.TradeProposalStatus.ToString(),
+                CreatedAt = tp.CreatedAt,
+                AcceptedAt = tp.AcceptedAt,
+                DeclinedAt = tp.DeclinedAt,
+                CompletedAt = tp.CompletedAt,
+                Connection = MapToConnectionEF(tp.Connection)
             };
         }
 
@@ -292,6 +328,15 @@ namespace Cuttr.Infrastructure.Mappers
 
             // JSON serialization
             return System.Text.Json.JsonSerializer.Serialize(extras);
+        }
+
+        public static string SerializePlantIds(List<int> plantIds)
+        {
+            if (plantIds == null || !plantIds.Any())
+                return "";
+
+            // JSON serialization
+            return System.Text.Json.JsonSerializer.Serialize(plantIds);
         }
     }
 }
