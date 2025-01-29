@@ -42,13 +42,13 @@ namespace Cuttr.Infrastructure.Repositories
             }
         }
 
-        public async Task<IEnumerable<Message>> GetMessagesByMatchIdAsync(int matchId)
+        public async Task<IEnumerable<Message>> GetMessagesByConnectionIdAsync(int connectionId)
         {
             try
             {
                 var efMessages = await _context.Messages
                     .AsNoTracking()
-                    .Where(m => m.ConnectionId == matchId)
+                    .Where(m => m.ConnectionId == connectionId)
                     .OrderBy(m => m.CreatedAt)
                     .ToListAsync();
 
@@ -56,7 +56,7 @@ namespace Cuttr.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An error occurred while retrieving messages for match with ID {matchId}.");
+                _logger.LogError(ex, $"An error occurred while retrieving messages for match with ID {connectionId}.");
                 throw new RepositoryException("An error occurred while retrieving messages.", ex);
             }
         }

@@ -2,12 +2,13 @@ import api from './axiosConfig';
 import { MessageRequest, MessageResponse } from '../types/apiTypes';
 
 export const messageService = {
-  sendMessage: async (data: MessageRequest): Promise<MessageResponse> => {
-    const response = await api.post<MessageResponse>('/messages/me', data);
+  getMessagesForConnection: async (connectionId: number): Promise<MessageResponse[]> => {
+    const response = await api.get<MessageResponse[]>(`/connections/${connectionId}/messages`);
     return response.data;
   },
-  getMessagesForMatch: async (matchId: number): Promise<MessageResponse[]> => {
-    const response = await api.get<MessageResponse[]>(`/matches/${matchId}/messages`);
+  
+  sendMessage: async (connectionId: number, data: MessageRequest): Promise<MessageResponse> => {
+    const response = await api.post<MessageResponse>(`/connections/${connectionId}/messages/user/me`, data);
     return response.data;
-  }
+  },
 };

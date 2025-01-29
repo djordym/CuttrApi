@@ -29,7 +29,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 // Hooks
 import { useUserProfile } from '../hooks/useUser';
 import { useUserMatches } from '../hooks/useUserMatches';
-import { useMatchConversation } from '../hooks/useMatchConversation';
+import { useMessages } from '../hooks/useMessages';
 
 // Components
 import { COLORS } from '../../../theme/colors';
@@ -92,7 +92,7 @@ const ChatScreen: React.FC = () => {
     refetchMessages,
     sendMessage,
     isSending,
-  } = useMatchConversation(activeMatchId ?? 0);
+  } = useMessages(activeMatchId ?? 0);
 
   // Sort messages by timestamp ascending
   const sortedMessages = useMemo(() => {

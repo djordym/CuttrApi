@@ -5,7 +5,6 @@ export interface RefreshTokenRequest {
 }
 
 export interface MessageRequest {
-    connectionId: number;
     messageText: string;
 }
 

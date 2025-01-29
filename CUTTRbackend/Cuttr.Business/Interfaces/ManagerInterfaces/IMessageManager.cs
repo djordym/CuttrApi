@@ -11,6 +11,6 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
     public interface IMessageManager
     {
         Task<MessageResponse> SendMessageAsync(MessageRequest request, int senderUserId);
-        Task<IEnumerable<MessageResponse>> GetMessagesByMatchIdAsync(int matchId, int userId);
+        Task<IEnumerable<MessageResponse>> GetMessagesByConnectionIdAsync(int connectionId, int userId);
     }
 }

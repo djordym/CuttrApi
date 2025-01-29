@@ -10,6 +10,6 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
     public interface IMessageRepository
     {
         Task<Message> AddMessageAsync(Message message);
-        Task<IEnumerable<Message>> GetMessagesByMatchIdAsync(int matchId);
+        Task<IEnumerable<Message>> GetMessagesByConnectionIdAsync(int matchId);
     }
 }

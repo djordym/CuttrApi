@@ -66,20 +66,20 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task<IEnumerable<MessageResponse>> GetMessagesByMatchIdAsync(int matchId, int userId)
+        public async Task<IEnumerable<MessageResponse>> GetMessagesByConnectionIdAsync(int connectionId, int userId)
         {
             try
             {
                 // Validate that the match exists
-                var match = await _connectionRepository.GetConnectionByIdAsync(matchId);
-                if (match == null)
-                    throw new NotFoundException($"Match with ID {matchId} not found.");
+                var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
+                if (connection == null)
+                    throw new NotFoundException($"Match with ID {connectionId} not found.");
 
                 // Validate that the user is part of the match
-                if (match.UserId1 != userId && match.UserId2 != userId)
+                if (connection.UserId1 != userId && connection.UserId2 != userId)
                     throw new Exceptions.UnauthorizedAccessException("User is not part of the match.");
 
-                var messages = await _messageRepository.GetMessagesByMatchIdAsync(matchId);
+                var messages = await _messageRepository.GetMessagesByConnectionIdAsync(connectionId);
 
                 return BusinessToContractMapper.MapToMessageResponse(messages);
             }
@@ -93,7 +93,7 @@ namespace Cuttr.Business.Managers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving messages for match with ID {matchId}.");
+                _logger.LogError(ex, $"Error retrieving messages for match with ID {connectionId}.");
                 throw new BusinessException("Error retrieving messages.", ex);
             }
         }
