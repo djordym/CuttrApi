@@ -1,3 +1,4 @@
+// components/profile/EditProfileModal.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Modal,
@@ -10,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Platform,
   ImageBackground,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -20,12 +20,16 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { userService } from '../../../api/userService';
-import { UserResponse, UserUpdateRequest } from '../../../types/apiTypes';
 import { ChangeLocationModal } from './ChangeLocationModal';
 import { COLORS } from '../../../theme/colors';
 import { profileCardStyles } from '../styles/profileCardStyles';
 import { log } from '../../../utils/logger';
+import {
+  useMyProfile,
+  useUpdateProfile,
+  useUpdateProfilePicture,
+} from '../hooks/useMyProfileHooks'; // Adjust the path as necessary
+import { UserResponse, UserUpdateRequest } from '../../../types/apiTypes';
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -35,7 +39,7 @@ interface EditProfileModalProps {
   cardLayout: { x: number; y: number; width: number; height: number };
 }
 
-export const EditProfileModal: React.FC<EditProfileModalProps> = ({
+export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
   visible,
   userProfile,
   onClose,
@@ -49,7 +53,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [name, setName] = useState(userProfile.name);
   const [bio, setBio] = useState(userProfile.bio || '');
   const [cityCountry, setCityCountry] = useState<string>('');
-  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // For nested ChangeLocationModal
@@ -85,6 +88,23 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     })();
   }, [userHasLocation, userProfile]);
 
+  // ----------- Hooks for Mutations -----------
+  const {
+    mutate: updateProfile,
+    isLoading: isUpdatingProfile,
+    isError: isUpdateProfileError,
+    error: updateProfileError,
+  } = useUpdateProfile();
+
+  const {
+    mutate: updateProfilePicture,
+    isLoading: isUpdatingPicture,
+    isError: isUpdatePictureError,
+    error: updatePictureError,
+  } = useUpdateProfilePicture();
+
+  const isUpdating = isUpdatingProfile || isUpdatingPicture;
+
   // ----------- Handle Profile Picture Updates -----------
   const handleChangeProfilePicture = useCallback(() => {
     Alert.alert(
@@ -106,6 +126,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
   const pickImageFromLibrary = async () => {
     try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(t('error_title'), t('error_media_library_permission_denied'));
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -114,7 +140,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       });
       if (!result.canceled && result.assets[0].uri) {
         const resized = await resizeImage(result.assets[0].uri);
-        await uploadProfilePicture(resized);
+        handleUploadProfilePicture(resized.uri);
       }
     } catch (err) {
       console.error('pickImageFromLibrary error:', err);
@@ -136,7 +162,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       });
       if (!result.canceled && result.assets[0].uri) {
         const resized = await resizeImage(result.assets[0].uri);
-        await uploadProfilePicture(resized);
+        handleUploadProfilePicture(resized.uri);
       }
     } catch (err) {
       console.error('takePictureWithCamera error:', err);
@@ -152,27 +178,23 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     );
   };
 
-  const uploadProfilePicture = async (img: ImageManipulator.ImageResult) => {
-    setUpdating(true);
+  const handleUploadProfilePicture = async (uri: string) => {
     try {
+      const img = await resizeImage(uri);
       const photo = {
         uri: img.uri,
         name: 'profile.jpg',
         type: 'image/jpeg',
-      } as any;
-      await userService.updateProfilePicture({ image: photo });
-      onUpdated();
+      };
+      updateProfilePicture(photo);
     } catch (err) {
-      console.error('Error uploading profile picture:', err);
+      console.error('Error preparing profile picture:', err);
       Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));
-    } finally {
-      setUpdating(false);
     }
   };
 
   // ----------- Handle “Save” -----------
   const handleSave = async () => {
-    setUpdating(true);
     setError(null);
 
     const payload: UserUpdateRequest = {
@@ -180,15 +202,20 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       bio: bio.trim(),
     };
 
-    try {
-      await userService.updateMe(payload);
-      onUpdated();
-      onClose();
-    } catch {
-      setError(t('edit_profile_error_message'));
-    } finally {
-      setUpdating(false);
+    if (!payload.name) {
+      setError(t('edit_profile_error_name_required'));
+      return;
     }
+
+    updateProfile(payload, {
+      onError: (error: any) => {
+        setError(error?.message || t('edit_profile_error_message'));
+      },
+      onSuccess: () => {
+        onUpdated();
+        onClose();
+      },
+    });
   };
 
   // ----------- Handle Location Modal -----------
@@ -199,8 +226,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     setLocationModalVisible(true);
   };
 
+  // ----------- Effect to Handle Mutation Errors -----------
+  useEffect(() => {
+    if (isUpdateProfileError && updateProfileError) {
+      Alert.alert(t('error_title'), updateProfileError.message || t('error_update_profile_failed'));
+    }
+    if (isUpdatePictureError && updatePictureError) {
+      Alert.alert(t('error_title'), updatePictureError.message || t('error_update_profile_picture_failed'));
+    }
+  }, [isUpdateProfileError, updateProfileError, isUpdatePictureError, updatePictureError, t]);
+
   return (
-    <Modal visible={visible} animationType="none" transparent>
+    <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.modalOverlay}>
         {/* Card positioned absolutely where the user’s profile card was */}
         <View
@@ -240,7 +277,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <TouchableOpacity
                   style={profileCardStyles.cameraIconWrapper}
                   onPress={handleChangeProfilePicture}
-                  disabled={updating}
+                  disabled={isUpdating}
                 >
                   <Ionicons name="camera" size={18} color="#fff" />
                 </TouchableOpacity>
@@ -250,9 +287,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               <TouchableOpacity
                 onPress={handleSave}
                 style={profileCardStyles.profileEditButton}
-                disabled={updating}
+                disabled={isUpdating}
               >
-                <MaterialIcons name="check" size={20} color={COLORS.textLight} />
+                {isUpdating ? (
+                  <ActivityIndicator size="small" color={COLORS.textLight} />
+                ) : (
+                  <MaterialIcons name="check" size={20} color={COLORS.textLight} />
+                )}
               </TouchableOpacity>
             </View>
 
@@ -262,7 +303,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 style={[
                   profileCardStyles.nameContainer,
                   profileCardStyles.editNameContainer,
-                  { maxWidth: (screenWidth * 0.9 - 215)},
+                  { maxWidth: screenWidth * 0.9 - 215 },
                 ]}
               >
                 <TextInput
@@ -285,11 +326,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   color={COLORS.accentLightRed}
                   style={profileCardStyles.locationIcon}
                 />
-                <TouchableOpacity
-                  onPress={handleOpenSetLocationModal}
-                  style={{ flex: 1 }}
-                >
-                  <Text style={[profileCardStyles.profileLocationText, { textDecorationLine: 'underline', color: COLORS.accentRed }]} numberOfLines={1}>
+                <TouchableOpacity onPress={handleOpenSetLocationModal} style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      profileCardStyles.profileLocationText,
+                      { textDecorationLine: 'underline', color: COLORS.accentRed },
+                    ]}
+                    numberOfLines={1}
+                  >
                     {cityCountry || t('profile_no_location')}
                   </Text>
                 </TouchableOpacity>
@@ -318,12 +362,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               />
             </View>
 
-            {/* Error / spinner */}
+            {/* Error Message */}
             {error && <Text style={profileCardStyles.errorText}>{error}</Text>}
-            
           </LinearGradient>
         </View>
       </View>
+
+      {/* Loading Indicator Overlay */}
+      {isUpdating && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={COLORS.accentRed} />
+        </View>
+      )}
 
       {/* Location modal */}
       <ChangeLocationModal
@@ -345,4 +395,5 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
+  
 });

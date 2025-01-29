@@ -1,3 +1,5 @@
+// src/screens/MyProfileScreen.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -5,22 +7,18 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  Image,
-  Dimensions,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { ImageBackground } from 'react-native';
 
 import { PlantCardWithInfo } from '../components/PlantCardWithInfo';
-import { useUserProfile } from '../hooks/useUser';
+import { useMyProfile } from '../hooks/useMyProfileHooks';
 import { useMyPlants } from '../hooks/usePlants';
 import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse } from '../../../types/apiTypes';
@@ -28,7 +26,7 @@ import { COLORS } from '../../../theme/colors';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { PlantThumbnail } from '../components/PlantThumbnail';
 import { headerStyles } from '../styles/headerStyles';
-import { profileCardStyles } from '../styles/profileCardStyles';
+import { ProfileCard } from '../components/ProfileCard'; // Import the new component
 
 const MyProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -40,7 +38,7 @@ const MyProfileScreen: React.FC = () => {
     isLoading: loadingProfile,
     isError: errorProfile,
     refetch: refetchProfile,
-  } = useUserProfile();
+  } = useMyProfile();
   const {
     data: myPlants,
     isLoading: loadingPlants,
@@ -185,85 +183,20 @@ const MyProfileScreen: React.FC = () => {
         </LinearGradient>
 
         {/* --- Profile Card --- */}
-        <View
-          ref={cardRef}
-          style={[
-            // Use the shared style for the card container
-            profileCardStyles.profileCardContainer,
-            {
-              marginHorizontal: 16,
-              marginTop: 20,
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={[COLORS.cardBg1, COLORS.cardBg2]}
-            style={profileCardStyles.profileCardInner}
-          >
-            <View style={profileCardStyles.profileTopContainer}>
-              <ImageBackground
-                source={require('../../../../assets/images/profileBackground.png')}
-                style={profileCardStyles.profileBackgroundImage}
-              />
-              <View style={profileCardStyles.profilePictureContainer}>
-                {userProfile.profilePictureUrl ? (
-                  <Image
-                    source={{ uri: userProfile.profilePictureUrl }}
-                    style={profileCardStyles.profilePicture}
-                  />
-                ) : (
-                  <View style={profileCardStyles.profilePlaceholder}>
-                    <Ionicons name="person-circle-outline" size={90} color="#ccc" />
-                  </View>
-                )}
-              </View>
-
-              {/* Edit button (opens modal) */}
-              <TouchableOpacity
-                onPress={openEditModal}
-                style={profileCardStyles.profileEditButton}
-                accessibilityLabel={t('profile_edit_button')}
-              >
-                <MaterialIcons name="edit" size={20} color={COLORS.textLight} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Name, location, bio */}
-            <View style={profileCardStyles.profileInfoContainer}>
-              <View style={profileCardStyles.nameContainer}>
-                <Text style={profileCardStyles.profileNameText}>{userProfile.name}</Text>
-              </View>
-              <View style={profileCardStyles.profileLocationRow}>
-                <Ionicons
-                  name="location-sharp"
-                  size={16}
-                  color={COLORS.accentLightRed}
-                  style={profileCardStyles.locationIcon}
-                />
-                <Text style={profileCardStyles.profileLocationText}>
-                  {cityCountry || t('profile_no_location')}
-                </Text>
-              </View>
-            </View>
-            <View style={profileCardStyles.bioContainer}>
-              <Text
-                style={[
-                  profileCardStyles.bioText,
-                  !userProfile.bio && profileCardStyles.bioPlaceholder,
-                ]}
-              >
-                {userProfile.bio ? userProfile.bio : t('profile_no_bio_placeholder')}
-              </Text>
-            </View>
-          </LinearGradient>
+        <View ref={cardRef} style={styles.cardContainer}>
+          <ProfileCard
+            userProfile={userProfile}
+            cityCountry={cityCountry}
+            isEditable={true} // Set to true to show the edit button
+            onEditPress={openEditModal}
+          />
         </View>
 
         {/* ---- My Plants Section ---- */}
         <View style={styles.plantsSectionWrapper}>
           <View style={styles.plantsSectionHeader}>
             <Text style={styles.plantsSectionTitle}>
-              {userProfile.name}
-              {t('profile_my_plants_section')}
+              {userProfile.name} {t('profile_my_plants_section')}
             </Text>
             <TouchableOpacity
               onPress={handleAddPlant}
@@ -313,6 +246,7 @@ const MyProfileScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
+
           {/* Plants List */}
           {myPlants && myPlants.length > 0 ? (
             <View style={showFullSize ? styles.fullViewContainer : styles.thumbViewContainer}>
@@ -340,9 +274,11 @@ const MyProfileScreen: React.FC = () => {
       </ScrollView>
     </SafeAreaProvider>
   );
-}; 
+};
 
 export default MyProfileScreen;
+
+// Styles remain unchanged
 
 const styles = StyleSheet.create({
   container: {
@@ -376,6 +312,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+
+  // Profile Card
+  cardContainer: {
+    marginHorizontal: 16,
+    marginTop: 20,
   },
 
   // ---- Plants Section ----
@@ -436,7 +378,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 18,
-    
   },
   segmentButtonActive: {
     backgroundColor: COLORS.accentGreen,

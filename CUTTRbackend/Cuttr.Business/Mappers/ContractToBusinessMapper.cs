@@ -82,14 +82,14 @@ namespace Cuttr.Business.Mappers
             };
         }
 
-        public static Message MapToMessage(MessageRequest request, int senderUserId)
+        public static Message MapToMessage(MessageRequest request, int senderUserId, int connectionId)
         {
             if (request == null)
                 return null;
 
             return new Message
             {
-                ConnectionId = request.ConnectionId,
+                ConnectionId = connectionId,
                 SenderUserId = senderUserId,
                 MessageText = request.MessageText,
                 SentAt = DateTime.UtcNow,

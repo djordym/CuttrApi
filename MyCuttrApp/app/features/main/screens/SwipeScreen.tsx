@@ -17,7 +17,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // --- Hooks ---
 import { useLikablePlants } from '../hooks/useSwipe'; // <--- NOTE the usage
-import { useUserProfile } from '../hooks/useUser';
+import { useMyProfile } from '../hooks/useMyProfileHooks';
 import { useUserPreferences } from '../hooks/usePreferences';
 import { useMyPlants } from '../hooks/usePlants';
 
@@ -49,7 +49,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
     isSending: sendingSwipes,
   } = useLikablePlants();
 
-  const { data: userProfile } = useUserProfile();
+  const { data: userProfile } = useMyProfile();
   const {
     data: userPreferences,
     updatePreferences,

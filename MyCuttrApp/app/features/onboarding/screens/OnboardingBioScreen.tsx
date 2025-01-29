@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 // Import userService (and possible utility code)
 import { userService } from '../../../api/userService';
-import { useUserProfile } from '../../main/hooks/useUser';
+import { useMyProfile } from '../../main/hooks/useMyProfileHooks';
 import { log } from '../../../utils/logger';
 
 
@@ -14,7 +14,7 @@ const OnboardingBioScreen: React.FC = () => {
     const navigation = useNavigation();
   
     // If needed, fetch userProfile to get user’s current name or other details
-    const { data: userProfile } = useUserProfile();
+    const { data: userProfile } = useMyProfile();
   
     // State for the bio
     const [bio, setBio] = useState(userProfile?.bio ?? '');

@@ -6,7 +6,7 @@ import { RootState } from '../store';
 import AuthNavigator from './AuthNavigator';
 import MainTabNavigator from './MainTabNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
-import { useUserProfile } from '../features/main/hooks/useUser';
+import { useMyProfile } from '../features/main/hooks/useMyProfileHooks';
 import { storage } from '../utils/storage';
 import { setInitialTokens } from '../features/auth/store/authSlice';
 import { userService } from '../api/userService';
@@ -19,7 +19,7 @@ const AppNavigator = () => {
   const { accessToken } = useSelector((state: RootState) => state.auth);
   const { refreshToken } = useSelector((state: RootState) => state.auth);
   const [initializing, setInitializing] = useState(true);
-  const { data: userProfile, isLoading: userProfileLoading } = useUserProfile();
+  const { data: userProfile, isLoading: userProfileLoading } = useMyProfile();
 
 // 1. Attempt to load tokens from storage
 useEffect(() => {

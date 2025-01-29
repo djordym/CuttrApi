@@ -1,11 +1,6 @@
 // File: src/features/main/screens/ChatScreen.tsx
-import React, {
-  useMemo,
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-} from 'react';
+
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,8 +12,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  ScrollView,
-  Image,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,64 +20,48 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Hooks
-import { useUserProfile } from '../hooks/useUser';
-import { useUserMatches } from '../hooks/useUserMatches';
-import { useMessages } from '../hooks/useMessages';
-
-// Components
-import { COLORS } from '../../../theme/colors';
-import { headerStyles } from '../styles/headerStyles';
-import { PlantCardWithInfo } from '../components/PlantCardWithInfo';
-import { MessageBubble } from '../components/MessageBubble';
-import ChatShelf, {ChatShelfRef} from '../components/ChatShelf';
+import { useMyProfile } from '../hooks/useMyProfileHooks';
+import { useMessages } from '../hooks/useMessages'; 
+import { useOtherProfile } from '../hooks/useOtherProfile'; // Example custom hook
 
 // Types
-import { MessageRequest } from '../../../types/apiTypes';
-import { MatchResponse, MessageResponse } from '../../../types/apiTypes';
-import { log } from '../../../utils/logger';
+import { MessageResponse, MessageRequest } from '../../../types/apiTypes';
+
+// Theme & Styles
+import { COLORS } from '../../../theme/colors';
+import { headerStyles } from '../styles/headerStyles';
+
+// Components
+import { MessageBubble } from '../components/MessageBubble';
+import ProfileCardShelf, { ProfileCardShelfRef } from '../components/ProfileCardShelf';
 
 const ChatScreen: React.FC = () => {
   const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
 
-  // We'll receive otherUserId from ConnectionsScreen
-  const { otherUserId } = route.params as { otherUserId: number };
+  // We expect both a connectionId and an otherUserId from the previous screen (ConnectionsScreen).
+  // Adjust as needed based on your app’s navigation structure.
+  const { connectionId, otherUserId } = route.params as {
+    connectionId: number;
+    otherUserId: number;
+  };
 
-  // Current user
+  // Current user (to distinguish our messages)
   const {
-    data: userProfile,
-    isLoading: loadingProfile,
-    isError: errorProfile,
-  } = useUserProfile();
+    data: myProfile,
+    isLoading: loadingMyProfile,
+    isError: errorMyProfile,
+  } = useMyProfile();
 
-  // All matches for me
+  // Other user's profile (for the ProfileCardShelf)
   const {
-    data: myMatches,
-    isLoading: loadingMatches,
-    isError: errorMatches,
-  } = useUserMatches();
+    data: otherUserProfile,
+    isLoading: loadingOtherUser,
+    isError: errorOtherUser,
+  } = useOtherProfile(otherUserId);
 
-  // Filter to find the relevant matches with otherUser
-  const relevantMatches = useMemo<MatchResponse[]>(() => {
-    if (!myMatches || !userProfile) return [];
-    const myUserId = userProfile.userId;
-    return myMatches.filter((m) => {
-      return 'hello';
-    });
-  }, [myMatches, userProfile, otherUserId]);
-
-  // Active matchId (the sub-channel tab)
-  const [activeMatchId, setActiveMatchId] = useState<number | null>(null);
-
-  // If we have matches but no activeMatchId yet, default to the first one
-  useEffect(() => {
-    if (relevantMatches.length > 0 && !activeMatchId) {
-      setActiveMatchId(relevantMatches[0].matchId);
-    }
-  }, [relevantMatches, activeMatchId]);
-
-  // Hook for the active match's conversation
+  // Messages for this connection
   const {
     messages,
     isLoadingMessages,
@@ -92,9 +69,9 @@ const ChatScreen: React.FC = () => {
     refetchMessages,
     sendMessage,
     isSending,
-  } = useMessages(activeMatchId ?? 0);
+  } = useMessages(connectionId);
 
-  // Sort messages by timestamp ascending
+  // Sort messages by ascending timestamp
   const sortedMessages = useMemo(() => {
     if (!messages) return [];
     return [...messages].sort(
@@ -102,7 +79,7 @@ const ChatScreen: React.FC = () => {
     );
   }, [messages]);
 
-  // Auto-scroll on new messages
+  // Scroll to bottom on new messages
   const flatListRef = useRef<FlatList<MessageResponse>>(null);
   useEffect(() => {
     if (sortedMessages.length > 0) {
@@ -112,44 +89,34 @@ const ChatScreen: React.FC = () => {
     }
   }, [sortedMessages]);
 
-  // Sending messages
+  // Input field state
   const [inputText, setInputText] = useState('');
+
+  // Sending messages
   const handleSendMessage = useCallback(() => {
-    if (!inputText.trim()) return;
-    if (!activeMatchId) {
-      Alert.alert('Error', 'No active match selected to send messages.');
-      return;
-    }
     const text = inputText.trim();
+    if (!text) return;
+
     setInputText('');
-    const messageData: MessageRequest = {
-      connectionId: activeMatchId,
-      messageText: text,
-    };
-    sendMessage(messageData, {
+    const payload: MessageRequest = { messageText: text };
+    sendMessage(payload, {
       onError: (error) => {
         console.error('Error sending message:', error);
-        Alert.alert('Error', 'Failed to send message');
+        Alert.alert(t('chat_error'), t('chat_send_failed'));
       },
     });
-  }, [activeMatchId, inputText, sendMessage]);
+  }, [inputText, sendMessage, t]);
 
-  const activeShelfRef = useRef<ChatShelfRef>(null);
+  // Shelf ref - to close it when user focuses on the text input
+  const shelfRef = useRef<ProfileCardShelfRef>(null);
 
-  // OnFocus: close the active shelf
-  const handleInputFocus = useCallback(() => {3
-    log.debug('Input focused, closing shelf');
-    activeShelfRef.current?.closeShelf();
+  const handleInputFocus = useCallback(() => {
+    // Closes the shelf if it’s open
+    shelfRef.current?.closeShelf();
   }, []);
 
-  // Current match data
-  const currentMatch = useMemo(() => {
-    if (!relevantMatches || !activeMatchId) return null;
-    return relevantMatches.find((m) => m.matchId === activeMatchId) || null;
-  }, [relevantMatches, activeMatchId]);
-
-  // Loading states
-  if (loadingProfile || loadingMatches || (activeMatchId && isLoadingMessages)) {
+  // Loading / error states
+  if (loadingMyProfile || isLoadingMessages || loadingOtherUser) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -158,103 +125,32 @@ const ChatScreen: React.FC = () => {
     );
   }
 
-  if (errorProfile || errorMatches || isErrorMessages) {
+  if (errorMyProfile || isErrorMessages || errorOtherUser) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
         <Text style={styles.errorText}>{t('chat_error_message')}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={refetchMessages}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => refetchMessages()}>
           <Text style={styles.retryButtonText}>{t('chat_retry_button')}</Text>
         </TouchableOpacity>
       </SafeAreaProvider>
     );
   }
 
-  if (relevantMatches.length === 0) {
-    // No matches with this user
-    return (
-      <SafeAreaProvider style={styles.centerContainer}>
-        <Text style={styles.noMessagesText}>
-          {t('chat_no_matches_with_user')}
-        </Text>
-      </SafeAreaProvider>
-    );
-  }
-
-
-  
-
-  // Render tabs for each relevant match
-  const renderMatchTabs = () => {
-    if (relevantMatches.length === 0) return null;
-    return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabsContainer}
-        contentContainerStyle={styles.tabsContent}
-      >
-        {relevantMatches.map((match) => {
-          const isActive = match.matchId === activeMatchId;
-
-          const plant1Uri = match.plant1?.imageUrl;
-          const plant2Uri = match.plant2?.imageUrl;
-
-          return (
-            <TouchableOpacity
-              key={match.matchId}
-              onPress={() => setActiveMatchId(match.matchId)}
-              style={[styles.tabItem, isActive && styles.tabItemActive]}
-              activeOpacity={0.8}
-            >
-              {/* Overlapping images */}
-              <View style={styles.overlappingContainer}>
-                <View style={[styles.plantCircle, styles.plantCircleFront]}>
-                  {plant1Uri ? (
-                    <Image
-                      source={{ uri: plant1Uri }}
-                      style={styles.circleImage}
-                    />
-                  ) : (
-                    <Ionicons
-                      name="leaf"
-                      size={22}
-                      color={COLORS.primary}
-                    />
-                  )}
-                </View>
-                <View style={[styles.plantCircle, styles.plantCircleBack]}>
-                  {plant2Uri ? (
-                    <Image
-                      source={{ uri: plant2Uri }}
-                      style={styles.circleImage}
-                    />
-                  ) : (
-                    <Ionicons
-                      name="leaf"
-                      size={22}
-                      color={COLORS.primary}
-                    />
-                  )}
-                </View>
-              </View>
-
-              <Text style={styles.tabLabel}>
-                {match.plant1?.speciesName} & {match.plant2?.speciesName}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    );
+  // Navigate to a "Browse Matches" screen for this connection
+  const handleBrowseMatches = () => {
+    //navigation.navigate('BrowseMatches' as never, { connectionId } as never);
   };
 
-  const hasMessages = messages && messages.length > 0;
+  // Navigate to a screen to create a trade proposal
+  const handleOpenTradeProposal = () => {
+    //navigation.navigate('MakeTradeProposal' as never, { connectionId } as never);
+  };
 
   return (
     <SafeAreaProvider style={styles.container}>
       {/* Header */}
       <LinearGradient
-        style={headerStyles.headerGradient}
+        style={[headerStyles.headerGradient, {marginBottom: 0}]}
         colors={[COLORS.primary, COLORS.secondary]}
       >
         <View style={headerStyles.headerColumn1}>
@@ -264,54 +160,55 @@ const ChatScreen: React.FC = () => {
           >
             <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
           </TouchableOpacity>
-
-          <Text style={headerStyles.headerTitle}>{t('chat_title')}</Text>
+          {otherUserProfile && (
+            <Text style={headerStyles.headerTitle}>
+            {t('chat_title')} {otherUserProfile.name}
+          </Text>)
+            }
         </View>
       </LinearGradient>
 
-      {/* Match tabs */}
-      <View style={styles.tabWrapper}>{renderMatchTabs()}</View>
-
-      {/* Shelf components for each match */}
-      <View style={styles.shelfContainer}>
-        {relevantMatches.map((match) => (
-          <View
-            key={match.matchId}
-            style={[
-              styles.shelfWrapper,
-              match.matchId !== activeMatchId && styles.hiddenShelf,
-            ]}
-          >
-            <ChatShelf
-              plant1={match.plant1}
-              plant2={match.plant2}
-              ref={activeMatchId === match.matchId ? activeShelfRef : null}
-            />
-          </View>
-        ))}
+      {/* Shelf showing the other user's profile */}
+      <View style={styles.shelfWrapper}>
+        <ProfileCardShelf
+          ref={shelfRef}
+          userProfile={otherUserProfile}
+        />
       </View>
+
+      {/* "Browse Matches" button */}
+      <TouchableOpacity style={styles.browseButton} onPress={handleBrowseMatches}>
+        <Text style={styles.browseButtonText}>
+          {t('chat_browse_matches_button', 'Browse Matches')}
+        </Text>
+      </TouchableOpacity>
+
       {/* Chat messages */}
-      {!hasMessages ? (
+      {sortedMessages.length === 0 ? (
         <View style={styles.emptyChatContainer}>
-          <Text style={styles.noMessagesText}>
-            {t('chat_no_messages_yet')}
-          </Text>
+          <Text style={styles.noMessagesText}>{t('chat_no_messages_yet')}</Text>
         </View>
       ) : (
         <View style={styles.listContainer}>
-        <FlatList
-          ref={flatListRef}
-          data={sortedMessages}
-          keyExtractor={(item) => item.messageId.toString()}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
-            const isMine = item.senderUserId === userProfile?.userId;
-            return <MessageBubble message={item} isMine={isMine} />;
-          }}
+          <FlatList
+            ref={flatListRef}
+            data={sortedMessages}
+            keyExtractor={(item) => item.messageId.toString()}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => {
+              const isMine = item.senderUserId === myProfile?.userId;
+              return <MessageBubble message={item} isMine={isMine} />;
+            }}
           />
-          </View>
+        </View>
       )}
-      {/* Input field */}
+
+      {/* Floating button for trade proposals */}
+      <TouchableOpacity style={styles.tradeFab} onPress={handleOpenTradeProposal}>
+        <Ionicons name="swap-horizontal" size={26} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Message input */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={10}
@@ -323,13 +220,10 @@ const ChatScreen: React.FC = () => {
             onChangeText={setInputText}
             placeholder={t('chat_message_placeholder')}
             multiline
-            onFocus={handleInputFocus}
+            onFocus={handleInputFocus} // <-- Close the shelf on focus
           />
           {isSending ? (
-            <ActivityIndicator
-              style={{ marginRight: 12 }}
-              color={COLORS.primary}
-            />
+            <ActivityIndicator style={{ marginRight: 12 }} color={COLORS.primary} />
           ) : (
             <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
               <Ionicons name="send" size={20} color={COLORS.background} />
@@ -377,115 +271,56 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  noMessagesText: {
-    fontSize: 16,
-    color: COLORS.textDark,
-    textAlign: 'center',
-  },
 
-
-  // ====== Tabs ======
-  tabWrapper: {
-    backgroundColor: '#f9f9f9',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    
-  },
-  tabsContainer: {
-    paddingVertical: 8,
-    backgroundColor: '#f9f9f9',
-  },
-  tabsContent: {
-    paddingHorizontal: 8,
-    alignItems: 'center',
-  },
-  tabItem: {
-    padding: 6,
-    marginRight: 8,
-    borderRadius: 6,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    minWidth: 80,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.08,
-        shadowRadius: 3,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  tabItemActive: {
-    borderColor: COLORS.accentGreen,
-    borderWidth: 2,
-  },
-  overlappingContainer: {
-    width: 40,
-    height: 30,
-    marginBottom: 4,
-    position: 'relative',
-  },
-  plantCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#fff',
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  plantCircleFront: {
-    left: 0,
-    zIndex: 2,
-  },
-  plantCircleBack: {
-    left: 20,
-    zIndex: 1,
-  },
-  circleImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  tabLabel: {
-    fontSize: 10,
-    color: '#333',
-    textAlign: 'center',
-  },
-
-  // ========== Chat shelves ==========
-  shelfContainer: {
-    position: 'relative',
-  },
+  // Shelf
   shelfWrapper: {
-  },
-  hiddenShelf: {
-    position: 'absolute',
-    opacity: 0,
-    zIndex: -1,
+    // A simple wrapper around the shelf at the top
   },
 
-  // ========== Chat bubbles & list ==========
-  listContainer: {
-    flex: 1,
+  // "Browse Matches" button
+  browseButton: {
+    margin: 10,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    alignSelf: 'center',
+    minWidth: '60%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  browseButtonText: {
+    color: COLORS.textDark,
+    fontSize: 16,
+    fontWeight: '600',
+  },
 
-  },
-  listContent: {
-    padding: 8,
-    paddingBottom: 60, // space for the input
-    zIndex: -2,
-  },
+  // If no messages
   emptyChatContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  noMessagesText: {
+    fontSize: 16,
+    color: COLORS.textDark,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
 
-  // ========== Input ==========
+  // Chat messages list
+  listContainer: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 8,
+    paddingBottom: 60, // space above the input
+  },
+
+  // Input
   inputContainer: {
     flexDirection: 'row',
     paddingVertical: 8,
@@ -510,5 +345,25 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accentGreen,
     borderRadius: 20,
     padding: 10,
+  },
+
+  // Trade Proposal FAB
+  tradeFab: {
+    position: 'relative',
+    alignSelf: 'flex-end',
+    bottom: 20,
+    right: 20,
+    backgroundColor: COLORS.accentGreen,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Light shadow
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
 });

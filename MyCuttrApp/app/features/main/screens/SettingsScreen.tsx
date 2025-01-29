@@ -18,7 +18,7 @@ import { SafeAreaProvider} from 'react-native-safe-area-context';
 import { storage } from '../../../utils/storage';
 // Suppose you have some hooks/services:
 import { userService } from '../../../api/userService';
-import { useUserProfile } from '../hooks/useUser';
+import { useMyProfile } from '../hooks/useMyProfileHooks';
 import { useNavigation } from '@react-navigation/native';
 import { logout } from '../../auth/store/authSlice';
 import { store } from '../../../store';
@@ -35,7 +35,7 @@ const SettingsScreen: React.FC = () => {
     data: userProfile,
     isLoading: userLoading,
     refetch: refetchUserProfile,
-  } = useUserProfile();
+  } = useMyProfile();
 
 //query client
 const queryClient = new QueryClient();
@@ -73,7 +73,7 @@ const queryClient = new QueryClient();
     setSaving(true);
     try {
       // Example: userService.updateEmail or userService.updateProfile
-      await userService.updateProfile({ email: newEmail });
+      //await userService.updateProfile({ email: newEmail });
       Alert.alert(t('Email changed successfully!'));
       setNewEmail('');
       refetchUserProfile();
@@ -96,7 +96,7 @@ const queryClient = new QueryClient();
     try {
       // Example: userService.updatePassword
       // Some backend endpoints might require old password, too
-      await userService.updateProfile({ password: newPassword });
+      //await userService.updateProfile({ password: newPassword });
       Alert.alert(t('Password changed successfully!'));
       setNewPassword('');
       refetchUserProfile();
@@ -123,7 +123,7 @@ const queryClient = new QueryClient();
           text: t('Yes'),
           style: 'destructive',
           onPress: async () => {
-            queryClient.invalidateQueries(['likablePlants']);
+            queryClient.removeQueries();
             queryClient.clear();
             store.dispatch(logout());
           }

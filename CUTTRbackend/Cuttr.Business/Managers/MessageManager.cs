@@ -30,21 +30,21 @@ namespace Cuttr.Business.Managers
             _logger = logger;
         }
 
-        public async Task<MessageResponse> SendMessageAsync(MessageRequest request, int senderUserId)
+        public async Task<MessageResponse> SendMessageAsync(MessageRequest request, int senderUserId, int connectionId)
         {
             try
             {
                 // Validate that the match exists
-                var match = await _connectionRepository.GetConnectionByIdAsync(request.ConnectionId);
+                var match = await _connectionRepository.GetConnectionByIdAsync(connectionId);
                 if (match == null)
-                    throw new NotFoundException($"Match with ID {request.ConnectionId} not found.");
+                    throw new NotFoundException($"Match with ID {connectionId} not found.");
 
                 // Validate that the sender user belongs to the match
                 if (match.UserId1 != senderUserId && match.UserId2 != senderUserId)
                     throw new BusinessException("Sender user is not part of the match.");
 
                 // Create Message entity
-                var message = ContractToBusinessMapper.MapToMessage(request, senderUserId);
+                var message = ContractToBusinessMapper.MapToMessage(request, senderUserId, connectionId);
 
                 var createdMessage = await _messageRepository.AddMessageAsync(message);
 

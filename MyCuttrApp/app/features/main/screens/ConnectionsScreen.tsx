@@ -1,4 +1,4 @@
-// File: app/features/main/screens/ConnectionsScreen.tsx
+// File: src/features/main/screens/ConnectionsScreen.tsx
 
 import React, { useCallback } from 'react';
 import {
@@ -18,9 +18,8 @@ import { useNavigation } from '@react-navigation/native';
 
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Hooks
-import { useConnections } from '../hooks/useConnections';  // <-- NEW HOOK
-import { useUserProfile } from '../hooks/useUser';         // We still need userId for logic
+import { useMyProfile } from '../hooks/useMyProfileHooks';
+import { useConnections } from '../hooks/useConnections';
 
 // Types
 import { ConnectionResponse, UserResponse } from '../../../types/apiTypes';
@@ -40,7 +39,7 @@ const ConnectionsScreen: React.FC = () => {
     data: userProfile,
     isLoading: loadingProfile,
     isError: errorProfile,
-  } = useUserProfile();
+  } = useMyProfile();
 
   // Fetch the user's connections
   const {
@@ -64,11 +63,11 @@ const ConnectionsScreen: React.FC = () => {
 
   /**
    * Navigate to a details or conversation screen for the selected connection.
+   * Now passes both connectionId and otherUserId to ChatScreen.
    */
   const handleConversationPress = useCallback(
-    (connectionId: number) => {
-      // For example, navigate to a "Chat" screen that knows how to fetch messages by connection
-      navigation.navigate('Chat' as never, { connectionId } as never);
+    (connectionId: number, otherUserId: number) => {
+      navigation.navigate('Chat' as never, { connectionId, otherUserId } as never);
     },
     [navigation]
   );
@@ -164,7 +163,7 @@ const ConnectionsScreen: React.FC = () => {
           return (
             <TouchableOpacity
               style={styles.rowContainer}
-              onPress={() => handleConversationPress(connection.connectionId)}
+              onPress={() => handleConversationPress(connection.connectionId, otherUser.userId)}
               activeOpacity={0.8}
             >
               <Image
@@ -288,7 +287,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyStateButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.accentGreen,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,

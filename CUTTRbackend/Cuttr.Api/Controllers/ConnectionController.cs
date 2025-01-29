@@ -192,42 +192,10 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        // POST: api/messages/me
-        [HttpPost("messages/user/me")]
-        public async Task<IActionResult> SendMessage([FromBody] MessageRequest request)
-        {
-            int senderUserId = 0;
-            try
-            {
-                senderUserId = User.GetUserId();
-
-                MessageResponse messageResponse = await _messageManager.SendMessageAsync(request, senderUserId);
-                return Ok(messageResponse);
-            }
-            catch (NotFoundException ex)
-            {
-                _logger.LogWarning(ex, "Match not found.");
-                return NotFound(ex.Message);
-            }
-            catch (BusinessException ex)
-            {
-                _logger.LogError(ex, "Error sending message.");
-                return BadRequest(ex.Message);
-            }
-            catch (Business.Exceptions.UnauthorizedAccessException ex)
-            {
-                _logger.LogWarning(ex, "Unauthorized access attempt.");
-                return Unauthorized(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An unexpected error occurred while sending message.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
-            }
-        }
+        
 
         // GET: api/matches/{matchId}/messages
-        [HttpGet("{ConectionId}/messages")]
+        [HttpGet("{connectionId}/messages")]
         public async Task<IActionResult> GetMessages(int connectionId)
         {
             int userId = 0;
@@ -256,6 +224,39 @@ namespace Cuttr.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An unexpected error occurred while accessing messages.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
+        }
+        // POST: api/messages/me
+        [HttpPost("{connectionId}/messages/user/me")]
+        public async Task<IActionResult> SendMessage([FromBody] MessageRequest request, int connectionId)
+        {
+            int senderUserId = 0;
+            try
+            {
+                senderUserId = User.GetUserId();
+
+                MessageResponse messageResponse = await _messageManager.SendMessageAsync(request, senderUserId, connectionId);
+                return Ok(messageResponse);
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Match not found.");
+                return NotFound(ex.Message);
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, "Error sending message.");
+                return BadRequest(ex.Message);
+            }
+            catch (Business.Exceptions.UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while sending message.");
                 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
             }
         }

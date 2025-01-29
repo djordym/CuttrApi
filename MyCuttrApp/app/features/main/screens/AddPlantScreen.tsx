@@ -403,10 +403,9 @@ const styles = StyleSheet.create({
   imageButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentLightRed,
     padding: 10,
     borderRadius: 8,
-    marginTop: 6,
   },
   imageButtonText: {
     fontSize: 14,
@@ -425,6 +424,8 @@ const styles = StyleSheet.create({
   noImageText: {
     fontSize: 14,
     color: '#555',
-    marginTop: 6,
+    marginTop: 3,
+    marginLeft: 13,
+    marginBottom: 15,
   },
 });

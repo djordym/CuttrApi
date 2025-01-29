@@ -4,10 +4,8 @@ import { UserResponse, UserUpdateRequest } from '../../../types/apiTypes';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../store';
 
-export const useUserProfile = () => {
-    const userId = useSelector((state: RootState) => state.auth.userId);
-    
-    // Only run the query if we have a userId
+export const useOtherProfile = (userId: number) => {
+        // Only run the query if we have a userId
     return useQuery<UserResponse, Error>(
       ['userProfile', userId],
       () => {
