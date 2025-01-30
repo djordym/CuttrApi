@@ -12,7 +12,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useMyPlants } from '../hooks/usePlants'; // Adjust import path if necessary
+import { useMyPlants } from '../hooks/usePlantHooks'; // Adjust import path if necessary
 import { PlantResponse } from '../../../types/apiTypes';
 import { t } from 'i18next';
 import { COLORS } from '../../../theme/colors';

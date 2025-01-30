@@ -15,7 +15,10 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
         Task<PlantResponse> GetPlantByIdAsync(int plantId);
         Task<PlantResponse> UpdatePlantAsync(int plantId, int userId, PlantRequest request);
         Task DeletePlantAsync(int plantId, int userId);
-        Task<IEnumerable<PlantResponse>> GetPlantsByUserIdAsync(int userId);
+        Task<List<PlantResponse>> GetPlantsByUserIdAsync(int userId);
+        Task<List<PlantResponse>> GetLikablePlantsAsync(int userId, int maxCount);
         Task SeedPlantAsync(SeedPlantRequest plant);
+        Task<List<PlantResponse>> GetPlantsLikedByUserFromMeAsync(int userAId, int currentUserId);
+        Task<List<PlantResponse>> GetPlantsLikedByMeFromUserAsync(int userAId, int currentUserId);
     }
 }

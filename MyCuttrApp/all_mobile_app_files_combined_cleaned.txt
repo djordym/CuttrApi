@@ -326,6 +326,46 @@ return Promise.reject(error);
 }
 );
 export default api;
+// File: app\api\connectionService.ts
+ConnectionResponse,
+TradeProposalRequest,
+TradeProposalResponse,
+UpdateTradeProposalStatusRequest,
+} from "../types/apiTypes";
+export const connectionService = {
+getMyConnections: async (): Promise<ConnectionResponse[]> => {
+const response = await api.get<ConnectionResponse[]>("/connections/me");
+return response.data;
+},
+getConnectionById: async (connectionId: number): Promise<ConnectionResponse> => {
+const response = await api.get<ConnectionResponse>(`/connections/${connectionId}`);
+return response.data;
+},
+getTradeProposals: async (connectionId: number): Promise<TradeProposalResponse[]> => {
+const response = await api.get<TradeProposalResponse[]>(`/connections/${connectionId}/proposals`);
+return response.data;
+},
+createTradeProposal: async (
+connectionId: number,
+data: TradeProposalRequest
+): Promise<TradeProposalResponse> => {
+const response = await api.post<TradeProposalResponse>(
+`/connections/${connectionId}/proposals`,
+data
+);
+return response.data;
+},
+updateTradeProposalStatus: async (
+connectionId: number,
+proposalId: number,
+data: UpdateTradeProposalStatusRequest
+): Promise<void> => {
+await api.put(
+`/connections/${connectionId}/proposals/${proposalId}/status`,
+data
+);
+},
+};
 // File: app\api\matchService.ts
 export const matchService = {
 getMyMatches: async (): Promise<MatchResponse[]> => {
@@ -339,14 +379,14 @@ return response.data;
 };
 // File: app\api\messageService.ts
 export const messageService = {
-sendMessage: async (data: MessageRequest): Promise<MessageResponse> => {
-const response = await api.post<MessageResponse>('/messages/me', data);
+getMessagesForConnection: async (connectionId: number): Promise<MessageResponse[]> => {
+const response = await api.get<MessageResponse[]>(`/connections/${connectionId}/messages`);
 return response.data;
 },
-getMessagesForMatch: async (matchId: number): Promise<MessageResponse[]> => {
-const response = await api.get<MessageResponse[]>(`/matches/${matchId}/messages`);
+sendMessage: async (connectionId: number, data: MessageRequest): Promise<MessageResponse> => {
+const response = await api.post<MessageResponse>(`/connections/${connectionId}/messages/user/me`, data);
 return response.data;
-}
+},
 };
 // File: app\api\plantService.ts
 PlantCreateRequest,
@@ -434,13 +474,25 @@ deleteMyPlant: async (plantId: number): Promise<void> => {
 await api.delete(`/plants/me/${plantId}`);
 },
 getUserPlants: async (userId: number): Promise<PlantResponse[]> => {
-const response = await api.get<PlantResponse[]>(`/users/${userId}/plants`);
+const response = await api.get<PlantResponse[]>(`/plants/users/${userId}`);
 return response.data;
 },
 getMyPlants: async (): Promise<PlantResponse[]> => {
-const response = await api.get<PlantResponse[]>("/users/me/plants");
+const response = await api.get<PlantResponse[]>("/plants/users/me");
 return response.data;
 },
+getLikablePlants: async (): Promise<PlantResponse[]> => {
+const response = await api.get<PlantResponse[]>('/plants/likable');
+return response.data;
+},
+getPlantsLikedByMeFromUser: async (otherUserId: number): Promise<PlantResponse[]> => {
+const response = await api.get<PlantResponse[]>(`/liked-by-me/from/${otherUserId}`);
+return response.data;
+},
+getPlantsLikedByUserFromMe: async (otherUserId: number): Promise<PlantResponse[]> => {
+const response = await api.get<PlantResponse[]>(`/liked-by/${otherUserId}/from-me`);
+return response.data;
+}
 };
 // File: app\api\reportService.ts
 export const reportService = {
@@ -455,10 +507,6 @@ sendSwipes: async (swipes: SwipeRequest[]): Promise<SwipeResponse> => {
 const response = await api.post<SwipeResponse>('/swipes/me', swipes);
 return response.data;
 },
-getLikablePlants: async (): Promise<PlantResponse[]> => {
-const response = await api.get<PlantResponse[]>('/swipes/me/likable-plants');
-return response.data;
-}
 };
 // File: app\api\userPreferencesService.ts
 export const userPreferencesService = {
@@ -506,34 +554,6 @@ return response.data;
 };
 // File: app\components\index.ts
 
-// File: app\components\common\BrandedButton.tsx
-interface Props {
-title: string;
-onPress: () => void;
-disabled?: boolean;
-}
-const BrandedButton: React.FC<Props> = ({ title, onPress, disabled }) => {
-return (
-<TouchableOpacity onPress={onPress} style={[styles.button, disabled && {opacity:0.5}]} disabled={disabled}>
-<Text style={styles.buttonText}>{title}</Text>
-</TouchableOpacity>
-);
-};
-export default BrandedButton;
-const styles = StyleSheet.create({
-button: {
-backgroundColor: '#1EAE98',
-padding: 16,
-borderRadius: 8,
-alignItems:'center',
-marginVertical:10
-},
-buttonText: {
-color:'#fff',
-fontSize:16,
-fontWeight:'600'
-}
-});
 // File: app\components\common\TextInputField.tsx
 interface Props {
 value: string;
@@ -558,10 +578,10 @@ placeholderTextColor="#999"
 export default TextInputField;
 const styles = StyleSheet.create({
 container: {
-marginVertical: 10,
 borderWidth:1,
 borderColor:'#ccc',
 borderRadius:8,
+marginTop:10,
 },
 input: {
 padding:12,
@@ -605,142 +625,203 @@ textAlign:'center'
 // File: app\features\auth\hooks\useAuth.ts
 
 // File: app\features\auth\screens\LoginScreen.tsx
+View,
+Text,
+Image,
+KeyboardAvoidingView,
+TouchableOpacity,
+ActivityIndicator,
+Alert,
+ScrollView,
+Platform,
+} from 'react-native';
 const LoginScreen = () => {
 const { t } = useTranslation();
+const dispatch = useAppDispatch();
+const navigation = useNavigation();
+const [loading, setLoading] = useState(false);
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
 const { status, error } = useAppSelector((state: RootState) => state.auth);
-const dispatch = useAppDispatch();
-const navigation = useNavigation();
 const handleLogin = async () => {
-let userLoginRequest: UserLoginRequest = {
-email: email,
-password: password
+if (!email.trim() || !password.trim()) {
+Alert.alert(t('error_title'), t('Please enter your email and password.'));
+return;
+}
+const userLoginRequest: UserLoginRequest = {
+email: email.trim(),
+password: password.trim(),
 };
 log.debug('Pressed login button, userLoginRequest:', userLoginRequest);
 await dispatch(loginThunk(userLoginRequest));
 };
 return (
-<KeyboardAvoidingView style={styles.container} behavior="padding">
-<Image source={require('../../../../assets/images/logo.png')} style={styles.logo} />
+<LinearGradient
+colors={[COLORS.primary, COLORS.secondary]}
+style={styles.gradientBackground}
+>
+<ScrollView
+contentContainerStyle={styles.scrollContent}
+keyboardShouldPersistTaps="handled"
+>
+<KeyboardAvoidingView
+behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+style={styles.keyboardAvoid}
+>
+<View style={styles.logoContainer}>
+<Image
+source={require('../../../../assets/images/logo.png')}
+style={styles.logo}
+/>
+</View>
+<View style={styles.cardContainer}>
 <Text style={styles.title}>{t('welcome_back')}</Text>
 <ErrorMessage message={error} />
+{}
 <TextInputField
 value={email}
 onChangeText={setEmail}
 placeholder={t('email')}
 />
+{}
 <TextInputField
 value={password}
 onChangeText={setPassword}
 placeholder={t('password')}
 secureTextEntry
 />
-<BrandedButton title={t('login')} onPress={handleLogin} disabled={status === 'loading'} />
-<TouchableOpacity onPress={() => navigation.navigate('Register' as never)}>
-<Text style={styles.link}>{t('no_account_register')}</Text>
+{}
+<TouchableOpacity
+style={styles.confirmButton}
+onPress={handleLogin}
+disabled={loading}
+>
+{loading ? (
+<ActivityIndicator size="small" color={COLORS.accentGreen} />
+) : (
+<Text style={styles.confirmButtonText}>{t('login_button')}</Text>
+)}
 </TouchableOpacity>
+{}
+<TouchableOpacity
+onPress={() => navigation.navigate('Register' as never)}
+style={styles.navLinkContainer}
+>
+<Text style={styles.navLinkText}>
+{t('no_account_register')}
+</Text>
+</TouchableOpacity>
+</View>
 </KeyboardAvoidingView>
+</ScrollView>
+</LinearGradient>
 );
 };
 export default LoginScreen;
-const styles = StyleSheet.create({
-container: {
-flex:1,
-justifyContent:'center',
-padding:20,
-backgroundColor:'#fff'
-},
-logo: {
-width:100,
-height:100,
-alignSelf:'center',
-marginBottom:20
-},
-title: {
-fontSize:24,
-fontWeight:'700',
-textAlign:'center',
-marginBottom:20
-},
-link: {
-color:'#1EAE98',
-textAlign:'center',
-marginTop:20
-}
-});
 // File: app\features\auth\screens\RegisterScreen.tsx
+View,
+Text,
+Image,
+KeyboardAvoidingView,
+TouchableOpacity,
+ActivityIndicator,
+Alert,
+ScrollView,
+Platform,
+} from 'react-native';
 const RegisterScreen = () => {
 const { t } = useTranslation();
+const dispatch = useAppDispatch();
+const navigation = useNavigation();
+const [loading, setLoading] = useState(false);
 const [name, setName] = useState('');
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
 const { status, error } = useAppSelector((state: RootState) => state.auth);
-const dispatch = useAppDispatch();
-const navigation = useNavigation();
 const handleRegister = async () => {
+if (!name.trim() || !email.trim() || !password.trim()) {
+Alert.alert(t('error_title'), t('Please fill all fields.'));
+return;
+}
 const userRegistrationRequest: UserRegistrationRequest = {
-email: email,
-password: password,
-name: name,
+email: email.trim(),
+password: password.trim(),
+name: name.trim(),
 };
 log.debug('Pressed register button, userRegistrationRequest:', userRegistrationRequest);
 await dispatch(registerThunk(userRegistrationRequest));
 };
 return (
-<KeyboardAvoidingView style={styles.container} behavior="padding">
-<Image source={require('../../../../assets/images/logo.png')} style={styles.logo} />
+<LinearGradient
+colors={[COLORS.primary, COLORS.secondary]}
+style={styles.gradientBackground}
+>
+<ScrollView
+contentContainerStyle={styles.scrollContent}
+keyboardShouldPersistTaps="handled"
+>
+<KeyboardAvoidingView
+behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+style={styles.keyboardAvoid}
+>
+<View style={styles.logoContainer}>
+<Image
+source={require('../../../../assets/images/logo.png')}
+style={styles.logo}
+/>
+</View>
+<View style={styles.cardContainer}>
 <Text style={styles.title}>{t('create_account')}</Text>
 <ErrorMessage message={error} />
+{}
 <TextInputField
 value={name}
 onChangeText={setName}
 placeholder={t('name')}
 />
+{}
 <TextInputField
 value={email}
 onChangeText={setEmail}
 placeholder={t('email')}
 />
+{}
 <TextInputField
 value={password}
 onChangeText={setPassword}
 placeholder={t('password')}
 secureTextEntry
 />
-<BrandedButton title={t('register')} onPress={handleRegister} disabled={status === 'loading'} />
-<TouchableOpacity onPress={() => navigation.navigate('Login' as never)}>
-<Text style={styles.link}>{t('have_account_login')}</Text>
+{}
+<TouchableOpacity
+style={styles.confirmButton}
+onPress={handleRegister}
+disabled={loading}
+>
+{loading ? (
+<ActivityIndicator size="small" color={COLORS.accentGreen} />
+) : (
+<Text style={styles.confirmButtonText}>
+{t('register_button')}
+</Text>
+)}
 </TouchableOpacity>
+{}
+<TouchableOpacity
+onPress={() => navigation.navigate('Login' as never)}
+style={styles.navLinkContainer}
+>
+<Text style={styles.navLinkText}>
+{t('have_account_login')}
+</Text>
+</TouchableOpacity>
+</View>
 </KeyboardAvoidingView>
+</ScrollView>
+</LinearGradient>
 );
 };
 export default RegisterScreen;
-const styles = StyleSheet.create({
-container: {
-flex:1,
-justifyContent:'center',
-padding:20,
-backgroundColor:'#fff'
-},
-logo: {
-width:100,
-height:100,
-alignSelf:'center',
-marginBottom:20
-},
-title: {
-fontSize:24,
-fontWeight:'700',
-textAlign:'center',
-marginBottom:20
-},
-link: {
-color:'#1EAE98',
-textAlign:'center',
-marginTop:20
-}
-});
 // File: app\features\auth\store\authSlice.ts
 UserLoginRequest,
 UserLoginResponse,
@@ -897,6 +978,77 @@ storage.clearTokens();
 }
 });
 export const { logout, setInitialTokens } = authSlice.actions;
+// File: app\features\auth\styles\authStyles.ts
+export const authStyles = StyleSheet.create({
+gradientBackground: {
+flex: 1,
+},
+scrollContent: {
+flexGrow: 1,
+justifyContent: 'center',
+},
+keyboardAvoid: {
+flex: 1,
+justifyContent: 'center',
+paddingHorizontal: 24,
+},
+logoContainer: {
+alignItems: 'center',
+marginBottom: 30,
+},
+logo: {
+width: 200,
+height: 200,
+resizeMode: 'contain',
+borderRadius: 10,
+},
+cardContainer: {
+backgroundColor: '#fff',
+borderRadius: 12,
+padding: 20,
+marginHorizontal: 4,
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 3 },
+},
+android: {
+elevation: 3,
+},
+}),
+},
+title: {
+fontSize: 24,
+fontWeight: '700',
+color: COLORS.textDark,
+textAlign: 'center',
+},
+navLinkContainer: {
+marginTop: 20,
+alignSelf: 'center',
+},
+navLinkText: {
+color: COLORS.accentGreen,
+fontSize: 14,
+fontWeight: '600',
+},
+confirmButton: {
+backgroundColor: COLORS.accentGreen,
+borderRadius: 8,
+padding: 13,
+alignItems: 'center',
+justifyContent: 'center',
+marginTop: 20,
+},
+confirmButtonText: {
+fontSize: 14,
+color: COLORS.textLight,
+fontWeight: '600',
+textAlign: 'center',
+},
+});
 // File: app\features\auth\types\authTypes.ts
 
 // File: app\features\main\index.ts
@@ -910,8 +1062,6 @@ TouchableOpacity,
 ActivityIndicator,
 TextInput,
 Alert,
-Dimensions,
-Platform,
 } from 'react-native';
 interface ChangeLocationModalProps {
 visible: boolean;
@@ -928,7 +1078,10 @@ onClose,
 onUpdated,
 }) => {
 const { t } = useTranslation();
-const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
+const [markerPosition, setMarkerPosition] = useState<{
+lat: number;
+lng: number;
+} | null>(null);
 const [region, setRegion] = useState<Region | null>(null);
 const [loading, setLoading] = useState(false);
 const [error, setError] = useState<string | null>(null);
@@ -941,15 +1094,18 @@ typeof initialLongitude === 'number' &&
 useEffect(() => {
 if (visible) {
 if (hasInitialCoords) {
-log.debug('Setting initial coords:', initialLatitude, initialLongitude);
+log.debug('setting initial coords:', initialLatitude, initialLongitude);
 setRegion({
-latitude: initialLatitude!,
-longitude: initialLongitude!,
+latitude: initialLatitude,
+longitude: initialLongitude,
 latitudeDelta: 0.05,
 longitudeDelta: 0.05,
 });
-setMarkerPosition({ lat: initialLatitude!, lng: initialLongitude! });
+log.debug('region set:', region);
+setMarkerPosition({ lat: initialLatitude, lng: initialLongitude });
+log.debug('marker set:', markerPosition);
 } else {
+log.debug('no initial coords, setting default region');
 setRegion({
 latitude: 37.78825,
 longitude: -122.4324,
@@ -964,7 +1120,7 @@ setError(null);
 }, [visible, hasInitialCoords, initialLatitude, initialLongitude]);
 const handleMapPress = (e: MapPressEvent) => {
 const { coordinate } = e.nativeEvent;
-log.debug('Map press:', coordinate);
+log.debug('map press:', coordinate);
 setMarkerPosition({ lat: coordinate.latitude, lng: coordinate.longitude });
 };
 const handleRegionChangeComplete = (newRegion: Region) => {
@@ -1001,7 +1157,7 @@ setError(null);
 try {
 const url = `https:
 searchInput
-)}`;
+)}&format=json&limit=1`;
 const response = await fetch(url);
 const data = await response.json();
 if (data && data.length > 0) {
@@ -1031,21 +1187,9 @@ return null;
 }
 return (
 <Modal visible={visible} animationType="slide" transparent>
-{}
-<View style={styles.modalOverlay}>
-{}
-<LinearGradient
-colors={[COLORS.primary, COLORS.secondary]}
-style={styles.gradientBackground}
->
-{}
-<View style={styles.cardContainer}>
-<View style={styles.headerRow}>
+<View style={styles.overlay}>
+<View style={styles.modalContainer}>
 <Text style={styles.title}>{t('change_location_title')}</Text>
-<TouchableOpacity onPress={handleCancel} style={styles.closeIconWrapper}>
-<Ionicons name="close" size={24} color={COLORS.textDark} />
-</TouchableOpacity>
-</View>
 <Text style={styles.subtitle}>{t('change_location_instructions')}</Text>
 {}
 <View style={styles.searchRow}>
@@ -1056,15 +1200,12 @@ value={searchInput}
 onChangeText={setSearchInput}
 returnKeyType="search"
 onSubmitEditing={handleSearch}
-placeholderTextColor="#999"
 />
 <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-<Text style={styles.searchButtonText}>{t('Search')}</Text>
+<Ionicons name="search" size={20} color="#fff" />
 </TouchableOpacity>
 </View>
-{}
 {error && <Text style={styles.errorText}>{error}</Text>}
-{}
 <View style={styles.mapContainer}>
 {region && (
 <MapView
@@ -1084,87 +1225,46 @@ longitude: markerPosition.lng,
 </MapView>
 )}
 </View>
-{}
 {loading && (
-<ActivityIndicator
-size="small"
-color={COLORS.accentGreen}
-style={{ marginVertical: 10 }}
-/>
+<ActivityIndicator size="small" color="#1EAE98" style={{ marginVertical: 10 }} />
 )}
-{}
-<View style={styles.actions}>
-<TouchableOpacity
-onPress={handleCancel}
-style={[styles.actionButton, styles.cancelButton]}
-accessibilityRole="button"
->
-<Text style={styles.cancelButtonText}>
-{t('change_location_cancel_button')}
-</Text>
-</TouchableOpacity>
-<TouchableOpacity
-onPress={handleConfirm}
-style={[styles.actionButton, styles.confirmButton]}
-accessibilityRole="button"
->
-<Text style={styles.confirmButtonText}>
-{t('change_location_confirm_button')}
-</Text>
-</TouchableOpacity>
+<ConfirmCancelButtons
+onCancel={handleCancel}
+onConfirm={handleConfirm}
+confirmButtonText={t('Confirm')}
+cancelButtonText={t('Cancel')}
+/>
 </View>
-</View>
-</LinearGradient>
 </View>
 </Modal>
 );
 };
 const styles = StyleSheet.create({
-modalOverlay: {
+overlay: {
 flex: 1,
 backgroundColor: 'rgba(0,0,0,0.5)',
 justifyContent: 'center',
-},
-gradientBackground: {
-flex: 1,
-justifyContent: 'center',
-},
-cardContainer: {
-backgroundColor: '#fff',
-marginHorizontal: 20,
-borderRadius: 12,
-padding: 16,
-maxHeight: '85%',
-...Platform.select({
-ios: {
-shadowColor: '#000',
-shadowOpacity: 0.15,
-shadowRadius: 6,
-shadowOffset: { width: 0, height: 3 },
-},
-android: {
-elevation: 5,
-},
-}),
-},
-headerRow: {
-flexDirection: 'row',
-justifyContent: 'space-between',
 alignItems: 'center',
-marginBottom: 6,
+},
+modalContainer: {
+width: '90%',
+height: '80%',
+backgroundColor: '#fff',
+borderRadius: 16,
+padding: 20,
 },
 title: {
 fontSize: 18,
 fontWeight: '700',
-color: COLORS.textDark,
-},
-closeIconWrapper: {
-padding: 4,
+color: '#333',
+marginBottom: 10,
+textAlign: 'center',
 },
 subtitle: {
 fontSize: 14,
 color: '#555',
 marginBottom: 10,
+textAlign: 'center',
 },
 searchRow: {
 flexDirection: 'row',
@@ -1179,12 +1279,10 @@ borderRadius: 8,
 paddingHorizontal: 10,
 paddingVertical: 6,
 marginRight: 8,
-fontSize: 14,
 },
 searchButton: {
 backgroundColor: COLORS.accentGreen,
-paddingHorizontal: 15,
-paddingVertical: 10,
+padding: 7,
 borderRadius: 8,
 },
 searchButtonText: {
@@ -1192,7 +1290,7 @@ color: '#fff',
 fontWeight: '600',
 },
 errorText: {
-color: COLORS.accentRed,
+color: '#FF6B6B',
 marginBottom: 10,
 },
 mapContainer: {
@@ -1202,35 +1300,15 @@ overflow: 'hidden',
 marginBottom: 10,
 backgroundColor: '#eee',
 },
-actions: {
-flexDirection: 'row',
-justifyContent: 'flex-end',
-},
-actionButton: {
-borderRadius: 8,
-paddingHorizontal: 15,
-paddingVertical: 10,
-marginLeft: 10,
-},
-cancelButton: {
-backgroundColor: '#f0f0f0',
-},
-cancelButtonText: {
-fontSize: 14,
-color: '#333',
-fontWeight: '600',
-},
-confirmButton: {
-backgroundColor: COLORS.accentGreen,
-},
-confirmButtonText: {
-fontSize: 14,
-color: '#fff',
-fontWeight: '600',
-},
 });
-export default ChangeLocationModal;
 // File: app\features\main\components\ChatShelf.tsx
+useState,
+useRef,
+useCallback,
+memo,
+forwardRef,
+useImperativeHandle,
+} from 'react';
 Animated,
 Easing,
 View,
@@ -1238,11 +1316,17 @@ TouchableOpacity,
 StyleSheet,
 LayoutChangeEvent,
 } from 'react-native';
+export interface ChatShelfRef {
+toggleShelf: () => void;
+openShelf: () => void;
+closeShelf: () => void;
+}
 interface ChatShelfProps {
 plant1?: PlantResponse;
 plant2?: PlantResponse;
 }
-const ChatShelf: React.FC<ChatShelfProps> = memo(({ plant1, plant2 }) => {
+const ChatShelf = forwardRef<ChatShelfRef, ChatShelfProps>(
+function ChatShelf({ plant1, plant2 }, ref) {
 const [isShelfOpen, setIsShelfOpen] = useState(true);
 const [maxShelfHeight, setMaxShelfHeight] = useState<number>(0);
 const shelfAnim = useRef(new Animated.Value(0)).current;
@@ -1259,24 +1343,47 @@ shelfAnim.setValue(height);
 },
 [isShelfOpen, maxShelfHeight, shelfAnim]
 );
+const animateTo = useCallback(
+(toValue: number) => {
+Animated.timing(shelfAnim, {
+toValue,
+duration: 300,
+easing: Easing.ease,
+useNativeDriver: false,
+}).start();
+},
+[shelfAnim]
+);
 const toggleShelf = useCallback(() => {
 if (!maxShelfHeight) return;
 const collapsedHeight = styles.shelfToggleButton.height;
 const targetValue = isShelfOpen ? collapsedHeight : maxShelfHeight;
-Animated.timing(shelfAnim, {
-toValue: targetValue,
-duration: 300,
-easing: Easing.ease,
-useNativeDriver: false,
-}).start(() => {
-setIsShelfOpen((prev) => !prev);
-});
-}, [isShelfOpen, maxShelfHeight, shelfAnim]);
-const containerStyle =
-maxShelfHeight > 0 ? { height: shelfAnim } : undefined;
+animateTo(targetValue);
+setIsShelfOpen(!isShelfOpen);
+}, [isShelfOpen, maxShelfHeight, animateTo]);
+const closeShelf = useCallback(() => {
+if (!maxShelfHeight) return;
+if (isShelfOpen) {
+const collapsedHeight = styles.shelfToggleButton.height;
+animateTo(collapsedHeight);
+setIsShelfOpen(false);
+}
+}, [isShelfOpen, maxShelfHeight, animateTo]);
+const openShelf = useCallback(() => {
+if (!maxShelfHeight) return;
+if (!isShelfOpen) {
+animateTo(maxShelfHeight);
+setIsShelfOpen(true);
+}
+}, [isShelfOpen, maxShelfHeight, animateTo]);
+useImperativeHandle(ref, () => ({
+toggleShelf,
+closeShelf,
+openShelf,
+}));
+const containerStyle = maxShelfHeight > 0 ? { height: shelfAnim } : undefined;
 return (
 <Animated.View style={[styles.animatedShelf, containerStyle]}>
-{}
 <View style={styles.shelfInnerContainer} onLayout={handleShelfLayout}>
 <View style={styles.plantCardWrapper}>
 {plant1 && <PlantCardWithInfo plant={plant1} compact />}
@@ -1299,8 +1406,9 @@ color="#fff"
 </TouchableOpacity>
 </Animated.View>
 );
-});
-export default ChatShelf;
+}
+);
+export default memo(ChatShelf);
 const styles = StyleSheet.create({
 animatedShelf: {
 overflow: 'hidden',
@@ -1373,7 +1481,6 @@ const styles = StyleSheet.create({
 actions: {
 flexDirection: 'column',
 justifyContent: 'flex-end',
-marginTop: 16,
 },
 confirmButton: {
 backgroundColor: COLORS.accentGreen,
@@ -1415,9 +1522,12 @@ TouchableOpacity,
 ActivityIndicator,
 Alert,
 Dimensions,
-Platform,
 ImageBackground,
 } from 'react-native';
+useMyProfile,
+useUpdateProfile,
+useUpdateProfilePicture,
+} from '../hooks/useMyProfileHooks';
 interface EditProfileModalProps {
 visible: boolean;
 userProfile: UserResponse;
@@ -1437,7 +1547,6 @@ const screenWidth = Dimensions.get('window').width;
 const [name, setName] = useState(userProfile.name);
 const [bio, setBio] = useState(userProfile.bio || '');
 const [cityCountry, setCityCountry] = useState<string>('');
-const [updating, setUpdating] = useState(false);
 const [error, setError] = useState<string | null>(null);
 const [locationModalVisible, setLocationModalVisible] = useState(false);
 const userHasLocation =
@@ -1467,6 +1576,19 @@ setCityCountry('');
 }
 })();
 }, [userHasLocation, userProfile]);
+const {
+mutate: updateProfile,
+isLoading: isUpdatingProfile,
+isError: isUpdateProfileError,
+error: updateProfileError,
+} = useUpdateProfile();
+const {
+mutate: updateProfilePicture,
+isLoading: isUpdatingPicture,
+isError: isUpdatePictureError,
+error: updatePictureError,
+} = useUpdateProfilePicture();
+const isUpdating = isUpdatingProfile || isUpdatingPicture;
 const handleChangeProfilePicture = useCallback(() => {
 Alert.alert(
 t('profile_change_picture_title'),
@@ -1486,6 +1608,11 @@ onPress: takePictureWithCamera,
 }, [t]);
 const pickImageFromLibrary = async () => {
 try {
+const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+if (!permissionResult.granted) {
+Alert.alert(t('error_title'), t('error_media_library_permission_denied'));
+return;
+}
 const result = await ImagePicker.launchImageLibraryAsync({
 mediaTypes: ImagePicker.MediaTypeOptions.Images,
 allowsEditing: true,
@@ -1494,7 +1621,7 @@ quality: 0.7,
 });
 if (!result.canceled && result.assets[0].uri) {
 const resized = await resizeImage(result.assets[0].uri);
-await uploadProfilePicture(resized);
+handleUploadProfilePicture(resized.uri);
 }
 } catch (err) {
 console.error('pickImageFromLibrary error:', err);
@@ -1515,7 +1642,7 @@ quality: 0.7,
 });
 if (!result.canceled && result.assets[0].uri) {
 const resized = await resizeImage(result.assets[0].uri);
-await uploadProfilePicture(resized);
+handleUploadProfilePicture(resized.uri);
 }
 } catch (err) {
 console.error('takePictureWithCamera error:', err);
@@ -1529,39 +1656,39 @@ uri,
 { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
 );
 };
-const uploadProfilePicture = async (img: ImageManipulator.ImageResult) => {
-setUpdating(true);
+const handleUploadProfilePicture = async (uri: string) => {
 try {
+const img = await resizeImage(uri);
 const photo = {
 uri: img.uri,
 name: 'profile.jpg',
 type: 'image/jpeg',
-} as any;
-await userService.updateProfilePicture({ image: photo });
-onUpdated();
+};
+updateProfilePicture(photo);
 } catch (err) {
-console.error('Error uploading profile picture:', err);
+console.error('Error preparing profile picture:', err);
 Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));
-} finally {
-setUpdating(false);
 }
 };
 const handleSave = async () => {
-setUpdating(true);
 setError(null);
 const payload: UserUpdateRequest = {
 name: name.trim(),
 bio: bio.trim(),
 };
-try {
-await userService.updateMe(payload);
+if (!payload.name) {
+setError(t('edit_profile_error_name_required'));
+return;
+}
+updateProfile(payload, {
+onError: (error: any) => {
+setError(error?.message || t('edit_profile_error_message'));
+},
+onSuccess: () => {
 onUpdated();
 onClose();
-} catch {
-setError(t('edit_profile_error_message'));
-} finally {
-setUpdating(false);
-}
+},
+});
 };
 const handleOpenSetLocationModal = () => {
 log.debug('Opening location modal');
@@ -1569,8 +1696,16 @@ log.debug('userProfile.locationLatitude', userProfile.locationLatitude);
 log.debug('userProfile.locationLongitude', userProfile.locationLongitude);
 setLocationModalVisible(true);
 };
+useEffect(() => {
+if (isUpdateProfileError && updateProfileError) {
+Alert.alert(t('error_title'), updateProfileError.message || t('error_update_profile_failed'));
+}
+if (isUpdatePictureError && updatePictureError) {
+Alert.alert(t('error_title'), updatePictureError.message || t('error_update_profile_picture_failed'));
+}
+}, [isUpdateProfileError, updateProfileError, isUpdatePictureError, updatePictureError, t]);
 return (
-<Modal visible={visible} animationType="none" transparent>
+<Modal visible={visible} animationType="fade" transparent>
 <View style={styles.modalOverlay}>
 {}
 <View
@@ -1609,7 +1744,7 @@ style={profileCardStyles.profilePicture}
 <TouchableOpacity
 style={profileCardStyles.cameraIconWrapper}
 onPress={handleChangeProfilePicture}
-disabled={updating}
+disabled={isUpdating}
 >
 <Ionicons name="camera" size={18} color="#fff" />
 </TouchableOpacity>
@@ -1618,9 +1753,13 @@ disabled={updating}
 <TouchableOpacity
 onPress={handleSave}
 style={profileCardStyles.profileEditButton}
-disabled={updating}
+disabled={isUpdating}
 >
+{isUpdating ? (
+<ActivityIndicator size="small" color={COLORS.textLight} />
+) : (
 <MaterialIcons name="check" size={20} color={COLORS.textLight} />
+)}
 </TouchableOpacity>
 </View>
 {}
@@ -1629,7 +1768,7 @@ disabled={updating}
 style={[
 profileCardStyles.nameContainer,
 profileCardStyles.editNameContainer,
-{ maxWidth: (screenWidth * 0.9 - 215)},
+{ maxWidth: screenWidth * 0.9 - 215 },
 ]}
 >
 <TextInput
@@ -1645,18 +1784,21 @@ placeholderTextColor="#999"
 />
 </View>
 <View style={profileCardStyles.profileLocationRow}>
+{}
 <Ionicons
 name="location-sharp"
 size={16}
 color={COLORS.accentLightRed}
 style={profileCardStyles.locationIcon}
 />
-{}
-<TouchableOpacity
-onPress={handleOpenSetLocationModal}
-style={{ flex: 1 }}
+<TouchableOpacity onPress={handleOpenSetLocationModal} style={{ flex: 1 }}>
+<Text
+style={[
+profileCardStyles.profileLocationText,
+{ textDecorationLine: 'underline', color: COLORS.accentRed },
+]}
+numberOfLines={1}
 >
-<Text style={profileCardStyles.profileLocationText}>
 {cityCountry || t('profile_no_location')}
 </Text>
 </TouchableOpacity>
@@ -1676,6 +1818,7 @@ profileCardStyles.editableTextBio,
 !bio && profileCardStyles.bioPlaceholder,
 ]}
 multiline
+maxLength={1000}
 value={bio}
 onChangeText={setBio}
 placeholder={t('profile_no_bio_placeholder')}
@@ -1687,6 +1830,12 @@ placeholderTextColor="#999"
 </LinearGradient>
 </View>
 </View>
+{}
+{isUpdating && (
+<View style={styles.loadingOverlay}>
+<ActivityIndicator size="large" color={COLORS.accentRed} />
+</View>
+)}
 {}
 <ChangeLocationModal
 visible={locationModalVisible}
@@ -2082,23 +2231,27 @@ plant: PlantResponse;
 onPress?: () => void;
 isSelected?: boolean;
 containerStyle?: StyleProp<ViewStyle>;
+selectable?: boolean;
+deletable?: boolean;
+OnDelete?: () => void;
+OnEdit?: () => void;
 }
 const screenWidth = Dimensions.get('window').width;
 export const PlantThumbnail: React.FC<PlantThumbnailProps> = ({
 plant,
 onPress,
-isSelected,
+isSelected = false,
 containerStyle,
+selectable = false,
+deletable = false,
+OnDelete,
 }) => {
 return (
+<View style={[styles.outerContainer, isSelected && styles.selected]}>
 <TouchableOpacity
-activeOpacity={0.9}
-style={[
-styles.container,
-containerStyle,
-isSelected && styles.selected,
-]}
+style={[styles.mainContainer, containerStyle]}
 onPress={onPress}
+disabled={!selectable}
 >
 {plant.imageUrl ? (
 <Image
@@ -2117,15 +2270,25 @@ resizeMode="contain"
 </Text>
 </View>
 </TouchableOpacity>
+{deletable && (
+<TouchableOpacity style={styles.deleteButton} onPress={OnDelete}>
+<Ionicons
+name="close-circle"
+size={24}
+color={COLORS.accentRed}/>
+</TouchableOpacity>
+)}
+</View>
 );
-};
+}
 const styles = StyleSheet.create({
-container: {
-width: (screenWidth-70)/3,
-backgroundColor: COLORS.cardBg1,
-borderRadius: 8,
-margin: 8,
-overflow: 'hidden',
+outerContainer: {
+margin: 5,
+alignSelf: 'flex-start',
+},
+selected: {
+backgroundColor: COLORS.accentGreen,
+borderRadius: 10,
 ...Platform.select({
 ios: {
 shadowColor: '#000',
@@ -2137,9 +2300,22 @@ elevation: 3,
 },
 }),
 },
-selected: {
-borderWidth: 3,
-borderColor: COLORS.accentGreen,
+mainContainer: {
+width: (screenWidth - 70) / 3,
+backgroundColor: COLORS.cardBg1,
+borderRadius: 8,
+margin: 3,
+overflow: 'hidden',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+},
+android: {
+elevation: 3,
+},
+}),
 },
 thumbImage: {
 width: '100%',
@@ -2161,6 +2337,232 @@ fontSize: 14,
 fontWeight: '600',
 color: COLORS.textDark,
 textAlign: 'center',
+},
+deleteButton: {
+position: 'absolute',
+top: -8,
+right: -8,
+borderRadius: 50,
+backgroundColor: 'white',
+},
+editButton: {
+position: 'absolute',
+bottom: 20,
+right: -8,
+borderRadius: 50,
+padding: 5,
+backgroundColor: COLORS.accentGreen,
+},
+});
+// File: app\features\main\components\ProfileCard.tsx
+interface ProfileCardProps {
+userProfile: UserResponse;
+isEditable?: boolean;
+onEditPress?: () => void;
+}
+export const ProfileCard: React.FC<ProfileCardProps> = ({
+userProfile,
+isEditable = false,
+onEditPress,
+}) => {
+const { t } = useTranslation();
+return (
+<View style={[profileCardStyles.profileCardContainer]}>
+<LinearGradient colors={[COLORS.cardBg1, COLORS.cardBg2]} style={profileCardStyles.profileCardInner}>
+<View style={profileCardStyles.profileTopContainer}>
+<ImageBackground
+source={require('../../../../assets/images/profileBackground.png')}
+style={profileCardStyles.profileBackgroundImage}
+/>
+<View style={profileCardStyles.profilePictureContainer}>
+{userProfile.profilePictureUrl ? (
+<Image
+source={{ uri: userProfile.profilePictureUrl }}
+style={profileCardStyles.profilePicture}
+/>
+) : (
+<View style={profileCardStyles.profilePlaceholder}>
+<Ionicons name="person-circle-outline" size={90} color="#ccc" />
+</View>
+)}
+</View>
+{}
+{isEditable && onEditPress && (
+<TouchableOpacity
+onPress={onEditPress}
+style={profileCardStyles.profileEditButton}
+accessibilityLabel={t('profile_edit_button')}
+>
+<MaterialIcons name="edit" size={20} color={COLORS.textLight} />
+</TouchableOpacity>
+)}
+</View>
+{}
+<View style={profileCardStyles.profileInfoContainer}>
+<View style={profileCardStyles.nameContainer}>
+<Text style={profileCardStyles.profileNameText}>{userProfile.name}</Text>
+</View>
+<View style={profileCardStyles.profileLocationRow}>
+<Ionicons
+name="location-sharp"
+size={16}
+color={COLORS.accentLightRed}
+style={profileCardStyles.locationIcon}
+/>
+<Text style={profileCardStyles.profileLocationText}>
+{t('profile_no_location')}
+</Text>
+</View>
+</View>
+<View style={profileCardStyles.bioContainer}>
+<Text
+style={[
+profileCardStyles.bioText,
+!userProfile.bio && profileCardStyles.bioPlaceholder,
+]}
+>
+{userProfile.bio ? userProfile.bio : t('profile_no_bio_placeholder')}
+</Text>
+</View>
+</LinearGradient>
+</View>
+);
+};
+// File: app\features\main\components\ProfileCardShelf.tsx
+useState,
+useRef,
+useCallback,
+memo,
+forwardRef,
+useImperativeHandle,
+} from 'react';
+Animated,
+Easing,
+View,
+TouchableOpacity,
+StyleSheet,
+LayoutChangeEvent,
+} from 'react-native';
+export interface ProfileCardShelfRef {
+toggleShelf: () => void;
+openShelf: () => void;
+closeShelf: () => void;
+}
+interface ProfileCardShelfProps {
+userProfile?: UserResponse;
+}
+const ProfileCardShelf = forwardRef<ProfileCardShelfRef, ProfileCardShelfProps>(
+function ProfileCardShelf({ userProfile }, ref) {
+const [isShelfOpen, setIsShelfOpen] = useState(true);
+const [maxShelfHeight, setMaxShelfHeight] = useState<number>(0);
+const shelfAnim = useRef(new Animated.Value(0)).current;
+const handleShelfLayout = useCallback(
+(event: LayoutChangeEvent) => {
+const { height } = event.nativeEvent.layout;
+log.debug('Measured shelf layout height:', height);
+if (height > maxShelfHeight) {
+setMaxShelfHeight(height);
+if (isShelfOpen) {
+shelfAnim.setValue(height);
+}
+}
+},
+[isShelfOpen, maxShelfHeight, shelfAnim]
+);
+const animateTo = useCallback(
+(toValue: number) => {
+Animated.timing(shelfAnim, {
+toValue,
+duration: 300,
+easing: Easing.ease,
+useNativeDriver: false,
+}).start();
+},
+[shelfAnim]
+);
+const toggleShelf = useCallback(() => {
+if (!maxShelfHeight) return;
+const collapsedHeight = styles.shelfToggleButton.height;
+const targetValue = isShelfOpen ? collapsedHeight : maxShelfHeight;
+animateTo(targetValue);
+setIsShelfOpen(!isShelfOpen);
+}, [isShelfOpen, maxShelfHeight, animateTo]);
+const closeShelf = useCallback(() => {
+if (!maxShelfHeight) return;
+if (isShelfOpen) {
+const collapsedHeight = styles.shelfToggleButton.height;
+animateTo(collapsedHeight);
+setIsShelfOpen(false);
+}
+}, [isShelfOpen, maxShelfHeight, animateTo]);
+const openShelf = useCallback(() => {
+if (!maxShelfHeight) return;
+if (!isShelfOpen) {
+animateTo(maxShelfHeight);
+setIsShelfOpen(true);
+}
+}, [isShelfOpen, maxShelfHeight, animateTo]);
+useImperativeHandle(ref, () => ({
+toggleShelf,
+closeShelf,
+openShelf,
+}));
+const containerStyle =
+maxShelfHeight > 0
+? { height: shelfAnim }
+: undefined;
+return (
+<Animated.View style={[styles.animatedShelf, containerStyle]}>
+<View style={styles.shelfInnerContainer} onLayout={handleShelfLayout}>
+{userProfile && (
+<View style={styles.profileCardWrapper}>
+<ProfileCard
+userProfile={userProfile}
+/>
+</View>
+)}
+</View>
+{}
+<TouchableOpacity
+style={styles.shelfToggleButton}
+onPress={toggleShelf}
+activeOpacity={0.7}
+>
+<Ionicons
+name={isShelfOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
+size={10}
+color="#fff"
+/>
+</TouchableOpacity>
+</Animated.View>
+);
+}
+);
+export default memo(ProfileCardShelf);
+const styles = StyleSheet.create({
+animatedShelf: {
+overflow: 'hidden',
+backgroundColor: '#f1f1f1',
+},
+shelfInnerContainer: {
+paddingHorizontal: 12,
+paddingVertical: 8,
+paddingBottom: 23,
+},
+profileCardWrapper: {
+borderRadius: 8,
+alignSelf: 'center',
+},
+shelfToggleButton: {
+position: 'absolute',
+bottom: 0,
+left: 0,
+right: 0,
+height: 15,
+backgroundColor: COLORS.accentGreen,
+flexDirection: 'row',
+alignItems: 'center',
+justifyContent: 'center',
 },
 });
 // File: app\features\main\components\SelectPlantsModal.tsx
@@ -2256,6 +2658,7 @@ return (
 key={plant.plantId}
 plant={plant}
 isSelected={isSelected}
+selectable={true}
 onPress={() => handleToggleSelect(plant.plantId)}
 />
 );
@@ -2329,7 +2732,7 @@ marginVertical: 20,
 },
 errorText: {
 fontSize: 14,
-color: COLORS.accent,
+color: COLORS.textDark,
 marginBottom: 10,
 textAlign: 'center',
 },
@@ -2362,6 +2765,7 @@ justifyContent: 'center',
 actionbuttons: {
 marginHorizontal: 17,
 marginBottom: 17,
+marginTop: 5,
 },
 });
 // File: app\features\main\components\SwipeableCard.tsx
@@ -2684,22 +3088,28 @@ color: COLORS.textLight,
 fontWeight: '600',
 },
 });
-// File: app\features\main\hooks\useMatchConversation.ts
-export const useMatchConversation = (matchId: number) => {
+// File: app\features\main\hooks\useConnections.ts
+export function useConnections() {
+return useQuery<ConnectionResponse[], Error>('myConnections', () =>
+connectionService.getMyConnections()
+);
+}
+// File: app\features\main\hooks\useMessages.ts
+export const useMessages = (connectionId: number) => {
 const queryClient = useQueryClient();
 const messagesQuery = useQuery<MessageResponse[], Error>(
-['messages', matchId],
-() => messageService.getMessagesForMatch(matchId),
+['messages', connectionId],
+() => messageService.getMessagesForConnection(connectionId),
 {
-enabled: matchId > 0,
+enabled: connectionId > 0,
 staleTime: 1000 * 30,
 }
 );
 const sendMessageMutation = useMutation(
-(data: MessageRequest) => messageService.sendMessage(data),
+(data: MessageRequest) => messageService.sendMessage(connectionId, data),
 {
 onSuccess: () => {
-queryClient.invalidateQueries(['messages', matchId]);
+queryClient.invalidateQueries(['messages', connectionId]);
 },
 }
 );
@@ -2712,7 +3122,80 @@ sendMessage: sendMessageMutation.mutate,
 isSending: sendMessageMutation.isLoading,
 };
 };
-// File: app\features\main\hooks\usePlants.ts
+// File: app\features\main\hooks\useMyProfileHooks.ts
+export const useMyProfile = () => {
+return useQuery<UserResponse, Error>(
+['userProfile'],
+userService.getCurrentUserProfile,
+{
+staleTime: 1000 * 60 * 5,
+cacheTime: 1000 * 60 * 10,
+retry: 1,
+}
+);
+};
+export const useUpdateProfile = () => {
+const queryClient = useQueryClient();
+return useMutation(
+(payload: UserUpdateRequest) => userService.updateMe(payload),
+{
+onSuccess: () => {
+queryClient.invalidateQueries(['userProfile']);
+},
+onError: (error: any) => {
+console.error('Error updating profile:', error);
+},
+}
+);
+};
+export const useUpdateProfilePicture = () => {
+const queryClient = useQueryClient();
+return useMutation(
+(photo: { uri: string; name: string; type: string }) => {
+const image: UserProfileImageUpdateRequest = { image: new File([photo.uri], photo.name, { type: photo.type }) };
+return userService.updateProfilePicture(image);
+},
+{
+onSuccess: () => {
+queryClient.invalidateQueries(['userProfile']);
+},
+onError: (error: any) => {
+console.error('Error updating profile picture:', error);
+},
+}
+);
+};
+export const useUpdateLocation = () => {
+const queryClient = useQueryClient();
+return useMutation(
+(payload: UpdateLocationRequest) => userService.updateLocation(payload),
+{
+onSuccess: () => {
+queryClient.invalidateQueries(['userProfile']);
+},
+onError: (error: any) => {
+console.error('Error updating location:', error);
+},
+}
+);
+};
+// File: app\features\main\hooks\useOtherProfile.ts
+export const useOtherProfile = (userId: number) => {
+return useQuery<UserResponse, Error>(
+['userProfile', userId],
+() => {
+if (!userId) {
+throw new Error('No userId available');
+}
+return userService.getUser(userId);
+},
+{
+enabled: !!userId,
+staleTime: 1000 * 60 * 5
+}
+);
+};
+// File: app\features\main\hooks\usePlantHooks.ts
 export const useUserPlants = (userId: number) => {
 return useQuery(['userPlants', userId], () => plantService.getUserPlants(userId), {
 enabled: !!userId,
@@ -2720,8 +3203,9 @@ staleTime: 1000 * 60 * 5,
 });
 };
 export const useMyPlants = () => {
+const queryClient = useQueryClient();
 const { userId } = useSelector((state: RootState) => state.auth);
-return useQuery<PlantResponse[], Error>(
+const query = useQuery<PlantResponse[], Error>(
 ['myPlants', userId],
 () => {
 if (!userId) throw new Error('User not logged in');
@@ -2732,6 +3216,17 @@ enabled: !!userId,
 staleTime: 1000 * 60 * 5
 }
 );
+const mutation = useMutation(
+(plantId: number) => plantService.deleteMyPlant(plantId),
+{
+onSettled: () => queryClient.invalidateQueries(['myPlants', userId])
+}
+);
+return {
+...query,
+deletePlant: mutation.mutate,
+isDeleting: mutation.isLoading
+};
 };
 // File: app\features\main\hooks\usePreferences.ts
 export const useUserPreferences = () => {
@@ -2772,7 +3267,7 @@ export const useLikablePlants = () => {
 const queryClient = useQueryClient();
 const query = useQuery<PlantResponse[], Error>(
 ['likablePlants'],
-swipeService.getLikablePlants,
+plantService.getLikablePlants,
 {
 staleTime: 1000 * 60 * 1,
 refetchOnWindowFocus: true,
@@ -2782,33 +3277,17 @@ retry: 1,
 const mutation = useMutation(
 (data: SwipeRequest[]) => swipeService.sendSwipes(data),
 {
-onSuccess: () => {
-queryClient.invalidateQueries(['userMatches']);
+onSuccess: (swipeResponse) => {
+if (swipeResponse.isMatch) {
+queryClient.invalidateQueries(['myConnections']);
 }
 }
-);
+});
 return {
 ...query,
 sendSwipes: mutation.mutate,
 isSending: mutation.isLoading
 };
-};
-// File: app\features\main\hooks\useUser.ts
-export const useUserProfile = () => {
-const userId = useSelector((state: RootState) => state.auth.userId);
-return useQuery<UserResponse, Error>(
-['userProfile', userId],
-() => {
-if (!userId) {
-throw new Error('No userId available');
-}
-return userService.getUser(userId);
-},
-{
-enabled: !!userId,
-staleTime: 1000 * 60 * 5
-}
-);
 };
 // File: app\features\main\hooks\useUserMatches.ts
 export const useUserMatches = () => {
@@ -3175,10 +3654,9 @@ fontSize: 14,
 imageButton: {
 flexDirection: 'row',
 alignItems: 'center',
-backgroundColor: COLORS.primary,
+backgroundColor: COLORS.accentLightRed,
 padding: 10,
 borderRadius: 8,
-marginTop: 6,
 },
 imageButtonText: {
 fontSize: 14,
@@ -3197,16 +3675,12 @@ resizeMode: 'cover',
 noImageText: {
 fontSize: 14,
 color: '#555',
-marginTop: 6,
+marginTop: 3,
+marginLeft: 13,
+marginBottom: 15,
 },
 });
 // File: app\features\main\screens\ChatScreen.tsx
-useMemo,
-useState,
-useEffect,
-useRef,
-useCallback,
-} from 'react';
 View,
 Text,
 StyleSheet,
@@ -3217,40 +3691,26 @@ FlatList,
 KeyboardAvoidingView,
 Platform,
 Alert,
-ScrollView,
 Image,
 } from 'react-native';
 const ChatScreen: React.FC = () => {
 const { t } = useTranslation();
 const route = useRoute();
 const navigation = useNavigation();
-const { otherUserId } = route.params as { otherUserId: number };
+const { connectionId, otherUserId } = route.params as {
+connectionId: number;
+otherUserId: number;
+};
 const {
-data: userProfile,
-isLoading: loadingProfile,
-isError: errorProfile,
-} = useUserProfile();
+data: myProfile,
+isLoading: loadingMyProfile,
+isError: errorMyProfile,
+} = useMyProfile();
 const {
-data: myMatches,
-isLoading: loadingMatches,
-isError: errorMatches,
-} = useUserMatches();
-const relevantMatches = useMemo<MatchResponse[]>(() => {
-if (!myMatches || !userProfile) return [];
-const myUserId = userProfile.userId;
-return myMatches.filter((m) => {
-return (
-(m.user1.userId === myUserId && m.user2.userId === otherUserId) ||
-(m.user2.userId === myUserId && m.user1.userId === otherUserId)
-);
-});
-}, [myMatches, userProfile, otherUserId]);
-const [activeMatchId, setActiveMatchId] = useState<number | null>(null);
-useEffect(() => {
-if (relevantMatches.length > 0 && !activeMatchId) {
-setActiveMatchId(relevantMatches[0].matchId);
-}
-}, [relevantMatches, activeMatchId]);
+data: otherUserProfile,
+isLoading: loadingOtherUser,
+isError: errorOtherUser,
+} = useOtherProfile(otherUserId);
 const {
 messages,
 isLoadingMessages,
@@ -3258,7 +3718,7 @@ isErrorMessages,
 refetchMessages,
 sendMessage,
 isSending,
-} = useMatchConversation(activeMatchId ?? 0);
+} = useMessages(connectionId);
 const sortedMessages = useMemo(() => {
 if (!messages) return [];
 return [...messages].sort(
@@ -3275,29 +3735,22 @@ flatListRef.current?.scrollToEnd({ animated: true });
 }, [sortedMessages]);
 const [inputText, setInputText] = useState('');
 const handleSendMessage = useCallback(() => {
-if (!inputText.trim()) return;
-if (!activeMatchId) {
-Alert.alert('Error', 'No active match selected to send messages.');
-return;
-}
 const text = inputText.trim();
+if (!text) return;
 setInputText('');
-const messageData: MessageRequest = {
-matchId: activeMatchId,
-messageText: text,
-};
-sendMessage(messageData, {
+const payload: MessageRequest = { messageText: text };
+sendMessage(payload, {
 onError: (error) => {
 console.error('Error sending message:', error);
-Alert.alert('Error', 'Failed to send message');
+Alert.alert(t('chat_error'), t('chat_send_failed'));
 },
 });
-}, [activeMatchId, inputText, sendMessage]);
-const currentMatch = useMemo(() => {
-if (!relevantMatches || !activeMatchId) return null;
-return relevantMatches.find((m) => m.matchId === activeMatchId) || null;
-}, [relevantMatches, activeMatchId]);
-if (loadingProfile || loadingMatches || (activeMatchId && isLoadingMessages)) {
+}, [inputText, sendMessage, t]);
+const shelfRef = useRef<ProfileCardShelfRef>(null);
+const handleInputFocus = useCallback(() => {
+shelfRef.current?.closeShelf();
+}, []);
+if (loadingMyProfile || isLoadingMessages || loadingOtherUser) {
 return (
 <SafeAreaProvider style={styles.centerContainer}>
 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -3305,91 +3758,28 @@ return (
 </SafeAreaProvider>
 );
 }
-if (errorProfile || errorMatches || isErrorMessages) {
+if (errorMyProfile || isErrorMessages || errorOtherUser) {
 return (
 <SafeAreaProvider style={styles.centerContainer}>
 <Text style={styles.errorText}>{t('chat_error_message')}</Text>
-<TouchableOpacity style={styles.retryButton} onPress={refetchMessages}>
+<TouchableOpacity style={styles.retryButton} onPress={() => refetchMessages()}>
 <Text style={styles.retryButtonText}>{t('chat_retry_button')}</Text>
 </TouchableOpacity>
 </SafeAreaProvider>
 );
 }
-if (relevantMatches.length === 0) {
-return (
-<SafeAreaProvider style={styles.centerContainer}>
-<Text style={styles.noMessagesText}>
-{t('chat_no_matches_with_user')}
-</Text>
-</SafeAreaProvider>
-);
-}
-const renderMatchTabs = () => {
-if (relevantMatches.length === 0) return null;
-return (
-<ScrollView
-horizontal
-showsHorizontalScrollIndicator={false}
-style={styles.tabsContainer}
-contentContainerStyle={styles.tabsContent}
->
-{relevantMatches.map((match) => {
-const isActive = match.matchId === activeMatchId;
-const plant1Uri = match.plant1?.imageUrl;
-const plant2Uri = match.plant2?.imageUrl;
-return (
-<TouchableOpacity
-key={match.matchId}
-onPress={() => setActiveMatchId(match.matchId)}
-style={[styles.tabItem, isActive && styles.tabItemActive]}
-activeOpacity={0.8}
->
-{}
-<View style={styles.overlappingContainer}>
-<View style={[styles.plantCircle, styles.plantCircleFront]}>
-{plant1Uri ? (
-<Image
-source={{ uri: plant1Uri }}
-style={styles.circleImage}
-/>
-) : (
-<Ionicons
-name="leaf"
-size={22}
-color={COLORS.primary}
-/>
-)}
-</View>
-<View style={[styles.plantCircle, styles.plantCircleBack]}>
-{plant2Uri ? (
-<Image
-source={{ uri: plant2Uri }}
-style={styles.circleImage}
-/>
-) : (
-<Ionicons
-name="leaf"
-size={22}
-color={COLORS.primary}
-/>
-)}
-</View>
-</View>
-<Text style={styles.tabLabel}>
-{match.plant1?.speciesName} & {match.plant2?.speciesName}
-</Text>
-</TouchableOpacity>
-);
-})}
-</ScrollView>
-);
+const handleBrowseMatches = () => {
 };
-const hasMessages = messages && messages.length > 0;
+const handleOpenTradeProposal = () => {
+};
+const handleNavigateToProfile = () => {
+navigation.navigate('OtherProfile' as never, { userId: otherUserProfile.userId } as never);
+}
 return (
 <SafeAreaProvider style={styles.container}>
 {}
 <LinearGradient
-style={headerStyles.headerGradient}
+style={[headerStyles.headerGradient, { marginBottom: 0 }]}
 colors={[COLORS.primary, COLORS.secondary]}
 >
 <View style={headerStyles.headerColumn1}>
@@ -3399,34 +3789,31 @@ onPress={() => navigation.goBack()}
 >
 <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
 </TouchableOpacity>
-<Text style={headerStyles.headerTitle}>{t('chat_title')}</Text>
+{otherUserProfile && (
+<TouchableOpacity style={styles.headerUserInfo} onPress={handleNavigateToProfile}>
+<Image
+source={{ uri: otherUserProfile.profilePictureUrl }}
+style={styles.headerUserImage}
+/>
+<Text style={headerStyles.headerTitle}>
+{otherUserProfile.name}
+</Text>
+</TouchableOpacity>
+)}
 </View>
 </LinearGradient>
 {}
-<View style={styles.tabWrapper}>{renderMatchTabs()}</View>
 {}
-<View style={styles.shelfContainer}>
-{relevantMatches.map((match) => (
-<View
-key={match.matchId}
-style={[
-styles.shelfWrapper,
-match.matchId !== activeMatchId && styles.hiddenShelf,
-]}
->
-<ChatShelf
-plant1={match.plant1}
-plant2={match.plant2}
-/>
-</View>
-))}
-</View>
 {}
-{!hasMessages ? (
-<View style={styles.emptyChatContainer}>
-<Text style={styles.noMessagesText}>
-{t('chat_no_messages_yet')}
+<TouchableOpacity style={styles.browseButton} onPress={handleBrowseMatches}>
+<Text style={styles.browseButtonText}>
+{t('chat_browse_matches_button', 'Browse Matches')}
 </Text>
+</TouchableOpacity>
+{}
+{sortedMessages.length === 0 ? (
+<View style={styles.emptyChatContainer}>
+<Text style={styles.noMessagesText}>{t('chat_no_messages_yet')}</Text>
 </View>
 ) : (
 <View style={styles.listContainer}>
@@ -3436,12 +3823,16 @@ data={sortedMessages}
 keyExtractor={(item) => item.messageId.toString()}
 contentContainerStyle={styles.listContent}
 renderItem={({ item }) => {
-const isMine = item.senderUserId === userProfile?.userId;
+const isMine = item.senderUserId === myProfile?.userId;
 return <MessageBubble message={item} isMine={isMine} />;
 }}
 />
 </View>
 )}
+{}
+<TouchableOpacity style={styles.tradeFab} onPress={handleOpenTradeProposal}>
+<Ionicons name="swap-horizontal" size={26} color="#fff" />
+</TouchableOpacity>
 {}
 <KeyboardAvoidingView
 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -3454,12 +3845,10 @@ value={inputText}
 onChangeText={setInputText}
 placeholder={t('chat_message_placeholder')}
 multiline
+onFocus={handleInputFocus}
 />
 {isSending ? (
-<ActivityIndicator
-style={{ marginRight: 12 }}
-color={COLORS.primary}
-/>
+<ActivityIndicator style={{ marginRight: 12 }} color={COLORS.primary} />
 ) : (
 <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
 <Ionicons name="send" size={20} color={COLORS.background} />
@@ -3505,90 +3894,37 @@ retryButtonText: {
 color: '#fff',
 fontWeight: '600',
 },
+shelfWrapper: {
+},
+browseButton: {
+margin: 10,
+padding: 12,
+borderRadius: 8,
+backgroundColor: '#fff',
+alignSelf: 'center',
+minWidth: '60%',
+alignItems: 'center',
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 5,
+shadowOffset: { width: 0, height: 2 },
+elevation: 2,
+},
+browseButtonText: {
+color: COLORS.textDark,
+fontSize: 16,
+fontWeight: '600',
+},
+emptyChatContainer: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+},
 noMessagesText: {
 fontSize: 16,
 color: COLORS.textDark,
 textAlign: 'center',
-},
-tabWrapper: {
-backgroundColor: '#f9f9f9',
-borderBottomWidth: 1,
-borderBottomColor: '#ddd',
-},
-tabsContainer: {
-paddingVertical: 8,
-backgroundColor: '#f9f9f9',
-},
-tabsContent: {
-paddingHorizontal: 8,
-alignItems: 'center',
-},
-tabItem: {
-padding: 6,
-marginRight: 8,
-borderRadius: 6,
-backgroundColor: '#fff',
-alignItems: 'center',
-minWidth: 80,
-...Platform.select({
-ios: {
-shadowColor: '#000',
-shadowOpacity: 0.08,
-shadowRadius: 3,
-shadowOffset: { width: 0, height: 2 },
-},
-android: {
-elevation: 2,
-},
-}),
-},
-tabItemActive: {
-borderColor: COLORS.accentGreen,
-borderWidth: 2,
-},
-overlappingContainer: {
-width: 40,
-height: 30,
-marginBottom: 4,
-position: 'relative',
-},
-plantCircle: {
-width: 28,
-height: 28,
-borderRadius: 14,
-backgroundColor: '#fff',
-position: 'absolute',
-alignItems: 'center',
-justifyContent: 'center',
-overflow: 'hidden',
-},
-plantCircleFront: {
-left: 0,
-zIndex: 2,
-},
-plantCircleBack: {
-left: 20,
-zIndex: 1,
-},
-circleImage: {
-width: '100%',
-height: '100%',
-resizeMode: 'cover',
-},
-tabLabel: {
-fontSize: 10,
-color: '#333',
-textAlign: 'center',
-},
-shelfContainer: {
-position: 'relative',
-},
-shelfWrapper: {
-},
-hiddenShelf: {
-position: 'absolute',
-opacity: 0,
-zIndex: -1,
+paddingHorizontal: 20,
 },
 listContainer: {
 flex: 1,
@@ -3596,12 +3932,6 @@ flex: 1,
 listContent: {
 padding: 8,
 paddingBottom: 60,
-zIndex: -2,
-},
-emptyChatContainer: {
-flex: 1,
-justifyContent: 'center',
-alignItems: 'center',
 },
 inputContainer: {
 flexDirection: 'row',
@@ -3628,6 +3958,37 @@ backgroundColor: COLORS.accentGreen,
 borderRadius: 20,
 padding: 10,
 },
+tradeFab: {
+position: 'relative',
+alignSelf: 'flex-end',
+bottom: 20,
+right: 20,
+backgroundColor: COLORS.accentGreen,
+width: 56,
+height: 56,
+borderRadius: 28,
+alignItems: 'center',
+justifyContent: 'center',
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 4,
+shadowOffset: { width: 0, height: 2 },
+elevation: 4,
+},
+headerUserInfo: {
+flexDirection: 'row',
+alignItems: 'center',
+marginLeft: 10,
+},
+headerUserImage: {
+borderColor: COLORS.accentGreen,
+borderWidth: 3,
+width: 60,
+height: 60,
+borderRadius: 30,
+marginRight: 8,
+backgroundColor: '#ccc',
+},
 });
 // File: app\features\main\screens\ConnectionsScreen.tsx
 View,
@@ -3647,13 +4008,13 @@ const {
 data: userProfile,
 isLoading: loadingProfile,
 isError: errorProfile,
-} = useUserProfile();
+} = useMyProfile();
 const {
-data: matches,
-isLoading: loadingMatches,
-isError: errorMatches,
-refetch: refetchMatches,
-} = useUserMatches();
+data: connections,
+isLoading: loadingConnections,
+isError: errorConnections,
+refetch: refetchConnections,
+} = useConnections();
 if (!userProfile) {
 return (
 <SafeAreaProvider style={styles.centerContainer}>
@@ -3663,29 +4024,13 @@ return (
 );
 }
 const myUserId = userProfile.userId;
-const groupedConversations = useMemo(() => {
-if (!matches || !myUserId) return [];
-const map = new Map<number, MatchResponse[]>();
-for (const m of matches) {
-const otherUserId =
-m.user1.userId === myUserId ? m.user2.userId : m.user1.userId;
-if (!map.has(otherUserId)) {
-map.set(otherUserId, []);
-}
-map.get(otherUserId)!.push(m);
-}
-return Array.from(map.entries()).map(([otherUserId, matchList]) => ({
-otherUserId,
-matchList,
-}));
-}, [matches, myUserId]);
 const handleConversationPress = useCallback(
-(otherUserId: number) => {
-navigation.navigate('Chat' as never, { otherUserId } as never);
+(connectionId: number, otherUserId: number) => {
+navigation.navigate('Chat' as never, { connectionId, otherUserId } as never);
 },
 [navigation]
 );
-if (loadingProfile || loadingMatches) {
+if (loadingProfile || loadingConnections) {
 return (
 <SafeAreaProvider style={styles.centerContainer}>
 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -3693,21 +4038,34 @@ return (
 </SafeAreaProvider>
 );
 }
-if (errorProfile || errorMatches) {
+if (errorProfile || errorConnections) {
 return (
 <SafeAreaProvider style={styles.centerContainer}>
 <Text style={styles.errorText}>{t('connections_error')}</Text>
-<TouchableOpacity style={styles.retryButton} onPress={refetchMatches}>
+<TouchableOpacity style={styles.retryButton} onPress={refetchConnections}>
 <Text style={styles.retryButtonText}>{t('connections_retry_button')}</Text>
 </TouchableOpacity>
 </SafeAreaProvider>
 );
 }
-const renderEmptyState = () => {
+if (!connections || connections.length === 0) {
 return (
+<SafeAreaProvider style={styles.container}>
+<LinearGradient
+style={headerStyles.headerGradient}
+colors={[COLORS.primary, COLORS.secondary]}
+>
+<Text style={headerStyles.headerTitle}>
+{t('connections_title', 'Connections')}
+</Text>
+</LinearGradient>
 <View style={styles.emptyStateContainer}>
-{}
-<Ionicons name="people-outline" size={64} color={COLORS.accentGreen} style={{ marginBottom: 20 }} />
+<Ionicons
+name="people-outline"
+size={64}
+color={COLORS.accentGreen}
+style={{ marginBottom: 20 }}
+/>
 <Text style={styles.emptyStateTitle}>{t('connections_none_title')}</Text>
 <Text style={styles.emptyStateMessage}>
 {t('connections_none_message')}
@@ -3723,37 +4081,35 @@ navigation.navigate('SwipeScreen' as never);
 </Text>
 </TouchableOpacity>
 </View>
+</SafeAreaProvider>
 );
-};
+}
 return (
 <SafeAreaProvider style={styles.container}>
 {}
-<LinearGradient style={headerStyles.headerGradient} colors={[COLORS.primary, COLORS.secondary]}>
+<LinearGradient
+style={headerStyles.headerGradient}
+colors={[COLORS.primary, COLORS.secondary]}
+>
 <Text style={headerStyles.headerTitle}>
 {t('connections_title', 'Connections')}
 </Text>
 </LinearGradient>
 {}
-{(!groupedConversations || groupedConversations.length === 0) && (
-renderEmptyState()
-)}
-{}
-{groupedConversations && groupedConversations.length > 0 && (
 <FlatList
-data={groupedConversations}
-keyExtractor={(item) => item.otherUserId.toString()}
+data={connections}
+keyExtractor={(item) => item.connectionId.toString()}
 contentContainerStyle={{ paddingBottom: 20 }}
 renderItem={({ item }) => {
-const { otherUserId, matchList } = item;
-const firstMatch = matchList[0];
-const isUser1Me = firstMatch.user1.userId === myUserId;
+const connection: ConnectionResponse = item;
+const isUser1Me = connection.user1.userId === myUserId;
 const otherUser: UserResponse = isUser1Me
-? firstMatch.user2
-: firstMatch.user1;
+? connection.user2
+: connection.user1;
 return (
 <TouchableOpacity
 style={styles.rowContainer}
-onPress={() => handleConversationPress(otherUserId)}
+onPress={() => handleConversationPress(connection.connectionId, otherUser.userId)}
 activeOpacity={0.8}
 >
 <Image
@@ -3766,8 +4122,11 @@ style={styles.avatar}
 />
 <View style={styles.textSection}>
 <Text style={styles.userName}>{otherUser.name}</Text>
+{}
 <Text style={styles.matchCount}>
-{t('connections_matches_label', { count: matchList.length })}
+{t('connections_matches_label', {
+count: connection.numberOfMatches,
+})}
 </Text>
 </View>
 <Ionicons
@@ -3779,7 +4138,6 @@ color={COLORS.textDark}
 );
 }}
 />
-)}
 </SafeAreaProvider>
 );
 };
@@ -3870,7 +4228,7 @@ textAlign: 'center',
 marginBottom: 20,
 },
 emptyStateButton: {
-backgroundColor: COLORS.accent,
+backgroundColor: COLORS.accentGreen,
 paddingHorizontal: 16,
 paddingVertical: 10,
 borderRadius: 8,
@@ -3882,21 +4240,15 @@ fontWeight: '600',
 fontSize: 14,
 },
 });
-// File: app\features\main\screens\HomeScreen.tsx
-
 // File: app\features\main\screens\MyProfileScreen.tsx
 View,
 Text,
 StyleSheet,
 ActivityIndicator,
 TouchableOpacity,
-Image,
-Dimensions,
 Platform,
 ScrollView,
-Alert,
 } from 'react-native';
-const { width } = Dimensions.get('window');
 const MyProfileScreen: React.FC = () => {
 const { t } = useTranslation();
 const navigation = useNavigation();
@@ -3905,7 +4257,7 @@ data: userProfile,
 isLoading: loadingProfile,
 isError: errorProfile,
 refetch: refetchProfile,
-} = useUserProfile();
+} = useMyProfile();
 const {
 data: myPlants,
 isLoading: loadingPlants,
@@ -3936,6 +4288,8 @@ setEditCardLayout({ x, y, width, height });
 setEditProfileVisible(true);
 });
 };
+const OnDelete = () => {
+};
 useEffect(() => {
 (async () => {
 if (userHasLocation) {
@@ -3965,7 +4319,15 @@ navigation.navigate('AddPlant' as never);
 };
 const renderPlantItem = (item: PlantResponse) => {
 if (!showFullSize) {
-return <PlantThumbnail key={item.plantId} plant={item} />;
+return (
+<PlantThumbnail
+key={item.plantId}
+plant={item}
+selectable
+deletable
+onPress={OnDelete}
+/>
+);
 } else {
 return (
 <View key={item.plantId} style={styles.plantCardWrapper}>
@@ -4016,81 +4378,18 @@ style={headerStyles.headerGradient}
 <Text style={headerStyles.headerTitle}>{t('profile_title')}</Text>
 </LinearGradient>
 {}
-<View
-ref={cardRef}
-style={[
-profileCardStyles.profileCardContainer,
-{
-marginHorizontal: 16,
-marginTop: 20,
-},
-]}
->
-<LinearGradient
-colors={[COLORS.cardBg1, COLORS.cardBg2]}
-style={profileCardStyles.profileCardInner}
->
-<View style={profileCardStyles.profileTopContainer}>
-<ImageBackground
-source={require('../../../../assets/images/profileBackground.png')}
-style={profileCardStyles.profileBackgroundImage}
+<View ref={cardRef} style={styles.cardContainer}>
+<ProfileCard
+userProfile={userProfile}
+isEditable={true}
+onEditPress={openEditModal}
 />
-<View style={profileCardStyles.profilePictureContainer}>
-{userProfile.profilePictureUrl ? (
-<Image
-source={{ uri: userProfile.profilePictureUrl }}
-style={profileCardStyles.profilePicture}
-/>
-) : (
-<View style={profileCardStyles.profilePlaceholder}>
-<Ionicons name="person-circle-outline" size={90} color="#ccc" />
-</View>
-)}
-</View>
-{}
-<TouchableOpacity
-onPress={openEditModal}
-style={profileCardStyles.profileEditButton}
-accessibilityLabel={t('profile_edit_button')}
->
-<MaterialIcons name="edit" size={20} color={COLORS.textLight} />
-</TouchableOpacity>
-</View>
-{}
-<View style={profileCardStyles.profileInfoContainer}>
-<View style={profileCardStyles.nameContainer}>
-<Text style={profileCardStyles.profileNameText}>{userProfile.name}</Text>
-</View>
-<View style={profileCardStyles.profileLocationRow}>
-<Ionicons
-name="location-sharp"
-size={16}
-color={COLORS.accentLightRed}
-style={profileCardStyles.locationIcon}
-/>
-<Text style={profileCardStyles.profileLocationText}>
-{cityCountry || t('profile_no_location')}
-</Text>
-</View>
-</View>
-<View style={profileCardStyles.bioContainer}>
-<Text
-style={[
-profileCardStyles.bioText,
-!userProfile.bio && profileCardStyles.bioPlaceholder,
-]}
->
-{userProfile.bio ? userProfile.bio : t('profile_no_bio_placeholder')}
-</Text>
-</View>
-</LinearGradient>
 </View>
 {}
 <View style={styles.plantsSectionWrapper}>
 <View style={styles.plantsSectionHeader}>
 <Text style={styles.plantsSectionTitle}>
-{userProfile.name}
-{t('profile_my_plants_section')}
+{userProfile.name} {t('profile_my_plants_section')}
 </Text>
 <TouchableOpacity
 onPress={handleAddPlant}
@@ -4098,26 +4397,25 @@ style={styles.addPlantButton}
 accessibilityRole="button"
 accessibilityLabel={t('profile_add_plant_button')}
 >
-<Ionicons name="add-circle" size={24} color={COLORS.accentGreen} />
+<Ionicons name="add-circle" size={24} color={COLORS.textLight} />
 <Text style={styles.addPlantButtonText}>
 {t('profile_add_plant_button')}
 </Text>
 </TouchableOpacity>
 </View>
 {}
-<View style={styles.viewToggleContainer}>
+<View style={styles.viewToggleRow}>
 <TouchableOpacity
 onPress={() => setShowFullSize(false)}
 style={[
-styles.viewToggleOption,
-!showFullSize && styles.viewToggleOptionActive,
+styles.segmentButton,
+!showFullSize && styles.segmentButtonActive,
 ]}
-activeOpacity={0.9}
 >
 <Text
 style={[
-styles.viewToggleText,
-!showFullSize && styles.viewToggleTextActive,
+styles.segmentButtonText,
+!showFullSize && styles.segmentButtonTextActive,
 ]}
 >
 {t('Thumbnails')}
@@ -4126,15 +4424,14 @@ styles.viewToggleText,
 <TouchableOpacity
 onPress={() => setShowFullSize(true)}
 style={[
-styles.viewToggleOption,
-showFullSize && styles.viewToggleOptionActive,
+styles.segmentButton,
+showFullSize && styles.segmentButtonActive,
 ]}
-activeOpacity={0.9}
 >
 <Text
 style={[
-styles.viewToggleText,
-showFullSize && styles.viewToggleTextActive,
+styles.segmentButtonText,
+showFullSize && styles.segmentButtonTextActive,
 ]}
 >
 {t('Full Size')}
@@ -4202,8 +4499,11 @@ color: '#fff',
 fontSize: 16,
 fontWeight: '600',
 },
+cardContainer: {
+marginHorizontal: 16,
+marginTop: 20,
+},
 plantsSectionWrapper: {
-paddingHorizontal: 10,
 paddingTop: 20,
 paddingBottom: 15,
 },
@@ -4212,7 +4512,7 @@ flexDirection: 'row',
 justifyContent: 'space-between',
 alignItems: 'center',
 marginBottom: 10,
-paddingHorizontal: 10,
+paddingHorizontal: 20,
 },
 plantsSectionTitle: {
 fontSize: 20,
@@ -4222,37 +4522,53 @@ color: COLORS.textDark,
 addPlantButton: {
 flexDirection: 'row',
 alignItems: 'center',
+backgroundColor: COLORS.accentGreen,
+paddingVertical: 8,
+paddingHorizontal: 12,
+borderRadius: 20,
+...Platform.select({
+ios: {
+shadowColor: "#000",
+shadowOpacity: 0.1,
+shadowOffset: { width: 0, height: 3 },
+shadowRadius: 4,
+},
+android: {
+elevation: 3,
+},
+}),
 },
 addPlantButtonText: {
+color: COLORS.textLight,
 fontSize: 14,
-color: COLORS.accentGreen,
-marginLeft: 5,
 fontWeight: '600',
+marginLeft: 6,
 },
-viewToggleContainer: {
+viewToggleRow: {
 flexDirection: 'row',
-alignSelf: 'center',
-borderColor: COLORS.border,
-borderWidth: 1,
+justifyContent: 'center',
+alignItems: 'center',
+backgroundColor: COLORS.textLight,
 borderRadius: 20,
-overflow: 'hidden',
-marginBottom: 12,
+alignSelf: 'center',
+padding: 3,
+marginBottom: 15,
 },
-viewToggleOption: {
-paddingVertical: 8,
+segmentButton: {
 paddingHorizontal: 20,
-backgroundColor: '#fff',
+paddingVertical: 8,
+borderRadius: 18,
 },
-viewToggleOptionActive: {
+segmentButtonActive: {
 backgroundColor: COLORS.accentGreen,
 },
-viewToggleText: {
+segmentButtonText: {
 fontSize: 14,
-color: COLORS.textDark,
 fontWeight: '600',
+color: COLORS.textDark,
 },
-viewToggleTextActive: {
-color: '#fff',
+segmentButtonTextActive: {
+color: COLORS.textLight,
 },
 thumbViewContainer: {
 flexDirection: 'row',
@@ -4261,6 +4577,7 @@ justifyContent: 'center',
 },
 fullViewContainer: {
 width: '100%',
+paddingHorizontal: 20,
 },
 plantCardWrapper: {
 marginBottom: 15,
@@ -4274,6 +4591,389 @@ noPlantsText: {
 fontSize: 16,
 color: '#555',
 textAlign: 'center',
+},
+});
+// File: app\features\main\screens\OtherProfileScreen.tsx
+View,
+Text,
+StyleSheet,
+ActivityIndicator,
+TouchableOpacity,
+Platform,
+ScrollView,
+Alert,
+} from 'react-native';
+type RootStackParamList = {
+OtherProfile: { userId: number };
+};
+type OtherProfileScreenRouteProp = RouteProp<RootStackParamList, 'OtherProfile'>;
+const OtherProfileScreen: React.FC = () => {
+const { t } = useTranslation();
+const navigation = useNavigation();
+const route = useRoute<OtherProfileScreenRouteProp>();
+const { userId } = route.params;
+const {
+data: otherUserProfile,
+isLoading: loadingProfile,
+isError: errorProfile,
+refetch: refetchProfile,
+} = useOtherProfile(userId);
+const {
+data: myPlants,
+isLoading: loadingPlants,
+isError: errorPlants,
+refetch: refetchPlants,
+} = useMyPlants();
+const {
+searchRadius,
+isLoading: srLoading,
+isError: srError,
+} = useSearchRadius();
+const [cityCountry, setCityCountry] = useState<string>('');
+const [showFullSize, setShowFullSize] = useState(false);
+const userHasLocation =
+otherUserProfile?.locationLatitude !== undefined &&
+otherUserProfile?.locationLongitude !== undefined;
+useEffect(() => {
+(async () => {
+if (userHasLocation) {
+try {
+const [geo] = await Location.reverseGeocodeAsync({
+latitude: otherUserProfile!.locationLatitude!,
+longitude: otherUserProfile!.locationLongitude!,
+});
+if (geo) {
+const city = geo.city || geo.subregion || '';
+const country = geo.country || '';
+setCityCountry(
+city && country ? `${city}, ${country}` : city || country
+);
+}
+} catch (error) {
+console.log('Reverse geocoding error:', error);
+setCityCountry('');
+}
+} else {
+setCityCountry('');
+}
+})();
+}, [userHasLocation, otherUserProfile]);
+const handleSendMessage = () => {
+navigation.navigate('Chat' as never, { otherUserId: userId } as never);
+};
+const renderPlantItem = (item: PlantResponse) => {
+if (!showFullSize) {
+return (
+<PlantThumbnail
+key={item.plantId}
+plant={item}
+/>
+);
+} else {
+return (
+<View key={item.plantId} style={styles.plantCardWrapper}>
+<PlantCardWithInfo plant={item} />
+</View>
+);
+}
+};
+if (loadingProfile || loadingPlants || srLoading) {
+return (
+<SafeAreaView style={styles.centerContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+<Text style={styles.loadingText}>{t('profile_loading_message')}</Text>
+</SafeAreaView>
+);
+}
+if (errorProfile || errorPlants || srError) {
+return (
+<SafeAreaView style={styles.centerContainer}>
+<Text style={styles.errorText}>{t('profile_error_message')}</Text>
+<TouchableOpacity
+onPress={() => {
+refetchProfile();
+refetchPlants();
+}}
+style={styles.retryButton}
+>
+<Text style={styles.retryButtonText}>{t('profile_retry_button')}</Text>
+</TouchableOpacity>
+</SafeAreaView>
+);
+}
+if (!otherUserProfile) {
+return (
+<SafeAreaView style={styles.centerContainer}>
+<Text style={styles.errorText}>{t('profile_no_user_profile_error')}</Text>
+</SafeAreaView>
+);
+}
+return (
+<SafeAreaProvider style={styles.container}>
+<ScrollView style={{ flex: 1 }}>
+{}
+<LinearGradient
+colors={[COLORS.primary, COLORS.secondary]}
+style={headerStyles.headerGradient}
+>
+<View style={headerStyles.headerColumn1}>
+<TouchableOpacity
+style={headerStyles.headerBackButton}
+onPress={() => navigation.goBack()}
+>
+<Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
+</TouchableOpacity>
+<View style={styles.headerUserInfo}>
+<Ionicons name="person-circle-outline" size={30} color={COLORS.textLight} />
+<Text style={headerStyles.headerTitle}>{t('profile_title')}</Text>
+</View>
+</View>
+</LinearGradient>
+{}
+<View style={styles.cardContainer}>
+<ProfileCard
+userProfile={otherUserProfile}
+isEditable={false}
+/>
+</View>
+{}
+<View style={styles.plantsSectionWrapper}>
+<View style={styles.plantsSectionHeader}>
+<Text style={styles.plantsSectionTitle}>
+{otherUserProfile.name} {t('profile_my_plants_section')}
+</Text>
+{}
+<TouchableOpacity
+onPress={handleSendMessage}
+style={styles.addPlantButton}
+accessibilityRole="button"
+accessibilityLabel={t('profile_send_message_button')}
+>
+<Ionicons name="chatbubble-ellipses" size={24} color={COLORS.textLight} />
+<Text style={styles.addPlantButtonText}>
+{t('profile_send_message_button')}
+</Text>
+</TouchableOpacity>
+</View>
+{}
+<View style={styles.viewToggleRow}>
+<TouchableOpacity
+onPress={() => setShowFullSize(false)}
+style={[
+styles.segmentButton,
+!showFullSize && styles.segmentButtonActive,
+]}
+>
+<Text
+style={[
+styles.segmentButtonText,
+!showFullSize && styles.segmentButtonTextActive,
+]}
+>
+{t('Thumbnails')}
+</Text>
+</TouchableOpacity>
+<TouchableOpacity
+onPress={() => setShowFullSize(true)}
+style={[
+styles.segmentButton,
+showFullSize && styles.segmentButtonActive,
+]}
+>
+<Text
+style={[
+styles.segmentButtonText,
+showFullSize && styles.segmentButtonTextActive,
+]}
+>
+{t('Full Size')}
+</Text>
+</TouchableOpacity>
+</View>
+{}
+{myPlants && myPlants.length > 0 ? (
+<View style={showFullSize ? styles.fullViewContainer : styles.thumbViewContainer}>
+{myPlants.map((plant) => renderPlantItem(plant))}
+</View>
+) : (
+<View style={styles.noPlantsContainer}>
+<Text style={styles.noPlantsText}>
+{t('profile_no_plants_message')}
+</Text>
+</View>
+)}
+</View>
+{}
+<View style={styles.actionsContainer}>
+{}
+<TouchableOpacity style={styles.followButton} onPress={() => Alert.alert('Followed!')}>
+<Text style={styles.followButtonText}>{t('profile_follow_button')}</Text>
+</TouchableOpacity>
+{}
+</View>
+</ScrollView>
+</SafeAreaProvider>
+);
+};
+export default OtherProfileScreen;
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+},
+centerContainer: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+padding: 20,
+},
+loadingText: {
+fontSize: 16,
+color: COLORS.textDark,
+marginTop: 10,
+},
+errorText: {
+fontSize: 16,
+color: COLORS.textDark,
+marginBottom: 20,
+textAlign: 'center',
+},
+retryButton: {
+backgroundColor: COLORS.primary,
+paddingVertical: 10,
+paddingHorizontal: 20,
+borderRadius: 8,
+},
+retryButtonText: {
+color: '#fff',
+fontSize: 16,
+fontWeight: '600',
+},
+cardContainer: {
+marginHorizontal: 16,
+marginTop: 20,
+},
+plantsSectionWrapper: {
+paddingTop: 20,
+paddingBottom: 15,
+},
+plantsSectionHeader: {
+flexDirection: 'row',
+justifyContent: 'space-between',
+alignItems: 'center',
+marginBottom: 10,
+paddingHorizontal: 20,
+},
+plantsSectionTitle: {
+fontSize: 20,
+fontWeight: '700',
+color: COLORS.textDark,
+},
+addPlantButton: {
+flexDirection: 'row',
+alignItems: 'center',
+backgroundColor: COLORS.accentGreen,
+paddingVertical: 8,
+paddingHorizontal: 12,
+borderRadius: 20,
+...Platform.select({
+ios: {
+shadowColor: "#000",
+shadowOpacity: 0.1,
+shadowOffset: { width: 0, height: 3 },
+shadowRadius: 4,
+},
+android: {
+elevation: 3,
+},
+}),
+},
+addPlantButtonText: {
+color: COLORS.textLight,
+fontSize: 14,
+fontWeight: '600',
+marginLeft: 6,
+},
+viewToggleRow: {
+flexDirection: 'row',
+justifyContent: 'center',
+alignItems: 'center',
+backgroundColor: COLORS.textLight,
+borderRadius: 20,
+alignSelf: 'center',
+padding: 3,
+marginBottom: 15,
+},
+segmentButton: {
+paddingHorizontal: 20,
+paddingVertical: 8,
+borderRadius: 18,
+},
+segmentButtonActive: {
+backgroundColor: COLORS.accentGreen,
+},
+segmentButtonText: {
+fontSize: 14,
+fontWeight: '600',
+color: COLORS.textDark,
+},
+segmentButtonTextActive: {
+color: COLORS.textLight,
+},
+thumbViewContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+justifyContent: 'center',
+},
+fullViewContainer: {
+width: '100%',
+paddingHorizontal: 20,
+},
+plantCardWrapper: {
+marginBottom: 15,
+},
+noPlantsContainer: {
+justifyContent: 'center',
+alignItems: 'center',
+padding: 20,
+},
+noPlantsText: {
+fontSize: 16,
+color: '#555',
+textAlign: 'center',
+},
+headerUserInfo: {
+flexDirection: 'row',
+alignItems: 'center',
+marginLeft: 10,
+},
+headerUserImage: {
+borderColor: COLORS.accentGreen,
+borderWidth: 3,
+width: 60,
+height: 60,
+borderRadius: 30,
+marginRight: 8,
+backgroundColor: '#ccc',
+},
+actionsContainer: {
+paddingHorizontal: 20,
+paddingVertical: 10,
+alignItems: 'center',
+},
+followButton: {
+backgroundColor: COLORS.accentGreen,
+paddingVertical: 12,
+paddingHorizontal: 30,
+borderRadius: 25,
+marginBottom: 10,
+width: '100%',
+alignItems: 'center',
+},
+followButtonText: {
+color: COLORS.textLight,
+fontSize: 16,
+fontWeight: '600',
 },
 });
 // File: app\features\main\screens\SettingsScreen.tsx
@@ -4294,7 +4994,7 @@ const {
 data: userProfile,
 isLoading: userLoading,
 refetch: refetchUserProfile,
-} = useUserProfile();
+} = useMyProfile();
 const queryClient = new QueryClient();
 const [currentLang, setCurrentLang] = useState(i18n.language);
 const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState<boolean>(true);
@@ -4316,7 +5016,6 @@ return;
 }
 setSaving(true);
 try {
-await userService.updateProfile({ email: newEmail });
 Alert.alert(t('Email changed successfully!'));
 setNewEmail('');
 refetchUserProfile();
@@ -4335,7 +5034,6 @@ return;
 }
 setSaving(true);
 try {
-await userService.updateProfile({ password: newPassword });
 Alert.alert(t('Password changed successfully!'));
 setNewPassword('');
 refetchUserProfile();
@@ -4357,6 +5055,7 @@ t('Are you sure you want to log out?'),
 text: t('Yes'),
 style: 'destructive',
 onPress: async () => {
+queryClient.removeQueries();
 queryClient.clear();
 store.dispatch(logout());
 }
@@ -5072,7 +5771,7 @@ refetch: refetchLikablePlants,
 sendSwipes,
 isSending: sendingSwipes,
 } = useLikablePlants();
-const { data: userProfile } = useUserProfile();
+const { data: userProfile } = useMyProfile();
 const {
 data: userPreferences,
 updatePreferences,
@@ -5282,17 +5981,17 @@ keyExtractor={(item, index) =>
 horizontal
 showsHorizontalScrollIndicator={false}
 renderItem={({ item }) => (
-<View style={styles.tagChip}>
-<Text style={styles.tagChipText}>{item.value}</Text>
 <TouchableOpacity
 style={styles.removeTagButton}
 onPress={() =>
 handleRemoveSinglePreference(item.key, item.value)
 }
 >
+<View style={styles.tagChip}>
+<Text style={styles.tagChipText}>{item.value}</Text>
 <Ionicons name="close-circle" size={16} color="#fff" />
-</TouchableOpacity>
 </View>
+</TouchableOpacity>
 )}
 />
 </View>
@@ -5771,8 +6470,8 @@ borderWidth: 3,
 borderColor: "#fff",
 },
 profilePlaceholder: {
-width: 150,
-height: 150,
+width: 170,
+height: 170,
 borderRadius: 40,
 backgroundColor: "#eee",
 alignItems: "center",
@@ -5908,7 +6607,7 @@ fontWeight: "600",
 const OnboardingBioScreen: React.FC = () => {
 const { t } = useTranslation();
 const navigation = useNavigation();
-const { data: userProfile } = useUserProfile();
+const { data: userProfile } = useMyProfile();
 const [bio, setBio] = useState(userProfile?.bio ?? '');
 const handleSkip = () => {
 navigation.navigate('OnboardingLocation' as never);
@@ -6306,7 +7005,6 @@ return i18n;
 "chat_error_message": "An error occurred. Please try again.",
 "chat_retry_button": "Retry",
 "chat_no_matches_with_user": "No matches found with this user.",
-"chat_title": "Chat",
 "chat_no_messages_yet": "No messages yet. Say hello!",
 "chat_message_placeholder": "Type a message",
 "profile_change_picture_title": "Change Profile Picture",
@@ -6319,7 +7017,9 @@ return i18n;
 "error_could_not_open_image_library": "Could not open image library.",
 "error_camera_permission_denied": "Camera permission denied.",
 "error_could_not_open_camera": "Could not open camera.",
-"error_profile_picture_update_failed": "Profile picture update failed."
+"error_profile_picture_update_failed": "Profile picture update failed.",
+"login_button": "Login",
+"register_button": "Register"
 }
 // File: app\i18n\locales\fr.json
 {
@@ -6380,7 +7080,7 @@ const dispatch = useDispatch();
 const { accessToken } = useSelector((state: RootState) => state.auth);
 const { refreshToken } = useSelector((state: RootState) => state.auth);
 const [initializing, setInitializing] = useState(true);
-const { data: userProfile, isLoading: userProfileLoading } = useUserProfile();
+const { data: userProfile, isLoading: userProfileLoading } = useMyProfile();
 useEffect(() => {
 const initializeAuth = async () => {
 const storedAccessToken = await storage.getAccessToken();
@@ -6484,6 +7184,11 @@ options={{ presentation: 'modal' }}
 <RootStack.Screen
 name="AddPlant"
 component={AddPlantScreen}
+options={{ presentation: 'modal' }}
+/>
+<RootStack.Screen
+name="OtherProfile"
+component={OtherProfileScreen}
 options={{ presentation: 'modal' }}
 />
 </RootStack.Navigator>
@@ -6679,7 +7384,6 @@ export interface RefreshTokenRequest {
 refreshToken: string;
 }
 export interface MessageRequest {
-matchId: number;
 messageText: string;
 }
 export interface PlantCreateRequest {
@@ -6743,6 +7447,13 @@ email: string;
 password: string;
 name: string;
 }
+export interface TradeProposalRequest{
+userPlantIds: number[];
+otherPlantIds: number[];
+}
+export interface UpdateTradeProposalStatusRequest{
+newStatus: TradeProposalStatus;
+}
 export interface UserUpdateRequest {
 name: string;
 bio: string;
@@ -6755,15 +7466,14 @@ expiresIn: number;
 }
 export interface MatchResponse {
 matchId: number;
+connectionId: number;
 plant1: PlantResponse;
 plant2: PlantResponse;
-user1: UserResponse;
-user2: UserResponse;
 isClosed: boolean;
 }
 export interface MessageResponse {
 messageId: number;
-matchId: number;
+connectionId: number;
 senderUserId: number;
 messageText: string;
 sentAt: Date;
@@ -6824,6 +7534,24 @@ profilePictureUrl: string;
 bio: string;
 locationLatitude?: number;
 locationLongitude?: number;
+}
+export interface ConnectionResponse {
+connectionId: number;
+user1: UserResponse;
+user2: UserResponse;
+numberOfMatches: number;
+}
+export interface TradeProposalResponse{
+tradeProposalId: number;
+connectionId: number;
+plantsProposedByUser1: PlantResponse[];
+plantsProposedByUser2: PlantResponse[];
+tradeProposalStatus: TradeProposalStatus;
+createdAt: Date;
+acceptedAt: Date;
+declinedAt: Date;
+completedAt: Date;
+connection: ConnectionResponse;
 }
 // File: app\types\enums.ts
 export enum PlantStage {
@@ -6897,6 +7625,12 @@ VariegatedFoliage = "VariegatedFoliage",
 Climbing = "Climbing",
 GroundCover = "GroundCover",
 Rare = "Rare"
+}
+export enum TradeProposalStatus {
+Pending = "Pending",
+Accepted = "Accepted",
+Rejected = "Rejected",
+Completed = "Completed"
 }
 // File: app\types\global.ts
 

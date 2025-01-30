@@ -112,5 +112,29 @@ namespace Cuttr.Infrastructure.Repositories
                 throw new RepositoryException("An error occurred while updating a swipe.", ex);
             }
         }
+
+        public async Task<IEnumerable<Plant>> GetLikedPlantsBySwiperAsync(int swiperUserId, int swipedPlantOwnerUserId)
+        {
+            try
+            {
+                var likedPlants = await _context.Swipes
+                        .AsNoTracking()
+                        .Where(s =>
+                            s.SwiperPlant.User.UserId == swiperUserId &&
+                            s.SwipedPlant.User.UserId == swipedPlantOwnerUserId &&
+                            s.IsLike)
+                        .GroupBy(s => s.SwipedPlant.PlantId)
+                        .Select(g => g.First().SwipedPlant)
+                        .ToListAsync();
+
+
+                return likedPlants.Select(EFToBusinessMapper.MapToPlantWithoutUser);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving liked plants.");
+                throw new RepositoryException("An error occurred while retrieving liked plants.", ex);
+            }
+        }
     }
 }

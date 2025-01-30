@@ -54,9 +54,12 @@ builder.Services.AddScoped<IMatchManager, MatchManager>();
 builder.Services.AddScoped<IMessageManager, MessageManager>();
 builder.Services.AddScoped<IReportManager, ReportManager>();
 builder.Services.AddScoped<IUserPreferencesManager, UserPreferencesManager>();
+builder.Services.AddScoped<IConnectionManager, ConnectionManager>();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IAuthManager, AuthManager>();
+builder.Services.AddScoped<IConnectionRepository, ConnectionRepository>();
+builder.Services.AddScoped<ITradeProposalRepository, TradeProposalRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPlantRepository, PlantRepository>();
 builder.Services.AddScoped<ISwipeRepository, SwipeRepository>();
@@ -253,13 +256,16 @@ public class ConnectionController : ControllerBase
 {
 private readonly IConnectionManager _connectionManager;
 private readonly ILogger<ConnectionController> _logger;
+private readonly IMessageManager _messageManager;
 public ConnectionController(
 IConnectionManager connectionManager,
-ILogger<ConnectionController> logger
+ILogger<ConnectionController> logger,
+IMessageManager messageManager
 )
 {
 _connectionManager = connectionManager;
 _logger = logger;
+_messageManager = messageManager;
 }
 [HttpGet("me")]
 public async Task<IActionResult> GetMyConnections()
@@ -415,92 +421,45 @@ _logger.LogError(ex, "An unexpected error occurred while updating the trade prop
 return StatusCode(500, "An unexpected error occurred.");
 }
 }
-}
-}
-//MatchController
-namespace Cuttr.Api.Controllers
-{
-[ApiController]
-[Route("api/matches")]
-public class MatchController : ControllerBase
-{
-private readonly IMatchManager _matchManager;
-private readonly ILogger<MatchController> _logger;
-public MatchController(IMatchManager matchManager, ILogger<MatchController> logger)
-{
-_matchManager = matchManager;
-_logger = logger;
-}
-[HttpGet("me")]
-public async Task<IActionResult> GetMatches()
+[HttpGet("{connectionId}/messages")]
+public async Task<IActionResult> GetMessages(int connectionId)
 {
 int userId = 0;
 try
 {
 userId = User.GetUserId();
-var matches = await _matchManager.GetMatchesByUserIdAsync(userId);
-return Ok(matches);
-}
-catch (BusinessException ex)
-{
-_logger.LogError(ex, $"Error retrieving matches for user.");
-return BadRequest(ex.Message);
-}
-catch (Business.Exceptions.UnauthorizedAccessException ex)
-{
-_logger.LogWarning(ex, "Unauthorized access attempt.");
-return Unauthorized(ex.Message);
-}
-catch (Exception ex)
-{
-_logger.LogError(ex, "An unexpected error occurred while retrieving matches.");
-return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
-}
-}
-[AllowAnonymous]
-[HttpGet("{matchId}")]
-public async Task<IActionResult> GetMatchById(int matchId)
-{
-try
-{
-var match = await _matchManager.GetMatchByIdAsync(matchId);
-return Ok(match);
+var messages = await _messageManager.GetMessagesByConnectionIdAsync(connectionId, userId);
+return Ok(messages);
 }
 catch (NotFoundException ex)
 {
-_logger.LogWarning(ex, $"Match with ID {matchId} not found.");
+_logger.LogWarning(ex, $"Match with ID {connectionId} not found.");
 return NotFound(ex.Message);
+}
+catch (Business.Exceptions.UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access to messages.");
+return Forbid(ex.Message);
 }
 catch (BusinessException ex)
 {
-_logger.LogError(ex, $"Error retrieving match with ID {matchId}.");
+_logger.LogError(ex, $"Error retrieving messages for match with ID {connectionId}.");
 return BadRequest(ex.Message);
 }
-}
-}
-}
-//MessageController
-namespace Cuttr.Api.Controllers
+catch (Exception ex)
 {
-[ApiController]
-[Route("api/messages")]
-public class MessageController : ControllerBase
-{
-private readonly IMessageManager _messageManager;
-private readonly ILogger<MessageController> _logger;
-public MessageController(IMessageManager messageManager, ILogger<MessageController> logger)
-{
-_messageManager = messageManager;
-_logger = logger;
+_logger.LogError(ex, "An unexpected error occurred while accessing messages.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
-[HttpPost("me")]
-public async Task<IActionResult> SendMessage([FromBody] MessageRequest request)
+}
+[HttpPost("{connectionId}/messages/user/me")]
+public async Task<IActionResult> SendMessage([FromBody] MessageRequest request, int connectionId)
 {
 int senderUserId = 0;
 try
 {
 senderUserId = User.GetUserId();
-MessageResponse messageResponse = await _messageManager.SendMessageAsync(request, senderUserId);
+MessageResponse messageResponse = await _messageManager.SendMessageAsync(request, senderUserId, connectionId);
 return Ok(messageResponse);
 }
 catch (NotFoundException ex)
@@ -524,34 +483,43 @@ _logger.LogError(ex, "An unexpected error occurred while sending message.");
 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
-[HttpGet("/api/matches/{matchId}/messages")]
-public async Task<IActionResult> GetMessages(int matchId)
+}
+}
+//MatchController
+namespace Cuttr.Api.Controllers
 {
-int userId = 0;
+[ApiController]
+[Route("api/matches")]
+public class MatchController : ControllerBase
+{
+private readonly IMatchManager _matchManager;
+private readonly ILogger<MatchController> _logger;
+public MatchController(IMatchManager matchManager, ILogger<MatchController> logger)
+{
+_matchManager = matchManager;
+_logger = logger;
+}
+[HttpGet("{connectionId}")]
+public async Task<IActionResult> GetMatches(int connectionId)
+{
 try
 {
-userId = User.GetUserId();
-var messages = await _messageManager.GetMessagesByMatchIdAsync(matchId, userId);
-return Ok(messages);
-}
-catch (NotFoundException ex)
-{
-_logger.LogWarning(ex, $"Match with ID {matchId} not found.");
-return NotFound(ex.Message);
-}
-catch (Business.Exceptions.UnauthorizedAccessException ex)
-{
-_logger.LogWarning(ex, "Unauthorized access to messages.");
-return Forbid(ex.Message);
+var matches = await _matchManager.GetMatchesByConnectionIdAsync(connectionId);
+return Ok(matches);
 }
 catch (BusinessException ex)
 {
-_logger.LogError(ex, $"Error retrieving messages for match with ID {matchId}.");
+_logger.LogError(ex, $"Error retrieving matches for user.");
 return BadRequest(ex.Message);
+}
+catch (Business.Exceptions.UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt.");
+return Unauthorized(ex.Message);
 }
 catch (Exception ex)
 {
-_logger.LogError(ex, "An unexpected error occurred while accessing messages.");
+_logger.LogError(ex, "An unexpected error occurred while retrieving matches.");
 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
@@ -1057,42 +1025,6 @@ _logger.LogError(ex, "An unexpected error occurred while updating the location."
 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
-[AllowAnonymous]
-[HttpPost("seed")]
-public async Task<IActionResult> SeedRegisterUsers([FromBody] List<UserRegistrationRequest> requests)
-{
-try
-{
-foreach(var request in requests)
-{
-await _userManager.RegisterUserAsync(request);
-}
-return Ok();
-}
-catch (BusinessException ex)
-{
-_logger.LogError(ex, "Error seeding users.");
-return BadRequest(ex.Message);
-}
-}
-[AllowAnonymous]
-[HttpPost("seed/locations")]
-public async Task<IActionResult> SeedUpdateLocations([FromBody] List<UpdateLocationRequest> requests)
-{
-try
-{
-foreach(var request in requests)
-{
-await _userManager.UpdateUserLocationAsync(request.UserId, request.Latitude, request.Longitude);
-}
-return Ok();
-}
-catch (BusinessException ex)
-{
-_logger.LogError(ex, "Error seeding locations.");
-return BadRequest(ex.Message);
-}
-}
 }
 }
 //UserPreferencesController
@@ -1285,7 +1217,6 @@ namespace Cuttr.Business.Contracts.Inputs
 {
 public class MessageRequest
 {
-public int ConnectionId { get; set; }
 public string MessageText { get; set; }
 }
 }
@@ -1382,7 +1313,6 @@ public class TradeProposalRequest
 {
 public List<int> UserPlantIds { get; set; }
 public List<int> OtherPlantIds { get; set; }
-public string AdditionalNotes { get; set; }
 }
 }
 //UpdateTradeProposalStatusRequest
@@ -1390,8 +1320,7 @@ namespace Cuttr.Business.Contracts.Inputs
 {
 public class UpdateTradeProposalStatusRequest
 {
-public string NewStatus { get; set; }
-public string Reason { get; set; }
+public TradeProposalStatus NewStatus { get; set; }
 }
 }
 //UpdateUserLocationRequest
@@ -1476,6 +1405,7 @@ public class ConnectionResponse
 public int ConnectionId { get; set; }
 public UserResponse User1 { get; set; }
 public UserResponse User2 { get; set; }
+public int NumberOfMatches { get; set; }
 }
 }
 //MatchResponse
@@ -1484,10 +1414,9 @@ namespace Cuttr.Business.Contracts.Outputs
 public class MatchResponse
 {
 public int MatchId { get; set; }
+public int ConnectionId { get; set; }
 public PlantResponse Plant1 { get; set; }
 public PlantResponse Plant2 { get; set; }
-public UserResponse User1 { get; set; }
-public UserResponse User2 { get; set; }
 }
 }
 //MessageResponse
@@ -1555,8 +1484,8 @@ public class TradeProposalResponse
 {
 public int TradeProposalId { get; set; }
 public int ConnectionId { get; set; }
-public List<PlantResponse> ItemsProposedByUser1 { get; set; }
-public List<PlantResponse> ItemsProposedByUser2 { get; set; }
+public List<PlantResponse> PlantsProposedByUser1 { get; set; }
+public List<PlantResponse> PlantsProposedByUser2 { get; set; }
 public TradeProposalStatus TradeProposalStatus { get; set; }
 public DateTime CreatedAt { get; set; }
 public DateTime? AcceptedAt { get; set; }
@@ -1631,14 +1560,10 @@ public class Match
 public int MatchId { get; set; }
 public int PlantId1 { get; set; }
 public int PlantId2 { get; set; }
-public int UserId1 { get; set; }
-public int UserId2 { get; set; }
+public int ConnectionId { get; set; }
 public DateTime CreatedAt { get; set; }
 public Plant Plant1 { get; set; }
 public Plant Plant2 { get; set; }
-public User User1 { get; set; }
-public User User2 { get; set; }
-public List<Message> Messages { get; set; }
 }
 }
 //Message
@@ -1945,7 +1870,7 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
 public interface IMatchManager
 {
-Task<IEnumerable<MatchResponse>> GetMatchesByUserIdAsync(int userId);
+Task<IEnumerable<MatchResponse>> GetMatchesByConnectionIdAsync(int userId);
 Task<MatchResponse> GetMatchByIdAsync(int matchId);
 }
 }
@@ -1954,8 +1879,8 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
 public interface IMessageManager
 {
-Task<MessageResponse> SendMessageAsync(MessageRequest request, int senderUserId);
-Task<IEnumerable<MessageResponse>> GetMessagesByMatchIdAsync(int matchId, int userId);
+Task<MessageResponse> SendMessageAsync(MessageRequest request, int senderUserId, int connectionId);
+Task<IEnumerable<MessageResponse>> GetMessagesByConnectionIdAsync(int connectionId, int senderUserId);
 }
 }
 //IPlantManager
@@ -2020,6 +1945,7 @@ Task<IEnumerable<Connection>> GetConnectionsByUserIdAsync(int userId);
 Task<Connection> CreateConnectionAsync(Connection connection);
 Task<Connection> UpdateConnectionAsync(Connection connection);
 Task<Connection> GetConnectionByUsersAsync(int swiperUserId, int swipedUserId);
+Task<int> GetNumberOfMatchesAsync(int connectionId);
 }
 }
 //IMatchRepository
@@ -2027,7 +1953,7 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
 {
 public interface IMatchRepository
 {
-Task<IEnumerable<Match>> GetMatchesByUserIdAsync(int userId);
+Task<IEnumerable<Match>> GetMatchesByConnectionIdAsync(int connectionId);
 Task<Match> GetMatchByIdAsync(int matchId);
 Task<Match> AddMatchAsync(Match match);
 }
@@ -2038,7 +1964,7 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
 public interface IMessageRepository
 {
 Task<Message> AddMessageAsync(Message message);
-Task<IEnumerable<Message>> GetMessagesByMatchIdAsync(int matchId);
+Task<IEnumerable<Message>> GetMessagesByConnectionIdAsync(int matchId);
 }
 }
 //IPlantRepository
@@ -2293,40 +2219,105 @@ _logger = logger;
 }
 public async Task<IEnumerable<ConnectionResponse>> GetConnectionsForUserAsync(int userId)
 {
+_logger.LogInformation("Fetching connections for user with ID {UserId}.", userId);
+try
+{
 var connections = await _connectionRepository.GetConnectionsByUserIdAsync(userId);
-return connections.Select(conn => BusinessToContractMapper.MapToMatchResponse(conn));
+if (connections == null || !connections.Any())
+{
+_logger.LogInformation("No connections found for user with ID {UserId}.", userId);
+return Enumerable.Empty<ConnectionResponse>();
+}
+var connResponses = connections
+.Select(conn => BusinessToContractMapper.MapToConnectionResponse(conn))
+.ToList();
+foreach (var conn in connResponses)
+{
+conn.NumberOfMatches = await _connectionRepository.GetNumberOfMatchesAsync(conn.ConnectionId);
+}
+_logger.LogInformation("Successfully fetched connections for user with ID {UserId}.", userId);
+return connResponses;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "Error fetching connections for user with ID {UserId}.", userId);
+throw new BusinessException("An error occurred while fetching connections.", ex);
+}
 }
 public async Task<ConnectionResponse> GetConnectionByIdAsync(int connectionId, int userId)
 {
+_logger.LogInformation("Fetching connection with ID {ConnectionId} for user with ID {UserId}.", connectionId, userId);
+try
+{
 var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
 if (connection == null)
 {
+_logger.LogWarning("Connection with ID {ConnectionId} not found.", connectionId);
 throw new NotFoundException($"Connection with ID {connectionId} not found.");
 }
 EnsureUserIsParticipantOfConnection(connection, userId);
-return BusinessToContractMapper.MapToMatchResponse(connection);
+var response = BusinessToContractMapper.MapToConnectionResponse(connection);
+_logger.LogInformation("Successfully fetched connection with ID {ConnectionId} for user with ID {UserId}.", connectionId, userId);
+return response;
+}
+catch (NotFoundException)
+{
+throw;
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt by user ID {UserId} to connection ID {ConnectionId}.", userId, connectionId);
+throw;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "Error fetching connection with ID {ConnectionId} for user with ID {UserId}.", connectionId, userId);
+throw new BusinessException("An error occurred while fetching the connection.", ex);
+}
 }
 public async Task<IEnumerable<TradeProposalResponse>> GetTradeProposalsAsync(int connectionId, int userId)
 {
+_logger.LogInformation("Fetching trade proposals for connection ID {ConnectionId} and user ID {UserId}.", connectionId, userId);
+try
+{
 var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
 if (connection == null)
 {
+_logger.LogWarning("Connection with ID {ConnectionId} not found.", connectionId);
 throw new NotFoundException($"Connection with ID {connectionId} not found.");
 }
 EnsureUserIsParticipantOfConnection(connection, userId);
-IEnumerable<TradeProposal> proposals = await _tradeProposalRepository.GetByConnectionIdAsync(connectionId);
-return proposals
+var proposals = await _tradeProposalRepository.GetByConnectionIdAsync(connectionId);
+var response = proposals
 .OrderByDescending(tp => tp.CreatedAt)
 .Select(tp => BusinessToContractMapper.MapToTradeProposalResponse(tp));
+_logger.LogInformation("Successfully fetched trade proposals for connection ID {ConnectionId}.", connectionId);
+return response;
 }
-public async Task<TradeProposalResponse> CreateTradeProposalAsync(
-int connectionId,
-int userId,
-TradeProposalRequest request)
+catch (NotFoundException)
+{
+throw;
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized access attempt by user ID {UserId} to trade proposals in connection ID {ConnectionId}.", userId, connectionId);
+throw;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "Error fetching trade proposals for connection ID {ConnectionId} and user ID {UserId}.", connectionId, userId);
+throw new BusinessException("An error occurred while fetching trade proposals.", ex);
+}
+}
+public async Task<TradeProposalResponse> CreateTradeProposalAsync(int connectionId, int userId, TradeProposalRequest request)
+{
+_logger.LogInformation("Creating trade proposal in connection ID {ConnectionId} by user ID {UserId}.", connectionId, userId);
+try
 {
 var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
 if (connection == null)
 {
+_logger.LogWarning("Connection with ID {ConnectionId} not found.", connectionId);
 throw new NotFoundException($"Connection with ID {connectionId} not found.");
 }
 EnsureUserIsParticipantOfConnection(connection, userId);
@@ -2335,65 +2326,98 @@ var newProposal = new TradeProposal
 ConnectionId = connectionId,
 TradeProposalStatus = Enums.TradeProposalStatus.Pending,
 CreatedAt = DateTime.UtcNow,
-PlantIdsProposedByUser1 = (userId == connection.UserId1) ? request.UserPlantIds : request.OtherPlantIds,
-PlantIdsProposedByUser2 = (userId == connection.UserId2) ? request.UserPlantIds : request.OtherPlantIds,
+PlantIdsProposedByUser1 = request.UserPlantIds,
+PlantIdsProposedByUser2 = request.OtherPlantIds
 };
 await _tradeProposalRepository.CreateAsync(newProposal);
-return BusinessToContractMapper.MapToTradeProposalResponse(newProposal);
+_logger.LogInformation("Trade proposal created with ID {ProposalId} in connection ID {ConnectionId}.", newProposal.TradeProposalId, connectionId);
+var response = BusinessToContractMapper.MapToTradeProposalResponse(newProposal);
+_logger.LogInformation("Successfully created trade proposal with ID {ProposalId}.", newProposal.TradeProposalId);
+return response;
 }
-public async Task UpdateTradeProposalStatusAsync(
-int connectionId,
-int proposalId,
-int userId,
-UpdateTradeProposalStatusRequest request)
+catch (NotFoundException)
+{
+throw;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "Error creating trade proposal in connection ID {ConnectionId} by user ID {UserId}.", connectionId, userId);
+throw new BusinessException("An error occurred while creating the trade proposal.", ex);
+}
+}
+public async Task UpdateTradeProposalStatusAsync(int connectionId, int proposalId, int userId, UpdateTradeProposalStatusRequest request)
+{
+_logger.LogInformation("Updating trade proposal ID {ProposalId} status to {NewStatus} in connection ID {ConnectionId} by user ID {UserId}.", proposalId, request.NewStatus, connectionId, userId);
+try
 {
 var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
 if (connection == null)
 {
+_logger.LogWarning("Connection with ID {ConnectionId} not found.", connectionId);
 throw new NotFoundException($"Connection with ID {connectionId} not found.");
 }
 EnsureUserIsParticipantOfConnection(connection, userId);
 var proposal = await _tradeProposalRepository.GetByIdAsync(proposalId);
 if (proposal == null || proposal.ConnectionId != connectionId)
 {
+_logger.LogWarning("Trade proposal with ID {ProposalId} not found in connection ID {ConnectionId}.", proposalId, connectionId);
 throw new NotFoundException($"Trade proposal with ID {proposalId} not found in connection {connectionId}.");
 }
-var newStatus = request.NewStatus?.Trim();
-if (string.IsNullOrEmpty(newStatus))
+switch (request.NewStatus)
 {
-throw new BusinessException("Invalid status update request (no NewStatus provided).");
-}
-switch (newStatus.ToLower())
-{
-case "accepted":
+case Enums.TradeProposalStatus.Accepted:
 proposal.TradeProposalStatus = Enums.TradeProposalStatus.Accepted;
 proposal.AcceptedAt = DateTime.UtcNow;
 proposal.DeclinedAt = null;
 proposal.CompletedAt = null;
 break;
-case "declined":
+case Enums.TradeProposalStatus.Rejected:
 proposal.TradeProposalStatus = Enums.TradeProposalStatus.Rejected;
 proposal.DeclinedAt = DateTime.UtcNow;
 proposal.AcceptedAt = null;
 proposal.CompletedAt = null;
 break;
-case "completed":
+case Enums.TradeProposalStatus.Completed:
 if (proposal.TradeProposalStatus != Enums.TradeProposalStatus.Accepted)
 {
+_logger.LogWarning("Cannot mark proposal ID {ProposalId} as 'Completed' because it is not 'Accepted'.", proposalId);
 throw new BusinessException("Cannot mark proposal as 'Completed' if it has not been 'Accepted'.");
 }
 proposal.TradeProposalStatus = Enums.TradeProposalStatus.Completed;
 proposal.CompletedAt = DateTime.UtcNow;
+await MarkPlantsAsTraded(proposal);
 break;
 default:
-throw new BusinessException($"Unknown status '{request.NewStatus}'. Allowed: Accepted, Declined, Completed.");
+_logger.LogWarning("Invalid trade proposal status '{NewStatus}' provided for proposal ID {ProposalId}.", request.NewStatus, proposalId);
+throw new BusinessException($"Unknown status '{request.NewStatus}'. Allowed: Accepted, Rejected, Completed.");
 }
 await _tradeProposalRepository.UpdateAsync(proposal);
+_logger.LogInformation("Successfully updated trade proposal ID {ProposalId} to status {NewStatus}.", proposalId, request.NewStatus);
+}
+catch (NotFoundException)
+{
+throw;
+}
+catch (BusinessException)
+{
+throw;
+}
+catch (UnauthorizedAccessException ex)
+{
+_logger.LogWarning(ex, "Unauthorized attempt by user ID {UserId} to update trade proposal ID {ProposalId} in connection ID {ConnectionId}.", userId, proposalId, connectionId);
+throw;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "Error updating trade proposal ID {ProposalId} in connection ID {ConnectionId} by user ID {UserId}.", proposalId, connectionId, userId);
+throw new BusinessException("An error occurred while updating the trade proposal.", ex);
+}
 }
 private void EnsureUserIsParticipantOfConnection(Connection connection, int userId)
 {
 if (connection.UserId1 != userId && connection.UserId2 != userId)
 {
+_logger.LogWarning("User ID {UserId} is not a participant of connection ID {ConnectionId}.", userId, connection.ConnectionId);
 throw new UnauthorizedAccessException(
 $"User {userId} is not a participant of connection {connection.ConnectionId}."
 );
@@ -2416,16 +2440,16 @@ public MatchManager(IMatchRepository matchRepository, ILogger<MatchManager> logg
 _matchRepository = matchRepository;
 _logger = logger;
 }
-public async Task<IEnumerable<MatchResponse>> GetMatchesByUserIdAsync(int userId)
+public async Task<IEnumerable<MatchResponse>> GetMatchesByConnectionIdAsync(int connectionId)
 {
 try
 {
-var matches = await _matchRepository.GetMatchesByUserIdAsync(userId);
+var matches = await _matchRepository.GetMatchesByConnectionIdAsync(connectionId);
 return BusinessToContractMapper.MapToMatchResponse(matches);
 }
 catch (Exception ex)
 {
-_logger.LogError(ex, $"Error retrieving matches for user with ID {userId}.");
+_logger.LogError(ex, $"Error retrieving matches for user with ID {connectionId}.");
 throw new BusinessException("Error retrieving matches.", ex);
 }
 }
@@ -2469,16 +2493,16 @@ _messageRepository = messageRepository;
 _connectionRepository = matchRepository;
 _logger = logger;
 }
-public async Task<MessageResponse> SendMessageAsync(MessageRequest request, int senderUserId)
+public async Task<MessageResponse> SendMessageAsync(MessageRequest request, int senderUserId, int connectionId)
 {
 try
 {
-var match = await _connectionRepository.GetConnectionByIdAsync(request.ConnectionId);
+var match = await _connectionRepository.GetConnectionByIdAsync(connectionId);
 if (match == null)
-throw new NotFoundException($"Match with ID {request.ConnectionId} not found.");
+throw new NotFoundException($"Match with ID {connectionId} not found.");
 if (match.UserId1 != senderUserId && match.UserId2 != senderUserId)
 throw new BusinessException("Sender user is not part of the match.");
-var message = ContractToBusinessMapper.MapToMessage(request, senderUserId);
+var message = ContractToBusinessMapper.MapToMessage(request, senderUserId, connectionId);
 var createdMessage = await _messageRepository.AddMessageAsync(message);
 return BusinessToContractMapper.MapToMessageResponse(createdMessage);
 }
@@ -2496,16 +2520,16 @@ _logger.LogError(ex, "Error sending message.");
 throw new BusinessException("Error sending message.", ex);
 }
 }
-public async Task<IEnumerable<MessageResponse>> GetMessagesByMatchIdAsync(int matchId, int userId)
+public async Task<IEnumerable<MessageResponse>> GetMessagesByConnectionIdAsync(int connectionId, int userId)
 {
 try
 {
-var match = await _connectionRepository.GetConnectionByIdAsync(matchId);
-if (match == null)
-throw new NotFoundException($"Match with ID {matchId} not found.");
-if (match.UserId1 != userId && match.UserId2 != userId)
+var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
+if (connection == null)
+throw new NotFoundException($"Match with ID {connectionId} not found.");
+if (connection.UserId1 != userId && connection.UserId2 != userId)
 throw new Exceptions.UnauthorizedAccessException("User is not part of the match.");
-var messages = await _messageRepository.GetMessagesByMatchIdAsync(matchId);
+var messages = await _messageRepository.GetMessagesByConnectionIdAsync(connectionId);
 return BusinessToContractMapper.MapToMessageResponse(messages);
 }
 catch (NotFoundException)
@@ -2518,7 +2542,7 @@ throw;
 }
 catch (Exception ex)
 {
-_logger.LogError(ex, $"Error retrieving messages for match with ID {matchId}.");
+_logger.LogError(ex, $"Error retrieving messages for match with ID {connectionId}.");
 throw new BusinessException("Error retrieving messages.", ex);
 }
 }
@@ -2808,20 +2832,10 @@ true
 SwipeResponse swipeResponse = new SwipeResponse { IsMatch = oppositeSwipe != null };
 if (swipeResponse.IsMatch)
 {
-bool isSwiperUserFirst = swiperPlant.UserId < swipedPlant.UserId;
-var match = new Match
-{
-PlantId1 = isSwiperUserFirst ? swiperPlant.PlantId : swipedPlant.PlantId,
-PlantId2 = isSwiperUserFirst ? swipedPlant.PlantId : swiperPlant.PlantId,
-UserId1 = isSwiperUserFirst ? swiperPlant.UserId : swipedPlant.UserId,
-UserId2 = isSwiperUserFirst ? swipedPlant.UserId : swiperPlant.UserId,
-CreatedAt = DateTime.UtcNow
-};
-var addedMatch = await _matchRepository.AddMatchAsync(match);
-if (addedMatch != null) swipeResponse.Match = BusinessToContractMapper.MapToMatchResponse(addedMatch);
 var swiperUserId = swiperPlant.UserId;
 var swipedUserId = swipedPlant.UserId;
 var existingConnection = await _connectionRepository.GetConnectionByUsersAsync(swiperUserId, swipedUserId);
+Connection currentConnection;
 if (existingConnection == null)
 {
 var newConnection = new Connection
@@ -2831,12 +2845,38 @@ UserId2 = swipedUserId,
 CreatedAt = DateTime.UtcNow,
 IsActive = true
 };
-var addedConnection = await _connectionRepository.CreateConnectionAsync(newConnection);
-swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(addedConnection);
+currentConnection = await _connectionRepository.CreateConnectionAsync(newConnection);
+swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(currentConnection);
 }
 else
 {
+currentConnection = existingConnection;
 swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(existingConnection);
+}
+if (currentConnection == null || currentConnection.ConnectionId == 0)
+throw new BusinessException("Connection not properly established.");
+int plantId1, plantId2;
+if (currentConnection.UserId1 == swiperUserId)
+{
+plantId1 = swiperPlant.PlantId;
+plantId2 = swipedPlant.PlantId;
+}
+else
+{
+plantId1 = swipedPlant.PlantId;
+plantId2 = swiperPlant.PlantId;
+}
+var match = new Match
+{
+PlantId1 = plantId1,
+PlantId2 = plantId2,
+ConnectionId = currentConnection.ConnectionId,
+CreatedAt = DateTime.UtcNow
+};
+var addedMatch = await _matchRepository.AddMatchAsync(match);
+if (addedMatch != null)
+{
+swipeResponse.Match = BusinessToContractMapper.MapToMatchResponse(addedMatch);
 }
 }
 responses.Add(swipeResponse);
@@ -3305,8 +3345,8 @@ return new TradeProposalResponse
 {
 TradeProposalId = tp.TradeProposalId,
 ConnectionId = tp.ConnectionId,
-ItemsProposedByUser1 = (tp.ItemsProposedByUser1).Select(MapToPlantResponse).ToList(),
-ItemsProposedByUser2 = (tp.ItemsProposedByUser2).Select(MapToPlantResponse).ToList(),
+PlantsProposedByUser1 = (tp.ItemsProposedByUser1).Select(MapToPlantResponse).ToList(),
+PlantsProposedByUser2 = (tp.ItemsProposedByUser2).Select(MapToPlantResponse).ToList(),
 TradeProposalStatus = tp.TradeProposalStatus,
 CreatedAt = tp.CreatedAt,
 AcceptedAt = tp.AcceptedAt,
@@ -3337,10 +3377,9 @@ return null;
 return new MatchResponse
 {
 MatchId = match.MatchId,
+ConnectionId = match.ConnectionId,
 Plant1 = MapToPlantResponse(match.Plant1),
 Plant2 = MapToPlantResponse(match.Plant2),
-User1 = MapToUserResponse(match.User1),
-User2 = MapToUserResponse(match.User2)
 };
 }
 public static IEnumerable<MatchResponse> MapToMatchResponse(IEnumerable<Match> matches)
@@ -3418,13 +3457,13 @@ SwipedPlantId = request.SwipedPlantId,
 IsLike = request.IsLike
 };
 }
-public static Message MapToMessage(MessageRequest request, int senderUserId)
+public static Message MapToMessage(MessageRequest request, int senderUserId, int connectionId)
 {
 if (request == null)
 return null;
 return new Message
 {
-ConnectionId = request.ConnectionId,
+ConnectionId = connectionId,
 SenderUserId = senderUserId,
 MessageText = request.MessageText,
 SentAt = DateTime.UtcNow,
@@ -3457,7 +3496,7 @@ PreferedExtras = request.PreferedExtras
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3052531534eb697895c8b452eab78b10e28a6ce1")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -3594,6 +3633,8 @@ public DbSet<MessageEF> Messages { get; set; }
 public DbSet<ReportEF> Reports { get; set; }
 public DbSet<UserPreferencesEF> UserPreferences { get; set; }
 public DbSet<RefreshTokenEF> RefreshTokens { get; set; }
+public DbSet<ConnectionEF> Connections { get; set; }
+public DbSet<TradeProposalEF> TradeProposals { get; set; }
 protected override void OnModelCreating(ModelBuilder modelBuilder)
 {
 base.OnModelCreating(modelBuilder);
@@ -3667,31 +3708,54 @@ entity.HasOne(m => m.Plant2)
 .WithMany()
 .HasForeignKey(m => m.PlantId2)
 .OnDelete(DeleteBehavior.Restrict);
-entity.HasOne(m => m.User1)
-.WithMany()
-.HasForeignKey(m => m.UserId1)
-.OnDelete(DeleteBehavior.Restrict);
-entity.HasOne(m => m.User2)
-.WithMany()
-.HasForeignKey(m => m.UserId2)
+entity.HasOne(m => m.Connection)
+.WithMany(m => m.Matches)
+.HasForeignKey(m => m.ConnectionId)
 .OnDelete(DeleteBehavior.Restrict);
 entity.HasIndex(m => new { m.PlantId1, m.PlantId2 })
 .IsUnique();
-entity.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
+});
+modelBuilder.Entity<ConnectionEF>(entity =>
+{
+entity.HasKey(c => c.ConnectionId);
+entity.HasOne(c => c.User1)
+.WithMany()
+.HasForeignKey(c => c.UserId1)
+.OnDelete(DeleteBehavior.Restrict);
+entity.HasOne(c => c.User2)
+.WithMany()
+.HasForeignKey(c => c.UserId2)
+.OnDelete(DeleteBehavior.Restrict);
+entity.HasMany(c => c.Messages)
+.WithOne(m => m.Connection)
+.HasForeignKey(m => m.ConnectionId)
+.OnDelete(DeleteBehavior.Cascade);
+entity.HasMany(c => c.TradeProposals)
+.WithOne(tp => tp.Connection)
+.HasForeignKey(tp => tp.ConnectionId)
+.OnDelete(DeleteBehavior.Cascade);
 });
 modelBuilder.Entity<MessageEF>(entity =>
 {
 entity.HasKey(m => m.MessageId);
 entity.Property(m => m.MessageText)
 .IsRequired();
-entity.HasOne(m => m.Match)
-.WithMany(mt => mt.Messages)
-.HasForeignKey(m => m.MatchId)
+entity.HasOne(m => m.Connection)
+.WithMany(conn => conn.Messages)
+.HasForeignKey(m => m.ConnectionId)
 .OnDelete(DeleteBehavior.Cascade);
 entity.HasOne(m => m.SenderUser)
 .WithMany(u => u.SentMessages)
 .HasForeignKey(m => m.SenderUserId)
 .OnDelete(DeleteBehavior.Restrict);
+});
+modelBuilder.Entity<TradeProposalEF>(entity =>
+{
+entity.HasKey(tp => tp.TradeProposalId);
+entity.HasOne(tp => tp.Connection)
+.WithMany(c => c.TradeProposals)
+.HasForeignKey(tp => tp.ConnectionId)
+.OnDelete(DeleteBehavior.Cascade);
 });
 modelBuilder.Entity<ReportEF>(entity =>
 {
@@ -3790,6 +3854,7 @@ public DateTime CreatedAt { get; set; }
 public virtual UserEF User1 { get; set; }
 [ForeignKey("UserId2")]
 public virtual UserEF User2 { get; set; }
+public virtual ICollection<MatchEF> Matches { get; set; }
 public virtual ICollection<MessageEF> Messages { get; set; }
 public List<TradeProposalEF> TradeProposals { get; set; }
 }
@@ -3806,19 +3871,14 @@ public int PlantId1 { get; set; }
 [Required]
 public int PlantId2 { get; set; }
 [Required]
-public int UserId1 { get; set; }
-[Required]
-public int UserId2 { get; set; }
+public int ConnectionId { get; set; }
 public DateTime CreatedAt { get; set; }
 [ForeignKey("PlantId1")]
 public virtual PlantEF Plant1 { get; set; }
 [ForeignKey("PlantId2")]
 public virtual PlantEF Plant2 { get; set; }
-[ForeignKey("UserId1")]
-public virtual UserEF User1 { get; set; }
-[ForeignKey("UserId2")]
-public virtual UserEF User2 { get; set; }
-public virtual ICollection<MessageEF> Messages { get; set; }
+[ForeignKey("ConnectionId")]
+public virtual ConnectionEF Connection { get; set; }
 }
 }
 //MessageEF
@@ -4142,13 +4202,9 @@ return new MatchEF
 MatchId = match.MatchId,
 PlantId1 = match.PlantId1,
 PlantId2 = match.PlantId2,
-UserId1 = match.UserId1,
-UserId2 = match.UserId2,
+ConnectionId = match.ConnectionId,
 Plant1 = MapToPlantEFWithoutUser(match.Plant1),
 Plant2 = MapToPlantEFWithoutUser(match.Plant2),
-User1 = MapToUserEFWithoutPlants(match.User1),
-User2 = MapToUserEFWithoutPlants(match.User2),
-Messages = match.Messages?.Select(MapToMessageEF).ToList(),
 CreatedAt = match.CreatedAt,
 };
 }
@@ -4435,13 +4491,9 @@ return new Match
 MatchId = efMatch.MatchId,
 PlantId1 = efMatch.PlantId1,
 PlantId2 = efMatch.PlantId2,
-UserId1 = efMatch.UserId1,
-UserId2 = efMatch.UserId2,
+ConnectionId = efMatch.ConnectionId,
 Plant1 = MapToPlantWithoutUser(efMatch.Plant1),
 Plant2 = MapToPlantWithoutUser(efMatch.Plant2),
-User1 = MapToUserWithoutPlants(efMatch.User1),
-User2 = MapToUserWithoutPlants(efMatch.User2),
-Messages = efMatch.Messages?.Select(MapToMessage).ToList(),
 CreatedAt = efMatch.CreatedAt,
 };
 }
@@ -4460,19 +4512,19 @@ SentAt = efMessage.CreatedAt,
 SenderUser = MapToUserWithoutPlants(efMessage.SenderUser),
 };
 }
-public static Connection MapToConnection(ConnectionEF efMatch)
+public static Connection MapToConnection(ConnectionEF efConnection)
 {
-if (efMatch == null)
+if (efConnection == null)
 return null;
 return new Connection
 {
-ConnectionId = efMatch.ConnectionId,
-UserId1 = efMatch.UserId1,
-UserId2 = efMatch.UserId2,
-User1 = MapToUserWithoutPlants(efMatch.User1),
-User2 = MapToUserWithoutPlants(efMatch.User2),
-Messages = efMatch.Messages?.Select(MapToMessage).ToList(),
-CreatedAt = efMatch.CreatedAt,
+ConnectionId = efConnection.ConnectionId,
+UserId1 = efConnection.UserId1,
+UserId2 = efConnection.UserId2,
+User1 = MapToUserWithoutPlants(efConnection.User1),
+User2 = MapToUserWithoutPlants(efConnection.User2),
+Messages = efConnection.Messages?.Select(MapToMessage).ToList(),
+CreatedAt = efConnection.CreatedAt,
 };
 }
 public static Report MapToReport(ReportEF efReport)
@@ -7847,21 +7899,201 @@ b.Navigation("SentMessages");
 }
 }
 }
-//CuttrDbContextModelSnapshot
+//20250128134110_version2.1
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+public partial class version21 : Migration
+{
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.DropForeignKey(
+name: "FK_Messages_Matches_MatchId",
+table: "Messages");
+migrationBuilder.DropIndex(
+name: "IX_Messages_MatchId",
+table: "Messages");
+migrationBuilder.AddColumn<bool>(
+name: "IsTraded",
+table: "Plants",
+type: "bit",
+nullable: false,
+defaultValue: false);
+migrationBuilder.AddColumn<int>(
+name: "ConnectionId",
+table: "Messages",
+type: "int",
+nullable: false,
+defaultValue: 0);
+migrationBuilder.AddColumn<int>(
+name: "MatchEFMatchId",
+table: "Messages",
+type: "int",
+nullable: true);
+migrationBuilder.CreateTable(
+name: "Connections",
+columns: table => new
+{
+ConnectionId = table.Column<int>(type: "int", nullable: false)
+.Annotation("SqlServer:Identity", "1, 1"),
+UserId1 = table.Column<int>(type: "int", nullable: false),
+UserId2 = table.Column<int>(type: "int", nullable: false),
+isActive = table.Column<bool>(type: "bit", nullable: false),
+CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
+},
+constraints: table =>
+{
+table.PrimaryKey("PK_Connections", x => x.ConnectionId);
+table.ForeignKey(
+name: "FK_Connections_Users_UserId1",
+column: x => x.UserId1,
+principalTable: "Users",
+principalColumn: "UserId",
+onDelete: ReferentialAction.Restrict);
+table.ForeignKey(
+name: "FK_Connections_Users_UserId2",
+column: x => x.UserId2,
+principalTable: "Users",
+principalColumn: "UserId",
+onDelete: ReferentialAction.Restrict);
+});
+migrationBuilder.CreateTable(
+name: "TradeProposals",
+columns: table => new
+{
+TradeProposalId = table.Column<int>(type: "int", nullable: false)
+.Annotation("SqlServer:Identity", "1, 1"),
+ConnectionId = table.Column<int>(type: "int", nullable: false),
+PlantIdsProposedByUser1 = table.Column<string>(type: "nvarchar(max)", nullable: false),
+PlantIdsProposedByUser2 = table.Column<string>(type: "nvarchar(max)", nullable: false),
+TradeProposalStatus = table.Column<string>(type: "nvarchar(max)", nullable: false),
+CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+AcceptedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+DeclinedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+},
+constraints: table =>
+{
+table.PrimaryKey("PK_TradeProposals", x => x.TradeProposalId);
+table.ForeignKey(
+name: "FK_TradeProposals_Connections_ConnectionId",
+column: x => x.ConnectionId,
+principalTable: "Connections",
+principalColumn: "ConnectionId",
+onDelete: ReferentialAction.Cascade);
+});
+migrationBuilder.CreateIndex(
+name: "IX_Messages_ConnectionId",
+table: "Messages",
+column: "ConnectionId");
+migrationBuilder.CreateIndex(
+name: "IX_Messages_MatchEFMatchId",
+table: "Messages",
+column: "MatchEFMatchId");
+migrationBuilder.CreateIndex(
+name: "IX_Connections_UserId1",
+table: "Connections",
+column: "UserId1");
+migrationBuilder.CreateIndex(
+name: "IX_Connections_UserId2",
+table: "Connections",
+column: "UserId2");
+migrationBuilder.CreateIndex(
+name: "IX_TradeProposals_ConnectionId",
+table: "TradeProposals",
+column: "ConnectionId");
+migrationBuilder.AddForeignKey(
+name: "FK_Messages_Connections_ConnectionId",
+table: "Messages",
+column: "ConnectionId",
+principalTable: "Connections",
+principalColumn: "ConnectionId",
+onDelete: ReferentialAction.Cascade);
+migrationBuilder.AddForeignKey(
+name: "FK_Messages_Matches_MatchEFMatchId",
+table: "Messages",
+column: "MatchEFMatchId",
+principalTable: "Matches",
+principalColumn: "MatchId");
+}
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.DropForeignKey(
+name: "FK_Messages_Connections_ConnectionId",
+table: "Messages");
+migrationBuilder.DropForeignKey(
+name: "FK_Messages_Matches_MatchEFMatchId",
+table: "Messages");
+migrationBuilder.DropTable(
+name: "TradeProposals");
+migrationBuilder.DropTable(
+name: "Connections");
+migrationBuilder.DropIndex(
+name: "IX_Messages_ConnectionId",
+table: "Messages");
+migrationBuilder.DropIndex(
+name: "IX_Messages_MatchEFMatchId",
+table: "Messages");
+migrationBuilder.DropColumn(
+name: "IsTraded",
+table: "Plants");
+migrationBuilder.DropColumn(
+name: "ConnectionId",
+table: "Messages");
+migrationBuilder.DropColumn(
+name: "MatchEFMatchId",
+table: "Messages");
+migrationBuilder.CreateIndex(
+name: "IX_Messages_MatchId",
+table: "Messages",
+column: "MatchId");
+migrationBuilder.AddForeignKey(
+name: "FK_Messages_Matches_MatchId",
+table: "Messages",
+column: "MatchId",
+principalTable: "Matches",
+principalColumn: "MatchId",
+onDelete: ReferentialAction.Cascade);
+}
+}
+}
+//20250128134110_version2.1.Designer
 ﻿
 #nullable disable
 namespace Cuttr.Infrastructure.Migrations
 {
 [DbContext(typeof(CuttrDbContext))]
-partial class CuttrDbContextModelSnapshot : ModelSnapshot
+[Migration("20250128134110_version2.1")]
+partial class version21
 {
-protected override void BuildModel(ModelBuilder modelBuilder)
+protected override void BuildTargetModel(ModelBuilder modelBuilder)
 {
 #pragma warning disable 612, 618
 modelBuilder
 .HasAnnotation("ProductVersion", "9.0.0")
 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.Property<int>("ConnectionId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ConnectionId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.Property<bool>("isActive")
+.HasColumnType("bit");
+b.HasKey("ConnectionId");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.ToTable("Connections");
+});
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
 {
 b.Property<int>("MatchId")
@@ -7897,12 +8129,16 @@ b.Property<int>("MessageId")
 .ValueGeneratedOnAdd()
 .HasColumnType("int");
 SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
 b.Property<DateTime>("CreatedAt")
 .ValueGeneratedOnAdd()
 .HasColumnType("datetime2")
 .HasDefaultValueSql("GETUTCDATE()");
 b.Property<bool>("IsRead")
 .HasColumnType("bit");
+b.Property<int?>("MatchEFMatchId")
+.HasColumnType("int");
 b.Property<int>("MatchId")
 .HasColumnType("int");
 b.Property<string>("MessageText")
@@ -7911,7 +8147,8 @@ b.Property<string>("MessageText")
 b.Property<int>("SenderUserId")
 .HasColumnType("int");
 b.HasKey("MessageId");
-b.HasIndex("MatchId");
+b.HasIndex("ConnectionId");
+b.HasIndex("MatchEFMatchId");
 b.HasIndex("SenderUserId");
 b.ToTable("Messages");
 });
@@ -7937,6 +8174,8 @@ b.Property<string>("IndoorOutdoor")
 .IsRequired()
 .HasMaxLength(50)
 .HasColumnType("nvarchar(50)");
+b.Property<bool>("IsTraded")
+.HasColumnType("bit");
 b.Property<string>("LightRequirement")
 .IsRequired()
 .HasMaxLength(50)
@@ -8051,6 +8290,35 @@ b.HasIndex("SwiperPlantId", "SwipedPlantId")
 .IsUnique();
 b.ToTable("Swipes");
 });
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.TradeProposalEF", b =>
+{
+b.Property<int>("TradeProposalId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TradeProposalId"));
+b.Property<DateTime?>("AcceptedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime?>("CompletedAt")
+.HasColumnType("datetime2");
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime?>("DeclinedAt")
+.HasColumnType("datetime2");
+b.Property<string>("PlantIdsProposedByUser1")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PlantIdsProposedByUser2")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("TradeProposalStatus")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.HasKey("TradeProposalId");
+b.HasIndex("ConnectionId");
+b.ToTable("TradeProposals");
+});
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
 {
 b.Property<int>("UserId")
@@ -8124,6 +8392,21 @@ b.Property<int>("SearchRadius")
 b.HasKey("UserId");
 b.ToTable("UserPreferences");
 });
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("User1");
+b.Navigation("User2");
+});
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
 {
 b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
@@ -8153,17 +8436,20 @@ b.Navigation("User2");
 });
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
 {
-b.HasOne("Cuttr.Infrastructure.Entities.MatchEF", "Match")
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
 .WithMany("Messages")
-.HasForeignKey("MatchId")
+.HasForeignKey("ConnectionId")
 .OnDelete(DeleteBehavior.Cascade)
 .IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.MatchEF", null)
+.WithMany("Messages")
+.HasForeignKey("MatchEFMatchId");
 b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
 .WithMany("SentMessages")
 .HasForeignKey("SenderUserId")
 .OnDelete(DeleteBehavior.Restrict)
 .IsRequired();
-b.Navigation("Match");
+b.Navigation("Connection");
 b.Navigation("SenderUser");
 });
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
@@ -8214,6 +8500,15 @@ b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
 b.Navigation("SwipedPlant");
 b.Navigation("SwiperPlant");
 });
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.TradeProposalEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("TradeProposals")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("Connection");
+});
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
 {
 b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
@@ -8223,9 +8518,1523 @@ b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
 .IsRequired();
 b.Navigation("User");
 });
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.Navigation("Messages");
+b.Navigation("TradeProposals");
+});
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
 {
 b.Navigation("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Navigation("Plants");
+b.Navigation("Preferences")
+.IsRequired();
+b.Navigation("ReportsMade");
+b.Navigation("ReportsReceived");
+b.Navigation("SentMessages");
+});
+#pragma warning restore 612, 618
+}
+}
+}
+//20250128162141_somechanges
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+public partial class somechanges : Migration
+{
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.DropForeignKey(
+name: "FK_Matches_Users_UserId1",
+table: "Matches");
+migrationBuilder.DropForeignKey(
+name: "FK_Matches_Users_UserId2",
+table: "Matches");
+migrationBuilder.DropForeignKey(
+name: "FK_Messages_Matches_MatchEFMatchId",
+table: "Messages");
+migrationBuilder.DropIndex(
+name: "IX_Messages_MatchEFMatchId",
+table: "Messages");
+migrationBuilder.DropIndex(
+name: "IX_Matches_UserId1",
+table: "Matches");
+migrationBuilder.DropColumn(
+name: "MatchEFMatchId",
+table: "Messages");
+migrationBuilder.DropColumn(
+name: "UserId1",
+table: "Matches");
+migrationBuilder.RenameColumn(
+name: "UserId2",
+table: "Matches",
+newName: "ConnectionId");
+migrationBuilder.RenameIndex(
+name: "IX_Matches_UserId2",
+table: "Matches",
+newName: "IX_Matches_ConnectionId");
+migrationBuilder.AddForeignKey(
+name: "FK_Matches_Connections_ConnectionId",
+table: "Matches",
+column: "ConnectionId",
+principalTable: "Connections",
+principalColumn: "ConnectionId",
+onDelete: ReferentialAction.Restrict);
+}
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.DropForeignKey(
+name: "FK_Matches_Connections_ConnectionId",
+table: "Matches");
+migrationBuilder.RenameColumn(
+name: "ConnectionId",
+table: "Matches",
+newName: "UserId2");
+migrationBuilder.RenameIndex(
+name: "IX_Matches_ConnectionId",
+table: "Matches",
+newName: "IX_Matches_UserId2");
+migrationBuilder.AddColumn<int>(
+name: "MatchEFMatchId",
+table: "Messages",
+type: "int",
+nullable: true);
+migrationBuilder.AddColumn<int>(
+name: "UserId1",
+table: "Matches",
+type: "int",
+nullable: false,
+defaultValue: 0);
+migrationBuilder.CreateIndex(
+name: "IX_Messages_MatchEFMatchId",
+table: "Messages",
+column: "MatchEFMatchId");
+migrationBuilder.CreateIndex(
+name: "IX_Matches_UserId1",
+table: "Matches",
+column: "UserId1");
+migrationBuilder.AddForeignKey(
+name: "FK_Matches_Users_UserId1",
+table: "Matches",
+column: "UserId1",
+principalTable: "Users",
+principalColumn: "UserId",
+onDelete: ReferentialAction.Restrict);
+migrationBuilder.AddForeignKey(
+name: "FK_Matches_Users_UserId2",
+table: "Matches",
+column: "UserId2",
+principalTable: "Users",
+principalColumn: "UserId",
+onDelete: ReferentialAction.Restrict);
+migrationBuilder.AddForeignKey(
+name: "FK_Messages_Matches_MatchEFMatchId",
+table: "Messages",
+column: "MatchEFMatchId",
+principalTable: "Matches",
+principalColumn: "MatchId");
+}
+}
+}
+//20250128162141_somechanges.Designer
+﻿
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+[DbContext(typeof(CuttrDbContext))]
+[Migration("20250128162141_somechanges")]
+partial class somechanges
+{
+protected override void BuildTargetModel(ModelBuilder modelBuilder)
+{
+#pragma warning disable 612, 618
+modelBuilder
+.HasAnnotation("ProductVersion", "9.0.0")
+.HasAnnotation("Relational:MaxIdentifierLength", 128);
+SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.Property<int>("ConnectionId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ConnectionId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.Property<bool>("isActive")
+.HasColumnType("bit");
+b.HasKey("ConnectionId");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.ToTable("Connections");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Property<int>("MatchId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchId"));
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("PlantId1")
+.HasColumnType("int");
+b.Property<int>("PlantId2")
+.HasColumnType("int");
+b.HasKey("MatchId");
+b.HasIndex("ConnectionId");
+b.HasIndex("PlantId2");
+b.HasIndex("PlantId1", "PlantId2")
+.IsUnique();
+b.ToTable("Matches", t =>
+{
+t.HasCheckConstraint("CK_MatchEF_PlantIdOrder", "[PlantId1] < [PlantId2]");
+});
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.Property<int>("MessageId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsRead")
+.HasColumnType("bit");
+b.Property<int>("MatchId")
+.HasColumnType("int");
+b.Property<string>("MessageText")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SenderUserId")
+.HasColumnType("int");
+b.HasKey("MessageId");
+b.HasIndex("ConnectionId");
+b.HasIndex("SenderUserId");
+b.ToTable("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.Property<int>("PlantId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Description")
+.HasColumnType("nvarchar(max)");
+b.Property<string>("Extras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ImageUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("IndoorOutdoor")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<bool>("IsTraded")
+.HasColumnType("bit");
+b.Property<string>("LightRequirement")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PetFriendly")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantCategory")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantStage")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PropagationEase")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("Size")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("SpeciesName")
+.IsRequired()
+.HasMaxLength(200)
+.HasColumnType("nvarchar(200)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("WateringNeed")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.HasKey("PlantId");
+b.HasIndex("UserId");
+b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.Property<int>("RefreshTokenId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefreshTokenId"));
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime>("ExpiresAt")
+.HasColumnType("datetime2");
+b.Property<bool>("IsRevoked")
+.HasColumnType("bit");
+b.Property<DateTime?>("RevokedAt")
+.HasColumnType("datetime2");
+b.Property<string>("TokenHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.HasKey("RefreshTokenId");
+b.HasIndex("UserId");
+b.ToTable("RefreshTokens");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.Property<int>("ReportId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportId"));
+b.Property<string>("Comments")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsResolved")
+.HasColumnType("bit");
+b.Property<string>("Reason")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("ReportedUserId")
+.HasColumnType("int");
+b.Property<int>("ReporterUserId")
+.HasColumnType("int");
+b.HasKey("ReportId");
+b.HasIndex("ReportedUserId");
+b.HasIndex("ReporterUserId");
+b.ToTable("Reports");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.Property<int>("SwipeId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SwipeId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsLike")
+.HasColumnType("bit");
+b.Property<int>("SwipedPlantId")
+.HasColumnType("int");
+b.Property<int>("SwiperPlantId")
+.HasColumnType("int");
+b.HasKey("SwipeId");
+b.HasIndex("SwipedPlantId");
+b.HasIndex("SwiperPlantId", "SwipedPlantId")
+.IsUnique();
+b.ToTable("Swipes");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.TradeProposalEF", b =>
+{
+b.Property<int>("TradeProposalId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TradeProposalId"));
+b.Property<DateTime?>("AcceptedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime?>("CompletedAt")
+.HasColumnType("datetime2");
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime?>("DeclinedAt")
+.HasColumnType("datetime2");
+b.Property<string>("PlantIdsProposedByUser1")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PlantIdsProposedByUser2")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("TradeProposalStatus")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.HasKey("TradeProposalId");
+b.HasIndex("ConnectionId");
+b.ToTable("TradeProposals");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Property<int>("UserId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+b.Property<string>("Bio")
+.HasMaxLength(500)
+.HasColumnType("nvarchar(500)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Email")
+.IsRequired()
+.HasMaxLength(256)
+.HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.HasColumnType("geography");
+b.Property<string>("Name")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<string>("PasswordHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ProfilePictureUrl")
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.HasKey("UserId");
+b.HasIndex("Email")
+.IsUnique();
+b.ToTable("Users");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("PreferedExtras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedIndoorOutdoor")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedLightRequirement")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPetFriendly")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantCategory")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantStage")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPropagationEase")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedSize")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedWateringNeed")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SearchRadius")
+.HasColumnType("int");
+b.HasKey("UserId");
+b.ToTable("UserPreferences");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("User1");
+b.Navigation("User2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("Matches")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
+.WithMany()
+.HasForeignKey("PlantId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant2")
+.WithMany()
+.HasForeignKey("PlantId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Connection");
+b.Navigation("Plant1");
+b.Navigation("Plant2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("Messages")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
+.WithMany("SentMessages")
+.HasForeignKey("SenderUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Connection");
+b.Navigation("SenderUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany("Plants")
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany()
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
+.WithMany("ReportsReceived")
+.HasForeignKey("ReportedUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReporterUser")
+.WithMany("ReportsMade")
+.HasForeignKey("ReporterUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("ReportedUser");
+b.Navigation("ReporterUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwipedPlant")
+.WithMany()
+.HasForeignKey("SwipedPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
+.WithMany()
+.HasForeignKey("SwiperPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("SwipedPlant");
+b.Navigation("SwiperPlant");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.TradeProposalEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("TradeProposals")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("Connection");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithOne("Preferences")
+.HasForeignKey("Cuttr.Infrastructure.Entities.UserPreferencesEF", "UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.Navigation("Matches");
+b.Navigation("Messages");
+b.Navigation("TradeProposals");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Navigation("Plants");
+b.Navigation("Preferences")
+.IsRequired();
+b.Navigation("ReportsMade");
+b.Navigation("ReportsReceived");
+b.Navigation("SentMessages");
+});
+#pragma warning restore 612, 618
+}
+}
+}
+//20250128165619_plantconstraintremoved
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+public partial class plantconstraintremoved : Migration
+{
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.DropCheckConstraint(
+name: "CK_MatchEF_PlantIdOrder",
+table: "Matches");
+}
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+migrationBuilder.AddCheckConstraint(
+name: "CK_MatchEF_PlantIdOrder",
+table: "Matches",
+sql: "[PlantId1] < [PlantId2]");
+}
+}
+}
+//20250128165619_plantconstraintremoved.Designer
+﻿
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+[DbContext(typeof(CuttrDbContext))]
+[Migration("20250128165619_plantconstraintremoved")]
+partial class plantconstraintremoved
+{
+protected override void BuildTargetModel(ModelBuilder modelBuilder)
+{
+#pragma warning disable 612, 618
+modelBuilder
+.HasAnnotation("ProductVersion", "9.0.0")
+.HasAnnotation("Relational:MaxIdentifierLength", 128);
+SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.Property<int>("ConnectionId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ConnectionId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.Property<bool>("isActive")
+.HasColumnType("bit");
+b.HasKey("ConnectionId");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.ToTable("Connections");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Property<int>("MatchId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchId"));
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("PlantId1")
+.HasColumnType("int");
+b.Property<int>("PlantId2")
+.HasColumnType("int");
+b.HasKey("MatchId");
+b.HasIndex("ConnectionId");
+b.HasIndex("PlantId2");
+b.HasIndex("PlantId1", "PlantId2")
+.IsUnique();
+b.ToTable("Matches");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.Property<int>("MessageId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsRead")
+.HasColumnType("bit");
+b.Property<int>("MatchId")
+.HasColumnType("int");
+b.Property<string>("MessageText")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SenderUserId")
+.HasColumnType("int");
+b.HasKey("MessageId");
+b.HasIndex("ConnectionId");
+b.HasIndex("SenderUserId");
+b.ToTable("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.Property<int>("PlantId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Description")
+.HasColumnType("nvarchar(max)");
+b.Property<string>("Extras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ImageUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("IndoorOutdoor")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<bool>("IsTraded")
+.HasColumnType("bit");
+b.Property<string>("LightRequirement")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PetFriendly")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantCategory")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantStage")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PropagationEase")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("Size")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("SpeciesName")
+.IsRequired()
+.HasMaxLength(200)
+.HasColumnType("nvarchar(200)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("WateringNeed")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.HasKey("PlantId");
+b.HasIndex("UserId");
+b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.Property<int>("RefreshTokenId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefreshTokenId"));
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime>("ExpiresAt")
+.HasColumnType("datetime2");
+b.Property<bool>("IsRevoked")
+.HasColumnType("bit");
+b.Property<DateTime?>("RevokedAt")
+.HasColumnType("datetime2");
+b.Property<string>("TokenHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.HasKey("RefreshTokenId");
+b.HasIndex("UserId");
+b.ToTable("RefreshTokens");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.Property<int>("ReportId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportId"));
+b.Property<string>("Comments")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsResolved")
+.HasColumnType("bit");
+b.Property<string>("Reason")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("ReportedUserId")
+.HasColumnType("int");
+b.Property<int>("ReporterUserId")
+.HasColumnType("int");
+b.HasKey("ReportId");
+b.HasIndex("ReportedUserId");
+b.HasIndex("ReporterUserId");
+b.ToTable("Reports");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.Property<int>("SwipeId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SwipeId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsLike")
+.HasColumnType("bit");
+b.Property<int>("SwipedPlantId")
+.HasColumnType("int");
+b.Property<int>("SwiperPlantId")
+.HasColumnType("int");
+b.HasKey("SwipeId");
+b.HasIndex("SwipedPlantId");
+b.HasIndex("SwiperPlantId", "SwipedPlantId")
+.IsUnique();
+b.ToTable("Swipes");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.TradeProposalEF", b =>
+{
+b.Property<int>("TradeProposalId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TradeProposalId"));
+b.Property<DateTime?>("AcceptedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime?>("CompletedAt")
+.HasColumnType("datetime2");
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime?>("DeclinedAt")
+.HasColumnType("datetime2");
+b.Property<string>("PlantIdsProposedByUser1")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PlantIdsProposedByUser2")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("TradeProposalStatus")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.HasKey("TradeProposalId");
+b.HasIndex("ConnectionId");
+b.ToTable("TradeProposals");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Property<int>("UserId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+b.Property<string>("Bio")
+.HasMaxLength(500)
+.HasColumnType("nvarchar(500)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Email")
+.IsRequired()
+.HasMaxLength(256)
+.HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.HasColumnType("geography");
+b.Property<string>("Name")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<string>("PasswordHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ProfilePictureUrl")
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.HasKey("UserId");
+b.HasIndex("Email")
+.IsUnique();
+b.ToTable("Users");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("PreferedExtras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedIndoorOutdoor")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedLightRequirement")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPetFriendly")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantCategory")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantStage")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPropagationEase")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedSize")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedWateringNeed")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SearchRadius")
+.HasColumnType("int");
+b.HasKey("UserId");
+b.ToTable("UserPreferences");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("User1");
+b.Navigation("User2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("Matches")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
+.WithMany()
+.HasForeignKey("PlantId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant2")
+.WithMany()
+.HasForeignKey("PlantId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Connection");
+b.Navigation("Plant1");
+b.Navigation("Plant2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("Messages")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
+.WithMany("SentMessages")
+.HasForeignKey("SenderUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Connection");
+b.Navigation("SenderUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany("Plants")
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany()
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
+.WithMany("ReportsReceived")
+.HasForeignKey("ReportedUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReporterUser")
+.WithMany("ReportsMade")
+.HasForeignKey("ReporterUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("ReportedUser");
+b.Navigation("ReporterUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwipedPlant")
+.WithMany()
+.HasForeignKey("SwipedPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
+.WithMany()
+.HasForeignKey("SwiperPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("SwipedPlant");
+b.Navigation("SwiperPlant");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.TradeProposalEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("TradeProposals")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("Connection");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithOne("Preferences")
+.HasForeignKey("Cuttr.Infrastructure.Entities.UserPreferencesEF", "UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.Navigation("Matches");
+b.Navigation("Messages");
+b.Navigation("TradeProposals");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Navigation("Plants");
+b.Navigation("Preferences")
+.IsRequired();
+b.Navigation("ReportsMade");
+b.Navigation("ReportsReceived");
+b.Navigation("SentMessages");
+});
+#pragma warning restore 612, 618
+}
+}
+}
+//CuttrDbContextModelSnapshot
+﻿
+#nullable disable
+namespace Cuttr.Infrastructure.Migrations
+{
+[DbContext(typeof(CuttrDbContext))]
+partial class CuttrDbContextModelSnapshot : ModelSnapshot
+{
+protected override void BuildModel(ModelBuilder modelBuilder)
+{
+#pragma warning disable 612, 618
+modelBuilder
+.HasAnnotation("ProductVersion", "9.0.0")
+.HasAnnotation("Relational:MaxIdentifierLength", 128);
+SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.Property<int>("ConnectionId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ConnectionId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId1")
+.HasColumnType("int");
+b.Property<int>("UserId2")
+.HasColumnType("int");
+b.Property<bool>("isActive")
+.HasColumnType("bit");
+b.HasKey("ConnectionId");
+b.HasIndex("UserId1");
+b.HasIndex("UserId2");
+b.ToTable("Connections");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.Property<int>("MatchId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchId"));
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("PlantId1")
+.HasColumnType("int");
+b.Property<int>("PlantId2")
+.HasColumnType("int");
+b.HasKey("MatchId");
+b.HasIndex("ConnectionId");
+b.HasIndex("PlantId2");
+b.HasIndex("PlantId1", "PlantId2")
+.IsUnique();
+b.ToTable("Matches");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.Property<int>("MessageId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsRead")
+.HasColumnType("bit");
+b.Property<int>("MatchId")
+.HasColumnType("int");
+b.Property<string>("MessageText")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SenderUserId")
+.HasColumnType("int");
+b.HasKey("MessageId");
+b.HasIndex("ConnectionId");
+b.HasIndex("SenderUserId");
+b.ToTable("Messages");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.Property<int>("PlantId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlantId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Description")
+.HasColumnType("nvarchar(max)");
+b.Property<string>("Extras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ImageUrl")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("IndoorOutdoor")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<bool>("IsTraded")
+.HasColumnType("bit");
+b.Property<string>("LightRequirement")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PetFriendly")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantCategory")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PlantStage")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("PropagationEase")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("Size")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.Property<string>("SpeciesName")
+.IsRequired()
+.HasMaxLength(200)
+.HasColumnType("nvarchar(200)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("WateringNeed")
+.IsRequired()
+.HasMaxLength(50)
+.HasColumnType("nvarchar(50)");
+b.HasKey("PlantId");
+b.HasIndex("UserId");
+b.ToTable("Plants");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.Property<int>("RefreshTokenId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RefreshTokenId"));
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime>("ExpiresAt")
+.HasColumnType("datetime2");
+b.Property<bool>("IsRevoked")
+.HasColumnType("bit");
+b.Property<DateTime?>("RevokedAt")
+.HasColumnType("datetime2");
+b.Property<string>("TokenHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.HasKey("RefreshTokenId");
+b.HasIndex("UserId");
+b.ToTable("RefreshTokens");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.Property<int>("ReportId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportId"));
+b.Property<string>("Comments")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsResolved")
+.HasColumnType("bit");
+b.Property<string>("Reason")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("ReportedUserId")
+.HasColumnType("int");
+b.Property<int>("ReporterUserId")
+.HasColumnType("int");
+b.HasKey("ReportId");
+b.HasIndex("ReportedUserId");
+b.HasIndex("ReporterUserId");
+b.ToTable("Reports");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.Property<int>("SwipeId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SwipeId"));
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<bool>("IsLike")
+.HasColumnType("bit");
+b.Property<int>("SwipedPlantId")
+.HasColumnType("int");
+b.Property<int>("SwiperPlantId")
+.HasColumnType("int");
+b.HasKey("SwipeId");
+b.HasIndex("SwipedPlantId");
+b.HasIndex("SwiperPlantId", "SwipedPlantId")
+.IsUnique();
+b.ToTable("Swipes");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.TradeProposalEF", b =>
+{
+b.Property<int>("TradeProposalId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TradeProposalId"));
+b.Property<DateTime?>("AcceptedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime?>("CompletedAt")
+.HasColumnType("datetime2");
+b.Property<int>("ConnectionId")
+.HasColumnType("int");
+b.Property<DateTime>("CreatedAt")
+.HasColumnType("datetime2");
+b.Property<DateTime?>("DeclinedAt")
+.HasColumnType("datetime2");
+b.Property<string>("PlantIdsProposedByUser1")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PlantIdsProposedByUser2")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("TradeProposalStatus")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.HasKey("TradeProposalId");
+b.HasIndex("ConnectionId");
+b.ToTable("TradeProposals");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
+{
+b.Property<int>("UserId")
+.ValueGeneratedOnAdd()
+.HasColumnType("int");
+SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+b.Property<string>("Bio")
+.HasMaxLength(500)
+.HasColumnType("nvarchar(500)");
+b.Property<DateTime>("CreatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.Property<string>("Email")
+.IsRequired()
+.HasMaxLength(256)
+.HasColumnType("nvarchar(256)");
+b.Property<Point>("Location")
+.HasColumnType("geography");
+b.Property<string>("Name")
+.IsRequired()
+.HasMaxLength(100)
+.HasColumnType("nvarchar(100)");
+b.Property<string>("PasswordHash")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("ProfilePictureUrl")
+.HasColumnType("nvarchar(max)");
+b.Property<DateTime>("UpdatedAt")
+.ValueGeneratedOnAdd()
+.HasColumnType("datetime2")
+.HasDefaultValueSql("GETUTCDATE()");
+b.HasKey("UserId");
+b.HasIndex("Email")
+.IsUnique();
+b.ToTable("Users");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.Property<int>("UserId")
+.HasColumnType("int");
+b.Property<string>("PreferedExtras")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedIndoorOutdoor")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedLightRequirement")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPetFriendly")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantCategory")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPlantStage")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedPropagationEase")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedSize")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<string>("PreferedWateringNeed")
+.IsRequired()
+.HasColumnType("nvarchar(max)");
+b.Property<int>("SearchRadius")
+.HasColumnType("int");
+b.HasKey("UserId");
+b.ToTable("UserPreferences");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User1")
+.WithMany()
+.HasForeignKey("UserId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User2")
+.WithMany()
+.HasForeignKey("UserId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("User1");
+b.Navigation("User2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MatchEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("Matches")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant1")
+.WithMany()
+.HasForeignKey("PlantId1")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "Plant2")
+.WithMany()
+.HasForeignKey("PlantId2")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Connection");
+b.Navigation("Plant1");
+b.Navigation("Plant2");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.MessageEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("Messages")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "SenderUser")
+.WithMany("SentMessages")
+.HasForeignKey("SenderUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("Connection");
+b.Navigation("SenderUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.PlantEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany("Plants")
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithMany()
+.HasForeignKey("UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ReportEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReportedUser")
+.WithMany("ReportsReceived")
+.HasForeignKey("ReportedUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "ReporterUser")
+.WithMany("ReportsMade")
+.HasForeignKey("ReporterUserId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("ReportedUser");
+b.Navigation("ReporterUser");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.SwipeEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwipedPlant")
+.WithMany()
+.HasForeignKey("SwipedPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.HasOne("Cuttr.Infrastructure.Entities.PlantEF", "SwiperPlant")
+.WithMany()
+.HasForeignKey("SwiperPlantId")
+.OnDelete(DeleteBehavior.Restrict)
+.IsRequired();
+b.Navigation("SwipedPlant");
+b.Navigation("SwiperPlant");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.TradeProposalEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.ConnectionEF", "Connection")
+.WithMany("TradeProposals")
+.HasForeignKey("ConnectionId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("Connection");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserPreferencesEF", b =>
+{
+b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
+.WithOne("Preferences")
+.HasForeignKey("Cuttr.Infrastructure.Entities.UserPreferencesEF", "UserId")
+.OnDelete(DeleteBehavior.Cascade)
+.IsRequired();
+b.Navigation("User");
+});
+modelBuilder.Entity("Cuttr.Infrastructure.Entities.ConnectionEF", b =>
+{
+b.Navigation("Matches");
+b.Navigation("Messages");
+b.Navigation("TradeProposals");
 });
 modelBuilder.Entity("Cuttr.Infrastructure.Entities.UserEF", b =>
 {
@@ -8246,7 +10055,7 @@ b.Navigation("SentMessages");
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3052531534eb697895c8b452eab78b10e28a6ce1")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -8262,50 +10071,161 @@ public class ConnectionRepository : IConnectionRepository
 {
 private readonly CuttrDbContext _context;
 private readonly ILogger<ConnectionRepository> _logger;
+public ConnectionRepository(CuttrDbContext context, ILogger<ConnectionRepository> logger)
+{
+_context = context;
+_logger = logger;
+}
 public async Task<Connection> GetConnectionByIdAsync(int connectionId)
 {
-var ef = await _context.Connections
+_logger.LogInformation("Retrieving connection with ID {ConnectionId}.", connectionId);
+try
+{
+var efConnection = await _context.Connections
 .Include(c => c.User1)
 .Include(c => c.User2)
 .FirstOrDefaultAsync(c => c.ConnectionId == connectionId);
-if (ef == null) return null;
-_context.Entry(ef).State = EntityState.Detached;
-return EFToBusinessMapper.MapToConnection(ef);
+if (efConnection == null)
+{
+_logger.LogWarning("Connection with ID {ConnectionId} not found.", connectionId);
+return null;
+}
+_context.Entry(efConnection).State = EntityState.Detached;
+var connection = EFToBusinessMapper.MapToConnection(efConnection);
+_logger.LogInformation("Successfully retrieved connection with ID {ConnectionId}.", connectionId);
+return connection;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while retrieving connection with ID {ConnectionId}.", connectionId);
+throw new RepositoryException("An error occurred while retrieving the connection.", ex);
+}
 }
 public async Task<IEnumerable<Connection>> GetConnectionsByUserIdAsync(int userId)
+{
+_logger.LogInformation("Retrieving connections for user with ID {UserId}.", userId);
+try
 {
 var efConnections = await _context.Connections
 .Where(c => c.UserId1 == userId || c.UserId2 == userId)
 .Include(c => c.User1)
 .Include(c => c.User2)
 .ToListAsync();
-_context.Entry(efConnections).State = EntityState.Detached;
-return efConnections.Select(EFToBusinessMapper.MapToConnection);
+if (efConnections == null || !efConnections.Any())
+{
+_logger.LogInformation("No connections found for user with ID {UserId}.", userId);
+return Enumerable.Empty<Connection>();
+}
+foreach (var efConnection in efConnections)
+{
+_context.Entry(efConnection).State = EntityState.Detached;
+}
+var connections = efConnections.Select(EFToBusinessMapper.MapToConnection);
+_logger.LogInformation("Successfully retrieved {Count} connections for user with ID {UserId}.", connections.Count(), userId);
+return connections;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while retrieving connections for user with ID {UserId}.", userId);
+throw new RepositoryException("An error occurred while retrieving connections.", ex);
+}
 }
 public async Task<Connection> CreateConnectionAsync(Connection connection)
 {
-var ef = BusinessToEFMapper.MapToConnectionEF(connection);
-_context.Connections.Add(ef);
+_logger.LogInformation("Creating a new connection between User1 ID {UserId1} and User2 ID {UserId2}.", connection.UserId1, connection.UserId2);
+try
+{
+var efConnection = BusinessToEFMapper.MapToConnectionEF(connection);
+await _context.Connections.AddAsync(efConnection);
 await _context.SaveChangesAsync();
-_context.Entry(ef).State = EntityState.Detached;
-return EFToBusinessMapper.MapToConnection(ef);
+_context.Entry(efConnection).State = EntityState.Detached;
+var createdConnection = EFToBusinessMapper.MapToConnection(efConnection);
+_logger.LogInformation("Successfully created connection with ID {ConnectionId}.", createdConnection.ConnectionId);
+return createdConnection;
+}
+catch (DbUpdateException ex)
+{
+_logger.LogError(ex, "A database error occurred while creating a new connection between User1 ID {UserId1} and User2 ID {UserId2}.", connection.UserId1, connection.UserId2);
+throw new RepositoryException("A database error occurred while creating the connection.", ex);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while creating a new connection between User1 ID {UserId1} and User2 ID {UserId2}.", connection.UserId1, connection.UserId2);
+throw new RepositoryException("An error occurred while creating the connection.", ex);
+}
 }
 public async Task<Connection> UpdateConnectionAsync(Connection connection)
 {
-var ef = BusinessToEFMapper.MapToConnectionEF(connection);
-_context.Connections.Update(ef);
+_logger.LogInformation("Updating connection with ID {ConnectionId}.", connection.ConnectionId);
+try
+{
+var efConnection = BusinessToEFMapper.MapToConnectionEF(connection);
+_context.Connections.Update(efConnection);
 await _context.SaveChangesAsync();
-_context.Entry(ef).State = EntityState.Detached;
-return EFToBusinessMapper.MapToConnection(ef);
+_context.Entry(efConnection).State = EntityState.Detached;
+var updatedConnection = EFToBusinessMapper.MapToConnection(efConnection);
+_logger.LogInformation("Successfully updated connection with ID {ConnectionId}.", connection.ConnectionId);
+return updatedConnection;
+}
+catch (DbUpdateConcurrencyException ex)
+{
+_logger.LogError(ex, "A concurrency error occurred while updating connection with ID {ConnectionId}.", connection.ConnectionId);
+throw new RepositoryException("A concurrency error occurred while updating the connection.", ex);
+}
+catch (DbUpdateException ex)
+{
+_logger.LogError(ex, "A database error occurred while updating connection with ID {ConnectionId}.", connection.ConnectionId);
+throw new RepositoryException("A database error occurred while updating the connection.", ex);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while updating connection with ID {ConnectionId}.", connection.ConnectionId);
+throw new RepositoryException("An error occurred while updating the connection.", ex);
+}
 }
 public async Task<Connection> GetConnectionByUsersAsync(int userId1, int userId2)
+{
+_logger.LogInformation("Retrieving connection between User1 ID {UserId1} and User2 ID {UserId2}.", userId1, userId2);
+try
 {
 var efConnection = await _context.Connections
 .Include(c => c.User1)
 .Include(c => c.User2)
-.FirstOrDefaultAsync(c => (c.UserId1 == userId1 && c.UserId2 == userId2) || (c.UserId1 == userId2 && c.UserId2 == userId1));
+.FirstOrDefaultAsync(c =>
+(c.UserId1 == userId1 && c.UserId2 == userId2) ||
+(c.UserId1 == userId2 && c.UserId2 == userId1));
+if (efConnection == null)
+{
+_logger.LogWarning("Connection between User1 ID {UserId1} and User2 ID {UserId2} not found.", userId1, userId2);
+return null;
+}
 _context.Entry(efConnection).State = EntityState.Detached;
-return EFToBusinessMapper.MapToConnection(efConnection);
+var connection = EFToBusinessMapper.MapToConnection(efConnection);
+_logger.LogInformation("Successfully retrieved connection between User1 ID {UserId1} and User2 ID {UserId2}.", userId1, userId2);
+return connection;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while retrieving connection between User1 ID {UserId1} and User2 ID {UserId2}.", userId1, userId2);
+throw new RepositoryException("An error occurred while retrieving the connection.", ex);
+}
+}
+public async Task<int> GetNumberOfMatchesAsync(int connectionId)
+{
+_logger.LogInformation("Retrieving number of matches for connection ID {ConnectionId}.", connectionId);
+try
+{
+var count = await _context.Matches
+.Where(m => m.ConnectionId == connectionId)
+.CountAsync();
+_logger.LogInformation("Connection ID {ConnectionId} has {Count} matches.", connectionId, count);
+return count;
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "An error occurred while retrieving number of matches for connection ID {ConnectionId}.", connectionId);
+throw new RepositoryException("An error occurred while retrieving the number of matches.", ex);
+}
 }
 }
 }
@@ -8321,7 +10241,7 @@ public MatchRepository(CuttrDbContext context, ILogger<MatchRepository> logger)
 _context = context;
 _logger = logger;
 }
-public async Task<IEnumerable<Match>> GetMatchesByUserIdAsync(int userId)
+public async Task<IEnumerable<Match>> GetMatchesByConnectionIdAsync(int connectionId)
 {
 try
 {
@@ -8329,15 +10249,13 @@ var efMatches = await _context.Matches
 .AsNoTracking()
 .Include(m => m.Plant1)
 .Include(m => m.Plant2)
-.Include(m => m.User1)
-.Include(m => m.User2)
-.Where(m => m.UserId1 == userId || m.UserId2 == userId)
+.Where(m => m.ConnectionId == connectionId)
 .ToListAsync();
 return efMatches.Select(EFToBusinessMapper.MapToMatch);
 }
 catch (Exception ex)
 {
-_logger.LogError(ex, $"An error occurred while retrieving matches for user with ID {userId}.");
+_logger.LogError(ex, $"An error occurred while retrieving matches for connection with ID {connectionId}.");
 throw new RepositoryException("An error occurred while retrieving matches.", ex);
 }
 }
@@ -8349,8 +10267,6 @@ var efMatch = await _context.Matches
 .AsNoTracking()
 .Include(m => m.Plant1)
 .Include(m => m.Plant2)
-.Include(m => m.User1)
-.Include(m => m.User2)
 .FirstOrDefaultAsync(m => m.MatchId == matchId);
 return EFToBusinessMapper.MapToMatch(efMatch);
 }
@@ -8407,20 +10323,20 @@ _logger.LogError(ex, "An error occurred while adding a message.");
 throw new RepositoryException("An error occurred while adding a message.", ex);
 }
 }
-public async Task<IEnumerable<Message>> GetMessagesByMatchIdAsync(int matchId)
+public async Task<IEnumerable<Message>> GetMessagesByConnectionIdAsync(int connectionId)
 {
 try
 {
 var efMessages = await _context.Messages
 .AsNoTracking()
-.Where(m => m.ConnectionId == matchId)
+.Where(m => m.ConnectionId == connectionId)
 .OrderBy(m => m.CreatedAt)
 .ToListAsync();
 return efMessages.Select(EFToBusinessMapper.MapToMessage);
 }
 catch (Exception ex)
 {
-_logger.LogError(ex, $"An error occurred while retrieving messages for match with ID {matchId}.");
+_logger.LogError(ex, $"An error occurred while retrieving messages for match with ID {connectionId}.");
 throw new RepositoryException("An error occurred while retrieving messages.", ex);
 }
 }

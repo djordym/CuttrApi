@@ -19,15 +19,17 @@ namespace Cuttr.Business.Managers
     {
         private readonly IPlantRepository _plantRepository;
         private readonly IUserRepository _userRepository;
+        private readonly ISwipeRepository _swipeRepository;
         private readonly ILogger<PlantManager> _logger;
         private readonly IBlobStorageService _blobStorageService;
 
         private const string PlantImagesContainer = "plant-images";
 
-        public PlantManager(IPlantRepository plantRepository, IUserRepository userRepository, ILogger<PlantManager> logger, IBlobStorageService blobStorageService)
+        public PlantManager(IPlantRepository plantRepository, IUserRepository userRepository, ISwipeRepository swipeRepository, ILogger<PlantManager> logger, IBlobStorageService blobStorageService)
         {
             _plantRepository = plantRepository;
             _userRepository = userRepository;
+            _swipeRepository = swipeRepository;
             _logger = logger;
             _blobStorageService = blobStorageService;
         }
@@ -35,7 +37,7 @@ namespace Cuttr.Business.Managers
         public async Task<PlantResponse> AddPlantAsync(PlantCreateRequest request, int userId)
         {
             try
-            { 
+            {
                 // Validate that the user exists
                 var user = await _userRepository.GetUserByIdAsync(userId);
                 if (user == null)
@@ -92,7 +94,7 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task<PlantResponse> UpdatePlantAsync(int plantId,int userId, PlantRequest request)
+        public async Task<PlantResponse> UpdatePlantAsync(int plantId, int userId, PlantRequest request)
         {
             try
             {
@@ -152,7 +154,7 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task<IEnumerable<PlantResponse>> GetPlantsByUserIdAsync(int userId)
+        public async Task<List<PlantResponse>> GetPlantsByUserIdAsync(int userId)
         {
             try
             {
@@ -165,7 +167,7 @@ namespace Cuttr.Business.Managers
 
                 var plants = await _plantRepository.GetPlantsByUserIdAsync(userId);
 
-                return BusinessToContractMapper.MapToPlantResponse(plants);
+                return BusinessToContractMapper.MapToPlantResponse(plants).ToList();
             }
             catch (NotFoundException)
             {
@@ -177,6 +179,137 @@ namespace Cuttr.Business.Managers
                 throw new BusinessException("Error retrieving plants.", ex);
             }
         }
+
+        public async Task<List<PlantResponse>> GetLikablePlantsAsync(int userId, int maxCount)
+        {
+            try
+            {
+                // 1. Retrieve the user to get location & preferences
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if (user == null)
+                    throw new BusinessException("User not found.");
+
+                if (user.Preferences == null)
+                    throw new BusinessException("User preferences not found.");
+
+                if (user.LocationLatitude == null || user.LocationLongitude == null)
+                    throw new BusinessException("User location not set.");
+
+                // 2. Determine radius or fallback
+                int radius = user.Preferences.SearchRadius > 0
+                             ? user.Preferences.SearchRadius
+                             : 10000; // or 9999, etc.
+
+                // 3. Retrieve the candidate plants in radius
+                var candidatePlants = await _plantRepository.GetPlantsWithinRadiusAsync(
+                                          user.LocationLatitude.Value,
+                                          user.LocationLongitude.Value,
+                                          radius);
+
+                // 4. Exclude user’s own plants
+                candidatePlants = candidatePlants.Where(p => p.UserId != userId);
+
+                // 5. Apply preference filters if lists are non-empty
+                if (user.Preferences.PreferedPlantStage != null && user.Preferences.PreferedPlantStage.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => user.Preferences.PreferedPlantStage.Contains(p.PlantStage));
+                }
+
+                if (user.Preferences.PreferedPlantCategory != null && user.Preferences.PreferedPlantCategory.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => p.PlantCategory.HasValue
+                                    && user.Preferences.PreferedPlantCategory.Contains(p.PlantCategory.Value));
+                }
+
+                if (user.Preferences.PreferedWateringNeed != null && user.Preferences.PreferedWateringNeed.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => p.WateringNeed.HasValue
+                                    && user.Preferences.PreferedWateringNeed.Contains(p.WateringNeed.Value));
+                }
+
+                if (user.Preferences.PreferedLightRequirement != null && user.Preferences.PreferedLightRequirement.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => p.LightRequirement.HasValue
+                                    && user.Preferences.PreferedLightRequirement.Contains(p.LightRequirement.Value));
+                }
+
+                if (user.Preferences.PreferedSize != null && user.Preferences.PreferedSize.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => p.Size.HasValue
+                                    && user.Preferences.PreferedSize.Contains(p.Size.Value));
+                }
+
+                if (user.Preferences.PreferedIndoorOutdoor != null && user.Preferences.PreferedIndoorOutdoor.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => p.IndoorOutdoor.HasValue
+                                    && user.Preferences.PreferedIndoorOutdoor.Contains(p.IndoorOutdoor.Value));
+                }
+
+                if (user.Preferences.PreferedPropagationEase != null && user.Preferences.PreferedPropagationEase.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => p.PropagationEase.HasValue
+                                    && user.Preferences.PreferedPropagationEase.Contains(p.PropagationEase.Value));
+                }
+
+                if (user.Preferences.PreferedPetFriendly != null && user.Preferences.PreferedPetFriendly.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => p.PetFriendly.HasValue
+                                    && user.Preferences.PreferedPetFriendly.Contains(p.PetFriendly.Value));
+                }
+
+
+                if (user.Preferences.PreferedExtras != null && user.Preferences.PreferedExtras.Any())
+                {
+                    candidatePlants = candidatePlants
+                        .Where(p => p.Extras != null && p.Extras.Any(e => user.Preferences.PreferedExtras.Contains(e)));
+                }
+
+                // 6. Retrieve user's own plants (to check if already swiped)
+                var userPlants = await _plantRepository.GetPlantsByUserIdAsync(userId);
+
+                var likablePlants = new List<PlantResponse>();
+
+                // 7. Exclude plants that have already been swiped
+                foreach (var plant in candidatePlants)
+                {
+                    bool hasUninteractedPlant = false;
+                    foreach (var up in userPlants)
+                    {
+                        // Check if this user plant has NOT swiped on the candidate plant
+                        bool hasSwipe = await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId);
+                        if (!hasSwipe)
+                        {
+                            hasUninteractedPlant = true;
+                            break; // Found an uninteracted swipe; no need to check further for this plant
+                        }
+                    }
+
+                    if (hasUninteractedPlant)
+                    {
+                        likablePlants.Add(BusinessToContractMapper.MapToPlantResponse(plant));
+                    }
+
+                    if (likablePlants.Count >= maxCount)
+                        break; // Reached the maximum count
+
+                }
+                return likablePlants;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving likable plants.");
+                throw new BusinessException("Error retrieving likable plants.", ex);
+            }
+        }
+
 
         public async Task SeedPlantAsync(SeedPlantRequest request)
         {
@@ -199,6 +332,62 @@ namespace Cuttr.Business.Managers
             };
             await _plantRepository.AddPlantAsync(plant);
             return;
+        }
+
+        public async Task<List<PlantResponse>> GetPlantsLikedByUserFromMeAsync(int userAId, int currentUserId)
+        {
+            try
+            {
+
+                var userA = await _userRepository.GetUserByIdAsync(userAId);
+                if (userA == null)
+                {
+                    throw new NotFoundException($"User with ID {userAId} not found.");
+                }
+                var userB = await _userRepository.GetUserByIdAsync(currentUserId);
+                if (userB == null)
+                {
+                    throw new NotFoundException($"User with ID {currentUserId} not found.");
+                }
+                var likedPlants = await _swipeRepository.GetLikedPlantsBySwiperAsync(userAId, currentUserId);
+                return BusinessToContractMapper.MapToPlantResponse(likedPlants).ToList();
+            }
+            catch (NotFoundException ex)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving plants liked by user with ID {userAId}.");
+                throw new BusinessException("Error retrieving plants.", ex);
+            }
+        }
+
+        public async Task<List<PlantResponse>> GetPlantsLikedByMeFromUserAsync(int userAId, int currentUserId)
+        {
+            try
+            {
+                var userA = await _userRepository.GetUserByIdAsync(userAId);
+                if (userA == null)
+                {
+                    throw new NotFoundException($"User with ID {userAId} not found.");
+                }
+                var userB = await _userRepository.GetUserByIdAsync(currentUserId);
+                if (userB == null)
+                {
+                    throw new NotFoundException($"User with ID {currentUserId} not found.");
+                }
+                var likedPlants = await _swipeRepository.GetLikedPlantsBySwiperAsync(currentUserId, userAId);
+                return BusinessToContractMapper.MapToPlantResponse(likedPlants).ToList();
+
+            } catch (NotFoundException ex)
+            {
+                throw;
+            } catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving plants liked by user with ID {userAId}.");
+                throw new BusinessException("Error retrieving plants.", ex);
+            }
         }
     }
 }

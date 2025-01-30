@@ -4,9 +4,11 @@ MyCuttrApp
 ├── README.md
 ├── all_mobile_app_files_combined_cleaned.txt
 ├── app
+│   ├── ErrorBoundary.tsx
 │   ├── api
 │   │   ├── authService.ts
 │   │   ├── axiosConfig.ts
+│   │   ├── connectionService.ts
 │   │   ├── matchService.ts
 │   │   ├── messageService.ts
 │   │   ├── plantService.ts
@@ -16,7 +18,6 @@ MyCuttrApp
 │   │   └── userService.ts
 │   ├── components
 │   │   ├── common
-│   │   │   ├── BrandedButton.tsx
 │   │   │   └── TextInputField.tsx
 │   │   ├── feedback
 │   │   │   ├── ErrorMessage.tsx
@@ -24,6 +25,8 @@ MyCuttrApp
 │   │   │   └── LoadingSpinner.tsx
 │   │   ├── index.ts
 │   │   └── layout
+│   ├── context
+│   │   └── AuthContext.tsx
 │   ├── features
 │   │   ├── auth
 │   │   │   ├── hooks
@@ -34,36 +37,62 @@ MyCuttrApp
 │   │   │   │   └── RegisterScreen.tsx
 │   │   │   ├── store
 │   │   │   │   └── authSlice.ts
+│   │   │   ├── styles
+│   │   │   │   └── authStyles.ts
 │   │   │   └── types
 │   │   │       └── authTypes.ts
-│   │   └── main
-│   │       ├── components
-│   │       │   ├── ChangeLocationModal.tsx
-│   │       │   ├── EditProfileModal.tsx
-│   │       │   ├── SelectPlantsModal.tsx
-│   │       │   └── SwipeableCard.tsx
-│   │       ├── hooks
-│   │       │   ├── useMatches.ts
-│   │       │   ├── usePlants.ts
-│   │       │   ├── usePreferences.ts
-│   │       │   ├── useSwipe.ts
-│   │       │   └── useUser.ts
-│   │       ├── index.ts
+│   │   ├── main
+│   │   │   ├── components
+│   │   │   │   ├── ChangeLocationModal.tsx
+│   │   │   │   ├── ChatShelf.tsx
+│   │   │   │   ├── ConfirmCancelButtons.tsx
+│   │   │   │   ├── EditProfileModal.tsx
+│   │   │   │   ├── MessageBubble.tsx
+│   │   │   │   ├── MultiSelectTagGroup.tsx
+│   │   │   │   ├── PlantCardWithInfo.tsx
+│   │   │   │   ├── PlantOverlay.tsx
+│   │   │   │   ├── PlantThumbnail.tsx
+│   │   │   │   ├── ProfileCard.tsx
+│   │   │   │   ├── ProfileCardShelf.tsx
+│   │   │   │   ├── SelectPlantsModal.tsx
+│   │   │   │   ├── SwipeableCard.tsx
+│   │   │   │   └── TagGroup.tsx
+│   │   │   ├── hooks
+│   │   │   │   ├── useConnections.ts
+│   │   │   │   ├── useMessages.ts
+│   │   │   │   ├── useMyProfileHooks.ts
+│   │   │   │   ├── useOtherProfile.ts
+│   │   │   │   ├── usePlants.ts
+│   │   │   │   ├── usePreferences.ts
+│   │   │   │   ├── useSearchRadius.ts
+│   │   │   │   ├── useSwipe.ts
+│   │   │   │   └── useUserMatches.ts
+│   │   │   ├── index.ts
+│   │   │   ├── screens
+│   │   │   │   ├── AddPlantScreen.tsx
+│   │   │   │   ├── ChatScreen.tsx
+│   │   │   │   ├── ConnectionsScreen.tsx
+│   │   │   │   ├── MyProfileScreen.tsx
+│   │   │   │   ├── OtherProfileScreen.tsx
+│   │   │   │   ├── SetUserPreferencesScreen.tsx
+│   │   │   │   ├── SettingsScreen.tsx
+│   │   │   │   └── SwipeScreen.tsx
+│   │   │   ├── store
+│   │   │   │   ├── matchesSlice.ts
+│   │   │   │   ├── plantsSlice.ts
+│   │   │   │   ├── userPreferencesSlice.ts
+│   │   │   │   └── userSlice.ts
+│   │   │   ├── styles
+│   │   │   │   ├── headerStyles.ts
+│   │   │   │   └── profileCardStyles.ts
+│   │   │   └── types
+│   │   │       └── mainTypes.ts
+│   │   └── onboarding
 │   │       ├── screens
-│   │       │   ├── AddPlantScreen.tsx
-│   │       │   ├── ChatScreen.tsx
-│   │       │   ├── HomeScreen.tsx
-│   │       │   ├── MatchListScreen.tsx
-│   │       │   ├── MyProfileScreen.tsx
-│   │       │   ├── SettingsScreen.tsx
-│   │       │   └── SwipeScreen.tsx
-│   │       ├── store
-│   │       │   ├── matchesSlice.ts
-│   │       │   ├── plantsSlice.ts
-│   │       │   ├── userPreferencesSlice.ts
-│   │       │   └── userSlice.ts
-│   │       └── types
-│   │           └── mainTypes.ts
+│   │       │   ├── OnboardingBioScreen.tsx
+│   │       │   ├── OnboardingLocationScreen.tsx
+│   │       │   └── OnboardingWelcomeScreen.tsx
+│   │       └── store
 │   ├── hooks
 │   │   ├── useAuthToken.ts
 │   │   ├── useAxiosErrorHandler.ts
@@ -77,11 +106,18 @@ MyCuttrApp
 │   ├── navigation
 │   │   ├── AppNavigator.tsx
 │   │   ├── AuthNavigator.tsx
-│   │   ├── MainNavigator.tsx
-│   │   └── NavigationTypes.ts
+│   │   ├── ConnectionStackNavigator.tsx
+│   │   ├── MainRootStackNavigator.tsx
+│   │   ├── MainTabNavigator.tsx
+│   │   ├── NavigationTypes.ts
+│   │   ├── OnboardingNavigator.tsx
+│   │   ├── ProfileStackNavigator.tsx
+│   │   └── SwipeStackNavigator.tsx
 │   ├── store
+│   │   ├── hooks.ts
 │   │   ├── index.ts
 │   │   ├── middlewares
+│   │   │   ├── loggingMiddleware.ts
 │   │   │   └── tokenRefreshMiddleware.ts
 │   │   ├── rootReducer.ts
 │   │   └── slices
@@ -98,6 +134,7 @@ MyCuttrApp
 │   └── utils
 │       ├── formatting.ts
 │       ├── index.ts
+│       ├── logger.ts
 │       ├── storage.ts
 │       └── validation.ts
 ├── app.json
@@ -106,17 +143,24 @@ MyCuttrApp
 │   │   └── SpaceMono-Regular.ttf
 │   └── images
 │       ├── adaptive-icon.png
+│       ├── connections.png
 │       ├── favicon.png
 │       ├── icon.png
 │       ├── logo.png
+│       ├── match.png
 │       ├── partial-react-logo.png
+│       ├── profile.png
+│       ├── profileBackground.png
 │       ├── react-logo.png
 │       ├── react-logo@2x.png
 │       ├── react-logo@3x.png
-│       └── splash-icon.png
+│       ├── settings.png
+│       ├── splash-icon.png
+│       └── swiping.png
 ├── babel.config.js
 ├── expo-env.d.ts
 ├── package.json
+├── previous shelf with matches.txt
 ├── project_tree.txt
 ├── scripts
 │   └── reset-project.js

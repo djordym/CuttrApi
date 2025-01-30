@@ -1,7 +1,9 @@
 ﻿using Cuttr.Api.Common;
 using Cuttr.Business.Contracts.Inputs;
+using Cuttr.Business.Contracts.Outputs;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
+using Cuttr.Business.Managers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -26,13 +28,13 @@ namespace Cuttr.Api.Controllers
         // POST: api/plants
         [HttpPost("me")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> AddPlant([FromForm] PlantCreateRequest request)
+        public async Task<ActionResult<PlantResponse>> AddPlant([FromForm] PlantCreateRequest request)
         {
             int userId = 0;
             try
             {
                 userId = User.GetUserId();
-                var plantResponse = await _plantManager.AddPlantAsync(request, userId);
+                PlantResponse plantResponse = await _plantManager.AddPlantAsync(request, userId);
                 return CreatedAtAction(nameof(GetPlantById), new { plantId = plantResponse.PlantId }, plantResponse);
             }
             catch (NotFoundException ex)
@@ -59,11 +61,11 @@ namespace Cuttr.Api.Controllers
 
         // GET: api/plants/{plantId}
         [HttpGet("{plantId}")]
-        public async Task<IActionResult> GetPlantById(int plantId)
+        public async Task<ActionResult<PlantResponse>> GetPlantById(int plantId)
         {
             try
             {
-                var plantResponse = await _plantManager.GetPlantByIdAsync(plantId);
+                PlantResponse plantResponse = await _plantManager.GetPlantByIdAsync(plantId);
                 return Ok(plantResponse);
             }
             catch (NotFoundException ex)
@@ -80,13 +82,13 @@ namespace Cuttr.Api.Controllers
 
         // PUT: api/plants/{plantId}
         [HttpPut("me/{plantId}")]
-        public async Task<IActionResult> UpdatePlant(int plantId, [FromBody] PlantRequest request)
+        public async Task<ActionResult<PlantResponse>> UpdatePlant(int plantId, [FromBody] PlantRequest request)
         {
             int userId = 0;
             try
             {
                 userId = User.GetUserId();
-                var plantResponse = await _plantManager.UpdatePlantAsync(plantId, userId, request);
+                PlantResponse plantResponse = await _plantManager.UpdatePlantAsync(plantId, userId, request);
                 return Ok(plantResponse);
             }
             catch (NotFoundException ex)
@@ -145,12 +147,12 @@ namespace Cuttr.Api.Controllers
         }
 
         // GET: api/users/{userId}/plants
-        [HttpGet("/api/users/{userId}/plants")]
-        public async Task<IActionResult> GetPlantsByUserId(int userId)
+        [HttpGet("users/{userId}")]
+        public async Task<ActionResult<List<PlantResponse>>> GetPlantsByUserId(int userId)
         {
             try
             {
-                var plantResponses = await _plantManager.GetPlantsByUserIdAsync(userId);
+                List<PlantResponse> plantResponses = await _plantManager.GetPlantsByUserIdAsync(userId);
                 return Ok(plantResponses);
             }
             catch (BusinessException ex)
@@ -160,14 +162,14 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        [HttpGet("/api/users/me/plants")]
-        public async Task<IActionResult> GetPlantsOfUser()
+        [HttpGet("users/me")]
+        public async Task<ActionResult<List<PlantResponse>>> GetPlantsOfUser()
         {
             int userId = 0;
             try
             {
                 userId = User.GetUserId();
-                var plantResponses = await _plantManager.GetPlantsByUserIdAsync(userId);
+                List<PlantResponse> plantResponses = await _plantManager.GetPlantsByUserIdAsync(userId);
                 return Ok(plantResponses);
             }
             catch (BusinessException ex)
@@ -187,34 +189,111 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        //seed plants
-        [AllowAnonymous]
-        [HttpPost("seed")]
-        public async Task<IActionResult> SeedPlants([FromBody] List<SeedPlantRequest> request)
+        // New GET: api/swipes/likable-plants
+        [HttpGet("likable")]
+        public async Task<ActionResult<List<PlantResponse>>> GetLikablePlants(int maxCount = 10)
         {
+            int userId = 0;
             try
             {
-                foreach(var plant in request)
-                {
-                    await _plantManager.SeedPlantAsync(plant);
-                }
-                return Ok();
+                userId = User.GetUserId();
+                List<PlantResponse> likablePlants = await _plantManager.GetLikablePlantsAsync(userId, maxCount);
+                return Ok(likablePlants);
             }
             catch (BusinessException ex)
             {
-                _logger.LogError(ex, "Error seeding plants.");
+                _logger.LogError(ex, "Error retrieving likable plants.");
                 return BadRequest(ex.Message);
             }
-            catch (UnauthorizedAccessException ex)
+        }
+
+        [HttpGet("liked-by-me/from/{userAId}")]
+        public async Task<ActionResult<List<PlantResponse>>> GetPlantsLikedByMeFromUser(int userAId)
+        {
+            try
             {
-                _logger.LogWarning(ex, "Unauthorized access attempt.");
-                return Unauthorized(ex.Message);
+                int currentUserId = User.GetUserId();
+                List<PlantResponse> likedPlants = await _plantManager.GetPlantsLikedByMeFromUserAsync(userAId, currentUserId);
+                return Ok(likedPlants);
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, $"User with ID {userAId} not found.");
+                return NotFound(new { error = ex.Message });
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, "Error retrieving liked plants.");
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An unexpected error occurred while seeding plants.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+                _logger.LogError(ex, "An unexpected error occurred while retrieving liked plants.");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An unexpected error occurred." });
             }
         }
+
+        [HttpGet("liked-by/{userAId}/from-me")]
+        public async Task<ActionResult<List<PlantResponse>>> GetPlantsLikedByUserFromMe(int userAId)
+        {
+            try
+            {
+                int currentUserId = User.GetUserId();
+                List<PlantResponse> plantsLikedByUser = await _plantManager.GetPlantsLikedByUserFromMeAsync(userAId, currentUserId);
+                return Ok(plantsLikedByUser);
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, $"User with ID {userAId} not found.");
+                return NotFound(new { error = ex.Message });
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, "Error retrieving plants liked by user.");
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while retrieving plants liked by user.");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An unexpected error occurred." });
+            }
+        }
+
+
+
+
+
+
+        ////seed plants
+        //[AllowAnonymous]
+        //[HttpPost("seed")]
+        //public async Task<IActionResult> SeedPlants([FromBody] List<SeedPlantRequest> request)
+        //{
+        //    try
+        //    {
+        //        foreach(var plant in request)
+        //        {
+        //            await _plantManager.SeedPlantAsync(plant);
+        //        }
+        //        return Ok();
+        //    }
+        //    catch (BusinessException ex)
+        //    {
+        //        _logger.LogError(ex, "Error seeding plants.");
+        //        return BadRequest(ex.Message);
+        //    }
+        //    catch (UnauthorizedAccessException ex)
+        //    {
+        //        _logger.LogWarning(ex, "Unauthorized access attempt.");
+        //        return Unauthorized(ex.Message);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "An unexpected error occurred while seeding plants.");
+        //        return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+        //    }
+        //}
+
+
     }
 }

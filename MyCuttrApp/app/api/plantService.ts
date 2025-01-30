@@ -98,12 +98,27 @@ export const plantService = {
   },
 
   getUserPlants: async (userId: number): Promise<PlantResponse[]> => {
-    const response = await api.get<PlantResponse[]>(`/users/${userId}/plants`);
+    const response = await api.get<PlantResponse[]>(`/plants/users/${userId}`);
     return response.data;
   },
 
   getMyPlants: async (): Promise<PlantResponse[]> => {
-    const response = await api.get<PlantResponse[]>("/users/me/plants");
+    const response = await api.get<PlantResponse[]>("/plants/users/me");
     return response.data;
   },
+
+  getLikablePlants: async (): Promise<PlantResponse[]> => {
+    const response = await api.get<PlantResponse[]>('/plants/likable');
+    return response.data;
+  },
+
+  getPlantsLikedByMeFromUser: async (otherUserId: number): Promise<PlantResponse[]> => {
+    const response = await api.get<PlantResponse[]>(`/plants/liked-by-me/from/${otherUserId}`);
+    return response.data;
+  },
+
+  getPlantsLikedByUserFromMe: async (otherUserId: number): Promise<PlantResponse[]> => {
+    const response = await api.get<PlantResponse[]>(`/plants/liked-by/${otherUserId}/from-me`);
+    return response.data;
+  }
 };

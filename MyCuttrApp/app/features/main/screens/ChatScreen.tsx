@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image, // <-- Added Image import
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -143,14 +144,18 @@ const ChatScreen: React.FC = () => {
 
   // Navigate to a screen to create a trade proposal
   const handleOpenTradeProposal = () => {
-    //navigation.navigate('MakeTradeProposal' as never, { connectionId } as never);
+    navigation.navigate('MakeTradeProposal' as never, { connectionId, otherUserId } as never);
   };
+
+  const handleNavigateToProfile = () => {
+    navigation.navigate('OtherProfile' as never, { userId: otherUserProfile.userId } as never);
+  }
 
   return (
     <SafeAreaProvider style={styles.container}>
       {/* Header */}
       <LinearGradient
-        style={[headerStyles.headerGradient, {marginBottom: 0}]}
+        style={[headerStyles.headerGradient, { marginBottom: 0 }]}
         colors={[COLORS.primary, COLORS.secondary]}
       >
         <View style={headerStyles.headerColumn1}>
@@ -161,20 +166,26 @@ const ChatScreen: React.FC = () => {
             <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
           </TouchableOpacity>
           {otherUserProfile && (
-            <Text style={headerStyles.headerTitle}>
-            {t('chat_title')} {otherUserProfile.name}
-          </Text>)
-            }
+            <TouchableOpacity style={styles.headerUserInfo} onPress={handleNavigateToProfile}>
+              <Image
+                source={{ uri: otherUserProfile.profilePictureUrl }}
+                style={styles.headerUserImage}
+              />
+              <Text style={headerStyles.headerTitle}>
+                {otherUserProfile.name}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </LinearGradient>
 
       {/* Shelf showing the other user's profile */}
-      <View style={styles.shelfWrapper}>
+      {/* <View style={styles.shelfWrapper}>
         <ProfileCardShelf
           ref={shelfRef}
           userProfile={otherUserProfile}
         />
-      </View>
+      </View> */}
 
       {/* "Browse Matches" button */}
       <TouchableOpacity style={styles.browseButton} onPress={handleBrowseMatches}>
@@ -365,5 +376,21 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
+  },
+
+  // New Styles for Header User Info
+  headerUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10, // Adjust as needed
+  },
+  headerUserImage: {
+    borderColor: COLORS.accentGreen,
+    borderWidth: 3,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 8,
+    backgroundColor: '#ccc', // Placeholder color in case image fails to load
   },
 });

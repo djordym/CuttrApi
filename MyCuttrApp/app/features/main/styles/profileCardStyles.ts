@@ -53,8 +53,8 @@ export const profileCardStyles = StyleSheet.create({
     borderColor: "#fff",
   },
   profilePlaceholder: {
-    width: 150,
-    height: 150,
+    width: 170,
+    height: 170,
     borderRadius: 40,
     backgroundColor: "#eee",
     alignItems: "center",

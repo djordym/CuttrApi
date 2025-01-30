@@ -91,7 +91,7 @@ namespace Cuttr.Infrastructure.Mappers
         }
 
         // Helper method to map PlantEF without User to prevent circular reference
-        private static Plant MapToPlantWithoutUser(PlantEF efPlant)
+        public static Plant MapToPlantWithoutUser(PlantEF efPlant)
         {
             if (efPlant == null)
                 return null;

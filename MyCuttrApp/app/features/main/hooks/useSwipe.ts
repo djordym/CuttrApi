@@ -2,12 +2,13 @@ import { useQuery } from 'react-query';
 import { swipeService } from '../../../api/swipeService';
 import { PlantResponse, SwipeRequest } from '../../../types/apiTypes';
 import { useMutation, useQueryClient } from 'react-query';
+import { plantService } from '../../../api/plantService';
 export const useLikablePlants = () => {
   const queryClient = useQueryClient();
 
   const query = useQuery<PlantResponse[], Error>(
     ['likablePlants'],
-    swipeService.getLikablePlants,
+    plantService.getLikablePlants,
     {
       staleTime: 1000 * 60 * 1, // 1 min
       refetchOnWindowFocus: true,

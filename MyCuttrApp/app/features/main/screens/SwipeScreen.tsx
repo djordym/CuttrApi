@@ -19,7 +19,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useLikablePlants } from '../hooks/useSwipe'; // <--- NOTE the usage
 import { useMyProfile } from '../hooks/useMyProfileHooks';
 import { useUserPreferences } from '../hooks/usePreferences';
-import { useMyPlants } from '../hooks/usePlants';
+import { useMyPlants } from '../hooks/usePlantHooks';
 
 // --- Components & Services ---
 import { SwipeableCard, SwipeableCardRef } from '../components/SwipeableCard';
