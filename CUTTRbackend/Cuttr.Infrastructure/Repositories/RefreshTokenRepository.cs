@@ -34,7 +34,7 @@ namespace Cuttr.Infrastructure.Repositories
                     CreatedAt = token.CreatedAt,
                     RevokedAt = token.RevokedAt
                 };
-                _context.RefreshTokens.Add(ef);
+                _context.RefreshTokens.AddAsync(ef);
                 await _context.SaveChangesAsync();
                 _context.Entry(ef).State = EntityState.Detached;
                 token.RefreshTokenId = ef.RefreshTokenId;

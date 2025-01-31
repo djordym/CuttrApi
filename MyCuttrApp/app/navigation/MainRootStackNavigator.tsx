@@ -38,7 +38,7 @@ const MainRootStackNavigator = () => (
     <RootStack.Screen
       name="MakeTradeProposal"
       component={MakeTradeProposalScreen}
-      options={{ presentation: 'modal' }}
+      options={{ presentation: 'transparentModal' }}
     />
   </RootStack.Navigator>
 );

@@ -75,6 +75,8 @@ export const PlantThumbnail: React.FC<PlantThumbnailProps> = ({
   );
 }
 
+export default PlantThumbnail;
+
 const styles = StyleSheet.create({
   outerContainer: {
     margin: 5,

@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   fullPlantNameCompact: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: '#fff',
     marginBottom: 3,
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   },
   tagTextCompact: {
     color: COLORS.textLight,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '600',
   },
   fullDescription: {

@@ -25,6 +25,7 @@ import { store } from '../../../store';
 import { QueryClient } from 'react-query';
 import { COLORS } from '../../../theme/colors';
 import { headerStyles } from '../styles/headerStyles';
+import { authService } from '../../../api/authService';
 
 const SettingsScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -123,6 +124,7 @@ const queryClient = new QueryClient();
           text: t('Yes'),
           style: 'destructive',
           onPress: async () => {
+            authService.logout();
             queryClient.removeQueries();
             queryClient.clear();
             store.dispatch(logout());

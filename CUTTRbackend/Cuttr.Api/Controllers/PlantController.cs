@@ -264,35 +264,35 @@ namespace Cuttr.Api.Controllers
 
 
 
-        ////seed plants
-        //[AllowAnonymous]
-        //[HttpPost("seed")]
-        //public async Task<IActionResult> SeedPlants([FromBody] List<SeedPlantRequest> request)
-        //{
-        //    try
-        //    {
-        //        foreach(var plant in request)
-        //        {
-        //            await _plantManager.SeedPlantAsync(plant);
-        //        }
-        //        return Ok();
-        //    }
-        //    catch (BusinessException ex)
-        //    {
-        //        _logger.LogError(ex, "Error seeding plants.");
-        //        return BadRequest(ex.Message);
-        //    }
-        //    catch (UnauthorizedAccessException ex)
-        //    {
-        //        _logger.LogWarning(ex, "Unauthorized access attempt.");
-        //        return Unauthorized(ex.Message);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "An unexpected error occurred while seeding plants.");
-        //        return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
-        //    }
-        //}
+        //seed plants
+        [AllowAnonymous]
+        [HttpPost("seed")]
+        public async Task<IActionResult> SeedPlants([FromBody] List<SeedPlantRequest> request)
+        {
+            try
+            {
+                foreach (var plant in request)
+                {
+                    await _plantManager.SeedPlantAsync(plant);
+                }
+                return Ok();
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, "Error seeding plants.");
+                return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while seeding plants.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
+        }
 
 
     }

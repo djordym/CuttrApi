@@ -82,6 +82,32 @@ namespace Cuttr.Infrastructure
                 // Geo
                 entity.Property(u => u.Location)
                       .HasColumnType("geography");
+
+                entity
+                .HasMany(u => u.RefreshTokens)
+                .WithOne(rt => rt.User)
+                .HasForeignKey(rt => rt.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<RefreshTokenEF>(entity =>
+            {
+                entity.HasKey(e => e.RefreshTokenId);
+
+                entity.Property(e => e.TokenHash)
+                      .IsRequired()
+                      .HasMaxLength(512); // Adjust as necessary
+
+                entity.Property(e => e.ExpiresAt)
+                      .IsRequired();
+
+                entity.Property(e => e.IsRevoked)
+                      .HasDefaultValue(false);
+
+                entity.HasOne(e => e.User)
+                      .WithMany(u => u.RefreshTokens) // Ensure UserEF has ICollection<RefreshTokenEF> RefreshTokens
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ===============================

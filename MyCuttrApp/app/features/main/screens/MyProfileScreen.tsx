@@ -26,7 +26,8 @@ import { COLORS } from '../../../theme/colors';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { PlantThumbnail } from '../components/PlantThumbnail';
 import { headerStyles } from '../styles/headerStyles';
-import { ProfileCard } from '../components/ProfileCard'; // Import the new component
+import { ProfileCard } from '../components/ProfileCard';
+import { ToggleButton } from '../components/ToggleButton'; // Import the new ToggleButton component
 
 const MyProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -56,7 +57,7 @@ const MyProfileScreen: React.FC = () => {
   const [editProfileVisible, setEditProfileVisible] = useState(false);
 
   // Toggle: Thumbnails or Full-size for plants
-  const [showFullSize, setShowFullSize] = useState(false);
+  const [viewOption, setViewOption] = useState<'Thumbnails' | 'Full Size'>('Thumbnails');
 
   // Position for the EditProfileModal
   const [editCardLayout, setEditCardLayout] = useState({
@@ -117,7 +118,7 @@ const MyProfileScreen: React.FC = () => {
 
   // Rendering plants
   const renderPlantItem = (item: PlantResponse) => {
-    if (!showFullSize) {
+    if (viewOption === 'Thumbnails') {
       return (
         <PlantThumbnail
           key={item.plantId}
@@ -211,44 +212,15 @@ const MyProfileScreen: React.FC = () => {
           </View>
 
           {/* Toggle between Thumbnails and Full view */}
-          <View style={styles.viewToggleRow}>
-            <TouchableOpacity
-              onPress={() => setShowFullSize(false)}
-              style={[
-                styles.segmentButton,
-                !showFullSize && styles.segmentButtonActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentButtonText,
-                  !showFullSize && styles.segmentButtonTextActive,
-                ]}
-              >
-                {t('Thumbnails')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowFullSize(true)}
-              style={[
-                styles.segmentButton,
-                showFullSize && styles.segmentButtonActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentButtonText,
-                  showFullSize && styles.segmentButtonTextActive,
-                ]}
-              >
-                {t('Full Size')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <ToggleButton
+            options={[t('Thumbnails'), t('Full Size')]}
+            selected={viewOption}
+            onToggle={(option) => setViewOption(option as 'Thumbnails' | 'Full Size')}
+          />
 
           {/* Plants List */}
           {myPlants && myPlants.length > 0 ? (
-            <View style={showFullSize ? styles.fullViewContainer : styles.thumbViewContainer}>
+            <View style={viewOption === 'Full Size' ? styles.fullViewContainer : styles.thumbViewContainer}>
               {myPlants.map((plant) => renderPlantItem(plant))}
             </View>
           ) : (
@@ -277,7 +249,7 @@ const MyProfileScreen: React.FC = () => {
 
 export default MyProfileScreen;
 
-// Styles remain unchanged
+// Updated Styles
 
 const styles = StyleSheet.create({
   container: {
@@ -361,35 +333,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-
-  // Toggle for Thumbnails / Full
-  viewToggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.textLight,
-    borderRadius: 20,
-    alignSelf: 'center',
-    padding: 3,
-    marginBottom: 15,
-  },
-  segmentButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 18,
-  },
-  segmentButtonActive: {
-    backgroundColor: COLORS.accentGreen,
-  },
-  segmentButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textDark,
-  },
-  segmentButtonTextActive: {
-    color: COLORS.textLight,
-  },
-
   // Different layouts for the plant items
   thumbViewContainer: {
     flexDirection: 'row',

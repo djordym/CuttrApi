@@ -19,7 +19,7 @@ const AppNavigator = () => {
   const { accessToken } = useSelector((state: RootState) => state.auth);
   const { refreshToken } = useSelector((state: RootState) => state.auth);
   const [initializing, setInitializing] = useState(true);
-  const { data: userProfile, isLoading: userProfileLoading } = useMyProfile();
+  const { data: userProfile, isLoading: userProfileLoading} = useMyProfile();
 
 // 1. Attempt to load tokens from storage
 useEffect(() => {

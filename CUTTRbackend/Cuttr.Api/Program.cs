@@ -68,7 +68,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<CuttrDbContext>(options =>
 {
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("CuttrDb"),
+        builder.Configuration.GetConnectionString("CuttrDb3"),
         sqlOptions => sqlOptions.UseNetTopologySuite());
 });
 //Register BlobStorageService

@@ -114,6 +114,8 @@ export const PlantCardWithInfo: React.FC<PlantCardWithInfoProps> = ({
     );
 };
 
+export default PlantCardWithInfo;
+
 const styles = StyleSheet.create({
     cardContainer: {
         borderRadius: 8,

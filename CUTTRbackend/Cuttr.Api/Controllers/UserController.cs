@@ -227,45 +227,45 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        //// temporary seed function that accepts list of registrationrequests
-        //[AllowAnonymous]
-        //[HttpPost("seed")]
-        //public async Task<IActionResult> SeedRegisterUsers([FromBody] List<UserRegistrationRequest> requests)
-        //{
-        //    try
-        //    {
-        //        foreach(var request in requests)
-        //        {
-        //            await _userManager.RegisterUserAsync(request);
-        //        }
-        //        return Ok();
-        //    }
-        //    catch (BusinessException ex)
-        //    {
-        //        _logger.LogError(ex, "Error seeding users.");
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        // temporary seed function that accepts list of registrationrequests
+        [AllowAnonymous]
+        [HttpPost("seed")]
+        public async Task<IActionResult> SeedRegisterUsers([FromBody] List<UserRegistrationRequest> requests)
+        {
+            try
+            {
+                foreach (var request in requests)
+                {
+                    await _userManager.RegisterUserAsync(request);
+                }
+                return Ok();
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, "Error seeding users.");
+                return BadRequest(ex.Message);
+            }
+        }
 
-        ////accepts list of usersId's to update location from
-        ////to seed, change request object to have userId, latitude, and longitude
-        //[AllowAnonymous]
-        //[HttpPost("seed/locations")]
-        //public async Task<IActionResult> SeedUpdateLocations([FromBody] List<UpdateLocationRequest> requests)
-        //{
-        //    try
-        //    {
-        //        foreach(var request in requests)
-        //        {
-        //            await _userManager.UpdateUserLocationAsync(request.UserId, request.Latitude, request.Longitude);
-        //        }
-        //        return Ok();
-        //    }
-        //    catch (BusinessException ex)
-        //    {
-        //        _logger.LogError(ex, "Error seeding locations.");
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        //accepts list of usersId's to update location from
+        //to seed, change request object to have userId, latitude, and longitude
+        [AllowAnonymous]
+        [HttpPost("seed/locations")]
+        public async Task<IActionResult> SeedUpdateLocations([FromBody] List<UpdateLocationRequest> requests)
+        {
+            try
+            {
+                foreach (var request in requests)
+                {
+                    await _userManager.UpdateUserLocationAsync(request.UserId, request.Latitude, request.Longitude);
+                }
+                return Ok();
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, "Error seeding locations.");
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

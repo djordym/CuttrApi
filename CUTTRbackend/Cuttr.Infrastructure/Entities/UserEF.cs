@@ -48,5 +48,7 @@ namespace Cuttr.Infrastructure.Entities
         public virtual ICollection<ReportEF> ReportsMade { get; set; }
 
         public virtual ICollection<ReportEF> ReportsReceived { get; set; }
+        public virtual ICollection<RefreshTokenEF> RefreshTokens { get; set; }
+
     }
 }

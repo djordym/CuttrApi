@@ -4,6 +4,7 @@ using Cuttr.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 
@@ -12,9 +13,11 @@ using NetTopologySuite.Geometries;
 namespace Cuttr.Infrastructure.Migrations
 {
     [DbContext(typeof(CuttrDbContext))]
-    partial class CuttrDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250131094824_betterrefreshtoken")]
+    partial class betterrefreshtoken
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -228,17 +231,14 @@ namespace Cuttr.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsRevoked")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
@@ -541,7 +541,7 @@ namespace Cuttr.Infrastructure.Migrations
             modelBuilder.Entity("Cuttr.Infrastructure.Entities.RefreshTokenEF", b =>
                 {
                     b.HasOne("Cuttr.Infrastructure.Entities.UserEF", "User")
-                        .WithMany("RefreshTokens")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -624,8 +624,6 @@ namespace Cuttr.Infrastructure.Migrations
 
                     b.Navigation("Preferences")
                         .IsRequired();
-
-                    b.Navigation("RefreshTokens");
 
                     b.Navigation("ReportsMade");
 

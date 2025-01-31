@@ -321,7 +321,6 @@ namespace Cuttr.Infrastructure.Mappers
         {
             if (extras == null || !extras.Any())
                 return "";
-
             // JSON serialization
             return System.Text.Json.JsonSerializer.Serialize(extras);
         }

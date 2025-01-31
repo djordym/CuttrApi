@@ -11,14 +11,26 @@ namespace Cuttr.Infrastructure.Entities
     {
         [Key]
         public int RefreshTokenId { get; set; }
+
+        [Required]
         public int UserId { get; set; }
+
+        [Required]
+        [MaxLength(512)] // Adjust based on hashing algorithm
         public string TokenHash { get; set; }
+
+        [Required]
         public DateTime ExpiresAt { get; set; }
+
         public bool IsRevoked { get; set; }
+
+        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
         public DateTime? RevokedAt { get; set; }
 
         // Navigation property
         public UserEF User { get; set; }
     }
+
 }
