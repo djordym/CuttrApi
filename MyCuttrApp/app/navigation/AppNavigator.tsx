@@ -19,7 +19,7 @@ const AppNavigator = () => {
   const { accessToken } = useSelector((state: RootState) => state.auth);
   const { refreshToken } = useSelector((state: RootState) => state.auth);
   const [initializing, setInitializing] = useState(true);
-  const { data: userProfile, isLoading: userProfileLoading} = useMyProfile();
+  const { data: userProfile, isLoading: userProfileLoading, refetch: refetchUserProfile} = useMyProfile();
 
 // 1. Attempt to load tokens from storage
 useEffect(() => {
@@ -32,19 +32,14 @@ useEffect(() => {
       dispatch(setInitialTokens({
         accessToken: storedAccessToken,
         refreshToken: storedRefreshToken,
-        userId: null, // userId is unknown until we fetch profile
-        email: null,
       }));
 
       // 2. Now fetch /me using these tokens
       try {
-        const profile = await userService.getCurrentUserProfile();
-        // Once we have the profile, save userId and email in Redux
+        refetchUserProfile();
         dispatch(setInitialTokens({
           accessToken: store.getState().auth.accessToken,
-          refreshToken: store.getState().auth.refreshToken,
-          userId: profile.userId,
-          email: profile.email,
+          refreshToken: store.getState().auth.refreshToken
         }));
       } catch (err) {
         // If /me fails, log out

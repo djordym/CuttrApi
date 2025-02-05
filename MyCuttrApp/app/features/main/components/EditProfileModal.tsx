@@ -185,8 +185,8 @@ export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
         uri: img.uri,
         name: 'profile.jpg',
         type: 'image/jpeg',
-      };
-      updateProfilePicture(photo);
+      } as any;
+      updateProfilePicture({image: photo});
     } catch (err) {
       console.error('Error preparing profile picture:', err);
       Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));

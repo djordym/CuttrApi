@@ -1,10 +1,11 @@
+// File: app/api/axiosConfig.ts
 import axios from "axios";
 import { store } from "../store"; // your Redux store
 import { refreshTokenThunk, logout } from "../features/auth/store/authSlice";
-import { setGlobalError } from "../store/slices/globalErrorSlice"; // hypothetical slice
+import { setGlobalError } from "../store/slices/globalErrorSlice";
 import { RootState } from "../store"; // your root state type
 import { AuthTokenResponse } from "../types/apiTypes";
-import {log} from '../utils/logger';
+import { log } from "../utils/logger";
 
 let isRefreshing = false;
 let pendingRequests: Array<(token: string) => void> = [];
@@ -19,19 +20,22 @@ const api = axios.create({
 // ────────────────────────────────────────────────────────────────────────────────
 api.interceptors.request.use(
   async (config) => {
+    // Do not add an Authorization header for refresh requests
+    if (config.url && config.url.includes("/auth/refresh")) {
+      log.debug("API Request (refresh)", {
+        baseUrl: api.defaults.baseURL,
+        url: config.url,
+        method: config.method,
+        data: config.data,
+        headers: config.headers,
+      });
+      return config;
+    }
     const state: RootState = store.getState();
-    const token = state.auth.accessToken; // adapt to your actual auth slice
+    const token = state.auth.accessToken;
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    log.debug("API Request", {
-      baseUrl : api.defaults.baseURL,
-      url: config.url,
-      method: config.method,
-      data: config.data,
-      headers: config.headers,
-    });
     return config;
   },
   (error) => {
@@ -49,75 +53,72 @@ api.interceptors.response.use(
       url: response.config.url,
       status: response.status,
       data: response.data,
-      header: response.headers,
+      headers: response.headers,
     });
-    // If the response is successful, just return it.
     return response;
   },
-
   async (error) => {
-    log.error("API Response Error", {
-      url: error.config.url,
-      message: error.message,
-      status: error.response.status,
-      data: error.response.data,
-      headers: error.response.headers,
-    });
-
-    // If we don't have an actual HTTP response (network error, CORS issue, etc.)
+    // If there's no response (network error), dispatch a global error
     if (!error.response) {
       store.dispatch(setGlobalError("Network Error: Unable to connect."));
       return Promise.reject(error);
     }
 
-    
-
     const { status } = error.response;
     const originalRequest = error.config;
 
-    // ──────────────────────────────────────────────────────────────────────
-    // 1. Handle 401 (Unauthorized) for token refresh
-    // ──────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // If the failing request is the refresh endpoint itself, then
+    // do not attempt another refresh; immediately log out.
+    // ─────────────────────────────────────────────────────────────
+    if (
+      originalRequest.url &&
+      originalRequest.url.includes("/auth/refresh")
+    ) {
+      log.error(
+        "Refresh endpoint failed. Forcing logout.",
+        error.response.data
+      );
+      store.dispatch(logout());
+      return Promise.reject(error);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 1. Handle 401 Unauthorized for token refresh
+    // ─────────────────────────────────────────────────────────────
     if (status === 401 && !originalRequest._retry) {
       if (!isRefreshing) {
         isRefreshing = true;
         originalRequest._retry = true;
         try {
-          // Attempt to refresh
+          log.debug("Refreshing token...");
           const result = await store.dispatch(refreshTokenThunk());
-          //initialise authtokenresponse
           let newTokens: AuthTokenResponse | undefined;
-
           if (refreshTokenThunk.fulfilled.match(result)) {
-            // The action was fulfilled, and we can safely access the payload
             newTokens = result.payload;
-            console.log("New tokens:", newTokens);
+            log.debug("New tokens:", newTokens);
           } else {
-            // The action was rejected, handle the error
-            console.error(
+            log.error(
               "Token refresh failed:",
               result.payload || result.error.message
             );
           }
-
-          // Reset refresh state
           isRefreshing = false;
-
-          pendingRequests.forEach((cb) => cb(newTokens?.accessToken || ""));
+          pendingRequests.forEach((cb) =>
+            cb(newTokens?.accessToken || "")
+          );
           pendingRequests = [];
-
-          // Retry the original request with the new token
+          // Retry the original request with the new token.
           return api(originalRequest);
         } catch (refreshError) {
-          // Refresh token failed, forcibly logout
+          log.error("Refresh token failed, logging out:", refreshError);
           isRefreshing = false;
           pendingRequests = [];
-          store.dispatch(logout()); // This should remove tokens & navigate to login
+          store.dispatch(logout());
           return Promise.reject(refreshError);
         }
       }
-
-      // We are already refreshing; queue requests
+      // If a refresh is already in progress, queue this request.
       return new Promise((resolve) => {
         pendingRequests.push((token: string) => {
           originalRequest.headers.Authorization = `Bearer ${token}`;
@@ -126,27 +127,18 @@ api.interceptors.response.use(
       });
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // 2. Other errors (e.g., 404, 403, 500, etc.)
-    // ──────────────────────────────────────────────────────────────────────
-
-    // Extract a user-friendly message
+    // ─────────────────────────────────────────────────────────────
+    // 2. Other errors
+    // ─────────────────────────────────────────────────────────────
     let errorMessage: string;
-
     if (typeof error.response.data === "string") {
-      // If your backend returns a plain text error, use it directly.
       errorMessage = error.response.data;
     } else if (error.response.data?.message) {
-      // Alternatively, if your backend returns { message: 'something' }
       errorMessage = error.response.data.message;
     } else {
-      // Fallback if the response format is unknown
       errorMessage = "An error occurred. Please try again later.";
     }
-
-    // Dispatch to a global error state (e.g., displayed in a toast or modal)
     store.dispatch(setGlobalError(errorMessage));
-
     return Promise.reject(error);
   }
 );

@@ -11,12 +11,11 @@ import {
 } from '../../../types/apiTypes';
 
 import { log } from '../../../utils/logger';
+import {useQueryClient} from 'react-query';
 
 interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
-  userId: number | null;
-  email: string | null;
   status: 'idle' | 'loading' | 'error';
   error: string | null;
 }
@@ -24,8 +23,6 @@ interface AuthState {
 const initialState: AuthState = {
   accessToken: null,
   refreshToken: null,
-  userId: null,
-  email: null,
   status: 'idle',
   error: null
 };
@@ -109,21 +106,16 @@ export const authSlice = createSlice({
   reducers: {
     setInitialTokens(
       state,
-      action: PayloadAction<{ accessToken: string | null; refreshToken: string | null; userId: number | null; email: string | null }>
+      action: PayloadAction<{ accessToken: string | null; refreshToken: string | null }>
     ) {
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
-      state.userId = action.payload.userId;
-      state.email = action.payload.email;
     },
     logout(state) {
       state.accessToken = null;
       state.refreshToken = null;
-      state.userId = null;
-      state.email = null;
       state.error = null;
       state.status = 'idle';
-      storage.clearTokens();
     }
   },
   extraReducers: (builder) => {
@@ -138,8 +130,6 @@ export const authSlice = createSlice({
         // action.payload: UserLoginResponse
         state.accessToken = action.payload.tokens.accessToken;
         state.refreshToken = action.payload.tokens.refreshToken;
-        state.userId = action.payload.userId;
-        state.email = action.payload.email;
       })
       .addCase(loginThunk.rejected, (state, action) => {
         state.status = 'error';
@@ -156,8 +146,6 @@ export const authSlice = createSlice({
         // action.payload: UserLoginResponse
         state.accessToken = action.payload.tokens.accessToken;
         state.refreshToken = action.payload.tokens.refreshToken;
-        state.userId = action.payload.userId;
-        state.email = action.payload.email;
       })
       .addCase(registerThunk.rejected, (state, action) => {
         state.status = 'error';
@@ -174,10 +162,9 @@ export const authSlice = createSlice({
         // If refresh fails, clear credentials
         state.accessToken = null;
         state.refreshToken = null;
-        state.userId = null;
-        state.email = null;
-        storage.clearTokens();
-      });
+        state.error = null;
+        state.status = 'idle';
+r      });
   }
 });
 

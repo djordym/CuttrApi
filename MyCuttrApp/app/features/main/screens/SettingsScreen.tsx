@@ -22,7 +22,6 @@ import { useMyProfile } from '../hooks/useMyProfileHooks';
 import { useNavigation } from '@react-navigation/native';
 import { logout } from '../../auth/store/authSlice';
 import { store } from '../../../store';
-import { QueryClient } from 'react-query';
 import { COLORS } from '../../../theme/colors';
 import { headerStyles } from '../styles/headerStyles';
 import { authService } from '../../../api/authService';
@@ -39,7 +38,6 @@ const SettingsScreen: React.FC = () => {
   } = useMyProfile();
 
 //query client
-const queryClient = new QueryClient();
 
   // Language management
   const [currentLang, setCurrentLang] = useState(i18n.language);
@@ -125,8 +123,6 @@ const queryClient = new QueryClient();
           style: 'destructive',
           onPress: async () => {
             authService.logout();
-            queryClient.removeQueries();
-            queryClient.clear();
             store.dispatch(logout());
           }
         },

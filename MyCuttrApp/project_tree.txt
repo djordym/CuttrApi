@@ -56,32 +56,31 @@ MyCuttrApp
 │   │   │   │   ├── ProfileCardShelf.tsx
 │   │   │   │   ├── SelectPlantsModal.tsx
 │   │   │   │   ├── SwipeableCard.tsx
-│   │   │   │   └── TagGroup.tsx
+│   │   │   │   ├── TagGroup.tsx
+│   │   │   │   └── ToggleButton.tsx
 │   │   │   ├── hooks
 │   │   │   │   ├── useConnections.ts
 │   │   │   │   ├── useMessages.ts
 │   │   │   │   ├── useMyProfileHooks.ts
 │   │   │   │   ├── useOtherProfile.ts
-│   │   │   │   ├── usePlants.ts
+│   │   │   │   ├── usePlantHooks.ts
 │   │   │   │   ├── usePreferences.ts
 │   │   │   │   ├── useSearchRadius.ts
 │   │   │   │   ├── useSwipe.ts
+│   │   │   │   ├── useTradeProposalHooks.ts
 │   │   │   │   └── useUserMatches.ts
 │   │   │   ├── index.ts
+│   │   │   ├── modals
 │   │   │   ├── screens
 │   │   │   │   ├── AddPlantScreen.tsx
 │   │   │   │   ├── ChatScreen.tsx
 │   │   │   │   ├── ConnectionsScreen.tsx
+│   │   │   │   ├── MakeTradeProposalScreen.tsx
 │   │   │   │   ├── MyProfileScreen.tsx
 │   │   │   │   ├── OtherProfileScreen.tsx
 │   │   │   │   ├── SetUserPreferencesScreen.tsx
 │   │   │   │   ├── SettingsScreen.tsx
 │   │   │   │   └── SwipeScreen.tsx
-│   │   │   ├── store
-│   │   │   │   ├── matchesSlice.ts
-│   │   │   │   ├── plantsSlice.ts
-│   │   │   │   ├── userPreferencesSlice.ts
-│   │   │   │   └── userSlice.ts
 │   │   │   ├── styles
 │   │   │   │   ├── headerStyles.ts
 │   │   │   │   └── profileCardStyles.ts
@@ -106,20 +105,15 @@ MyCuttrApp
 │   ├── navigation
 │   │   ├── AppNavigator.tsx
 │   │   ├── AuthNavigator.tsx
-│   │   ├── ConnectionStackNavigator.tsx
 │   │   ├── MainRootStackNavigator.tsx
 │   │   ├── MainTabNavigator.tsx
-│   │   ├── NavigationTypes.ts
-│   │   ├── OnboardingNavigator.tsx
-│   │   ├── ProfileStackNavigator.tsx
-│   │   └── SwipeStackNavigator.tsx
+│   │   └── OnboardingNavigator.tsx
 │   ├── store
 │   │   ├── hooks.ts
 │   │   ├── index.ts
 │   │   ├── middlewares
 │   │   │   ├── loggingMiddleware.ts
 │   │   │   └── tokenRefreshMiddleware.ts
-│   │   ├── rootReducer.ts
 │   │   └── slices
 │   │       └── globalErrorSlice.ts
 │   ├── theme

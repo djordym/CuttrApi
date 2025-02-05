@@ -6,7 +6,7 @@ import { UserResponse, UserUpdateRequest, UpdateLocationRequest, UserProfileImag
 // Fetch User Profile
 export const useMyProfile = () => {
   return useQuery<UserResponse, Error>(
-    ['userProfile'],
+    ['myProfile'],
     userService.getCurrentUserProfile,
     {
       staleTime: 1000 * 60 * 5, // 5 minutes
@@ -25,7 +25,7 @@ export const useUpdateProfile = () => {
     {
       onSuccess: () => {
         // Invalidate and refetch
-        queryClient.invalidateQueries(['userProfile']);
+        queryClient.invalidateQueries(['myProfile']);
       },
       onError: (error: any) => {
         console.error('Error updating profile:', error);
@@ -39,14 +39,14 @@ export const useUpdateProfilePicture = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    (photo: { uri: string; name: string; type: string }) => {
-      const image: UserProfileImageUpdateRequest = { image: new File([photo.uri], photo.name, { type: photo.type }) };
-      return userService.updateProfilePicture(image);
+    (data: UserProfileImageUpdateRequest) => {
+
+      return userService.updateProfilePicture(data);
     },
     {
       onSuccess: () => {
         // Invalidate and refetch
-        queryClient.invalidateQueries(['userProfile']);
+        queryClient.invalidateQueries(['myProfile']);
       },
       onError: (error: any) => {
         console.error('Error updating profile picture:', error);
@@ -64,7 +64,7 @@ export const useUpdateLocation = () => {
     {
       onSuccess: () => {
         // Invalidate and refetch
-        queryClient.invalidateQueries(['userProfile']);
+        queryClient.invalidateQueries(['myProfile']);
       },
       onError: (error: any) => {
         console.error('Error updating location:', error);

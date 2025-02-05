@@ -9,7 +9,7 @@
 "icon": "./assets/images/icon.png",
 "scheme": "myapp",
 "userInterfaceStyle": "automatic",
-"newArchEnabled": false,
+"newArchEnabled": true,
 "ios": {
 "supportsTablet": true
 },
@@ -224,7 +224,7 @@ log.debug('response', response);
 return response.data;
 },
 logout: async (): Promise<void> => {
-await api.post('/api/auth/logout');
+await api.post('/auth/logout');
 },
 };
 // File: app\api\axiosConfig.ts
@@ -486,11 +486,11 @@ const response = await api.get<PlantResponse[]>('/plants/likable');
 return response.data;
 },
 getPlantsLikedByMeFromUser: async (otherUserId: number): Promise<PlantResponse[]> => {
-const response = await api.get<PlantResponse[]>(`/liked-by-me/from/${otherUserId}`);
+const response = await api.get<PlantResponse[]>(`/plants/liked-by-me/from/${otherUserId}`);
 return response.data;
 },
 getPlantsLikedByUserFromMe: async (otherUserId: number): Promise<PlantResponse[]> => {
-const response = await api.get<PlantResponse[]>(`/liked-by/${otherUserId}/from-me`);
+const response = await api.get<PlantResponse[]>(`/plants/liked-by/${otherUserId}/from-me`);
 return response.data;
 }
 };
@@ -832,16 +832,12 @@ AuthTokenResponse
 interface AuthState {
 accessToken: string | null;
 refreshToken: string | null;
-userId: number | null;
-email: string | null;
 status: 'idle' | 'loading' | 'error';
 error: string | null;
 }
 const initialState: AuthState = {
 accessToken: null,
 refreshToken: null,
-userId: null,
-email: null,
 status: 'idle',
 error: null
 };
@@ -915,20 +911,18 @@ initialState,
 reducers: {
 setInitialTokens(
 state,
-action: PayloadAction<{ accessToken: string | null; refreshToken: string | null; userId: number | null; email: string | null }>
+action: PayloadAction<{ accessToken: string | null; refreshToken: string | null }>
 ) {
 state.accessToken = action.payload.accessToken;
 state.refreshToken = action.payload.refreshToken;
-state.userId = action.payload.userId;
-state.email = action.payload.email;
 },
 logout(state) {
+const queryClient = useQueryClient();
 state.accessToken = null;
 state.refreshToken = null;
-state.userId = null;
-state.email = null;
 state.error = null;
 state.status = 'idle';
+queryClient.clear();
 storage.clearTokens();
 }
 },
@@ -942,8 +936,6 @@ state.error = null;
 state.status = 'idle';
 state.accessToken = action.payload.tokens.accessToken;
 state.refreshToken = action.payload.tokens.refreshToken;
-state.userId = action.payload.userId;
-state.email = action.payload.email;
 })
 .addCase(loginThunk.rejected, (state, action) => {
 state.status = 'error';
@@ -957,8 +949,6 @@ state.error = null;
 state.status = 'idle';
 state.accessToken = action.payload.tokens.accessToken;
 state.refreshToken = action.payload.tokens.refreshToken;
-state.userId = action.payload.userId;
-state.email = action.payload.email;
 })
 .addCase(registerThunk.rejected, (state, action) => {
 state.status = 'error';
@@ -969,10 +959,12 @@ state.accessToken = action.payload.accessToken;
 state.refreshToken = action.payload.refreshToken;
 })
 .addCase(refreshTokenThunk.rejected, (state) => {
+const queryClient = useQueryClient();
 state.accessToken = null;
 state.refreshToken = null;
-state.userId = null;
-state.email = null;
+state.error = null;
+state.status = 'idle';
+queryClient.clear();
 storage.clearTokens();
 });
 }
@@ -1663,8 +1655,8 @@ const photo = {
 uri: img.uri,
 name: 'profile.jpg',
 type: 'image/jpeg',
-};
-updateProfilePicture(photo);
+} as any;
+updateProfilePicture({image: photo});
 } catch (err) {
 console.error('Error preparing profile picture:', err);
 Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));
@@ -2074,6 +2066,7 @@ compact={compact}
 </View>
 );
 };
+export default PlantCardWithInfo;
 const styles = StyleSheet.create({
 cardContainer: {
 borderRadius: 8,
@@ -2163,7 +2156,7 @@ color: '#fff',
 marginBottom: 6,
 },
 fullPlantNameCompact: {
-fontSize: 12,
+fontSize: 14,
 fontWeight: '700',
 color: '#fff',
 marginBottom: 3,
@@ -2201,7 +2194,7 @@ fontWeight: '600',
 },
 tagTextCompact: {
 color: COLORS.textLight,
-fontSize: 8,
+fontSize: 10,
 fontWeight: '600',
 },
 fullDescription: {
@@ -2281,6 +2274,7 @@ color={COLORS.accentRed}/>
 </View>
 );
 }
+export default PlantThumbnail;
 const styles = StyleSheet.create({
 outerContainer: {
 margin: 5,
@@ -3088,6 +3082,75 @@ color: COLORS.textLight,
 fontWeight: '600',
 },
 });
+// File: app\features\main\components\ToggleButton.tsx
+interface ToggleButtonProps {
+options: [string, string];
+selected: string;
+onToggle: (option: string) => void;
+}
+export const ToggleButton: React.FC<ToggleButtonProps> = ({
+options,
+selected,
+onToggle,
+}) => {
+return (
+<View style={styles.toggleContainer}>
+{options.map((option) => {
+const isActive = selected === option;
+return (
+<TouchableOpacity
+key={option}
+onPress={() => onToggle(option)}
+style={[
+styles.button,
+isActive && styles.activeButton,
+]}
+accessibilityRole="button"
+accessibilityLabel={option}
+>
+<Text
+style={[
+styles.buttonText,
+isActive && styles.activeButtonText,
+]}
+>
+{option}
+</Text>
+</TouchableOpacity>
+);
+})}
+</View>
+);
+};
+export default ToggleButton;
+const styles = StyleSheet.create({
+toggleContainer: {
+flexDirection: 'row',
+justifyContent: 'center',
+alignItems: 'center',
+backgroundColor: COLORS.textLight,
+borderRadius: 20,
+alignSelf: 'center',
+padding: 3,
+marginBottom: 15,
+},
+button: {
+paddingHorizontal: 20,
+paddingVertical: 8,
+borderRadius: 18,
+},
+activeButton: {
+backgroundColor: COLORS.accentGreen,
+},
+buttonText: {
+fontSize: 14,
+fontWeight: '600',
+color: COLORS.textDark,
+},
+activeButtonText: {
+color: COLORS.textLight,
+},
+});
 // File: app\features\main\hooks\useConnections.ts
 export function useConnections() {
 return useQuery<ConnectionResponse[], Error>('myConnections', () =>
@@ -3125,7 +3188,7 @@ isSending: sendMessageMutation.isLoading,
 // File: app\features\main\hooks\useMyProfileHooks.ts
 export const useMyProfile = () => {
 return useQuery<UserResponse, Error>(
-['userProfile'],
+['myProfile'],
 userService.getCurrentUserProfile,
 {
 staleTime: 1000 * 60 * 5,
@@ -3140,7 +3203,7 @@ return useMutation(
 (payload: UserUpdateRequest) => userService.updateMe(payload),
 {
 onSuccess: () => {
-queryClient.invalidateQueries(['userProfile']);
+queryClient.invalidateQueries(['myProfile']);
 },
 onError: (error: any) => {
 console.error('Error updating profile:', error);
@@ -3151,13 +3214,12 @@ console.error('Error updating profile:', error);
 export const useUpdateProfilePicture = () => {
 const queryClient = useQueryClient();
 return useMutation(
-(photo: { uri: string; name: string; type: string }) => {
-const image: UserProfileImageUpdateRequest = { image: new File([photo.uri], photo.name, { type: photo.type }) };
-return userService.updateProfilePicture(image);
+(data: UserProfileImageUpdateRequest) => {
+return userService.updateProfilePicture(data);
 },
 {
 onSuccess: () => {
-queryClient.invalidateQueries(['userProfile']);
+queryClient.invalidateQueries(['myProfile']);
 },
 onError: (error: any) => {
 console.error('Error updating profile picture:', error);
@@ -3171,7 +3233,7 @@ return useMutation(
 (payload: UpdateLocationRequest) => userService.updateLocation(payload),
 {
 onSuccess: () => {
-queryClient.invalidateQueries(['userProfile']);
+queryClient.invalidateQueries(['myProfile']);
 },
 onError: (error: any) => {
 console.error('Error updating location:', error);
@@ -3196,43 +3258,62 @@ staleTime: 1000 * 60 * 5
 );
 };
 // File: app\features\main\hooks\usePlantHooks.ts
-export const useUserPlants = (userId: number) => {
-return useQuery(['userPlants', userId], () => plantService.getUserPlants(userId), {
+export const useOtherUserPlants = (userId: number) => {
+return useQuery(
+["otherUserPlants", userId],
+() => plantService.getUserPlants(userId),
+{
 enabled: !!userId,
 staleTime: 1000 * 60 * 5,
-});
+}
+);
 };
 export const useMyPlants = () => {
 const queryClient = useQueryClient();
-const { userId } = useSelector((state: RootState) => state.auth);
 const query = useQuery<PlantResponse[], Error>(
-['myPlants', userId],
+["myPlants"],
 () => {
-if (!userId) throw new Error('User not logged in');
 return plantService.getMyPlants();
 },
 {
-enabled: !!userId,
-staleTime: 1000 * 60 * 5
+staleTime: 1000 * 60 * 5,
 }
 );
 const mutation = useMutation(
 (plantId: number) => plantService.deleteMyPlant(plantId),
 {
-onSettled: () => queryClient.invalidateQueries(['myPlants', userId])
+onSettled: () => queryClient.invalidateQueries(["myPlants"]),
 }
 );
 return {
 ...query,
 deletePlant: mutation.mutate,
-isDeleting: mutation.isLoading
+isDeleting: mutation.isLoading,
 };
+};
+export const usePlantsLikedByMeFromUser = (otherUserId: number) => {
+return useQuery<PlantResponse[], Error>(
+["plantsLikedByMeFromUser", otherUserId],
+() => plantService.getPlantsLikedByMeFromUser(otherUserId),
+{
+enabled: !!otherUserId,
+}
+);
+};
+export const usePlantsLikedByUserFromMe = (otherUserId: number) => {
+return useQuery<PlantResponse[], Error>(
+["plantsLikedByUserFromMe", otherUserId],
+() => plantService.getPlantsLikedByUserFromMe(otherUserId),
+{
+enabled: !!otherUserId,
+}
+);
 };
 // File: app\features\main\hooks\usePreferences.ts
 export const useUserPreferences = () => {
 const queryClient = useQueryClient();
 const query = useQuery<UserPreferencesResponse, Error>(
-['userPreferences'],
+['myPreferences'],
 userPreferencesService.getPreferences,
 {
 staleTime: 1000 * 60 * 5
@@ -3242,7 +3323,7 @@ const mutation = useMutation(
 (data: UserPreferencesRequest) => userPreferencesService.updatePreferences(data),
 {
 onSuccess: () => {
-queryClient.invalidateQueries(['userPreferences']);
+queryClient.invalidateQueries(['myPreferences']);
 queryClient.invalidateQueries(['likablePlants']);
 }
 }
@@ -3288,6 +3369,18 @@ return {
 sendSwipes: mutation.mutate,
 isSending: mutation.isLoading
 };
+};
+// File: app\features\main\hooks\useTradeProposalHooks.ts
+export const useCreateTradeProposal = (connectionId: number) => {
+const queryClient = useQueryClient();
+return useMutation<TradeProposalResponse, Error, TradeProposalRequest>(
+(payload: TradeProposalRequest) => connectionService.createTradeProposal(connectionId, payload),
+{
+onSuccess: () => {
+queryClient.invalidateQueries(['tradeProposals', connectionId]);
+},
+}
+);
 };
 // File: app\features\main\hooks\useUserMatches.ts
 export const useUserMatches = () => {
@@ -3771,6 +3864,7 @@ return (
 const handleBrowseMatches = () => {
 };
 const handleOpenTradeProposal = () => {
+navigation.navigate('MakeTradeProposal' as never, { connectionId, otherUserId } as never);
 };
 const handleNavigateToProfile = () => {
 navigation.navigate('OtherProfile' as never, { userId: otherUserProfile.userId } as never);
@@ -4240,6 +4334,303 @@ fontWeight: '600',
 fontSize: 14,
 },
 });
+// File: app\features\main\screens\MakeTradeProposalScreen.tsx
+View,
+Text,
+StyleSheet,
+ActivityIndicator,
+TouchableOpacity,
+Alert,
+Dimensions,
+ScrollView,
+Modal,
+Pressable,
+} from 'react-native';
+usePlantsLikedByMeFromUser,
+usePlantsLikedByUserFromMe,
+} from '../hooks/usePlantHooks';
+const { width, height } = Dimensions.get('window');
+interface MakeTradeProposalRouteParams {
+connectionId: number;
+otherUserId: number;
+}
+const MakeTradeProposalScreen: React.FC = () => {
+const navigation = useNavigation();
+const route = useRoute();
+const { connectionId, otherUserId } = route.params as MakeTradeProposalRouteParams;
+const {
+data: othersPlantsILiked,
+isLoading: loadingOtherPlants,
+isError: errorOtherPlants,
+} = usePlantsLikedByMeFromUser(otherUserId);
+const {
+data: myPlantsTheyLiked,
+isLoading: loadingMyPlants,
+isError: errorMyPlants,
+} = usePlantsLikedByUserFromMe(otherUserId);
+const { mutate: createTradeProposal, isLoading: creatingProposal } =
+useCreateTradeProposal(connectionId);
+const [selectedOtherPlantIds, setSelectedOtherPlantIds] = useState<number[]>([]);
+const [selectedMyPlantIds, setSelectedMyPlantIds] = useState<number[]>([]);
+const [previewPlant, setPreviewPlant] = useState<PlantResponse | null>(null);
+const toggleOtherPlantSelection = (plantId: number) => {
+setSelectedOtherPlantIds((prev) =>
+prev.includes(plantId) ? prev.filter((id) => id !== plantId) : [...prev, plantId]
+);
+};
+const toggleMyPlantSelection = (plantId: number) => {
+setSelectedMyPlantIds((prev) =>
+prev.includes(plantId) ? prev.filter((id) => id !== plantId) : [...prev, plantId]
+);
+};
+const handleTrade = () => {
+if (selectedOtherPlantIds.length === 0 && selectedMyPlantIds.length === 0) {
+Alert.alert('Empty Trade', 'Select at least one plant to trade!');
+return;
+}
+const payload = {
+userPlantIds: selectedMyPlantIds,
+otherPlantIds: selectedOtherPlantIds,
+};
+createTradeProposal(payload, {
+onSuccess: () => {
+Alert.alert('Success', 'Trade proposal created!', [
+{ text: 'OK', onPress: () => navigation.goBack() },
+]);
+},
+onError: (err) => {
+console.error('Failed to create proposal:', err);
+Alert.alert('Error', 'Could not create proposal. Try again.');
+},
+});
+};
+const renderHorizontalSection = (
+label: string,
+data: PlantResponse[] | undefined,
+selectedIds: number[],
+onToggle: (id: number) => void
+) => {
+if (!data) return null;
+return (
+<View style={styles.sectionWrapper}>
+<Text style={styles.sectionTitle}>{label}</Text>
+<ScrollView
+horizontal
+showsHorizontalScrollIndicator={false}
+contentContainerStyle={styles.horizontalScrollContent}
+>
+{data.map((plant) => {
+const isSelected = selectedIds.includes(plant.plantId);
+return (
+<Pressable
+key={plant.plantId}
+onLongPress={() => setPreviewPlant(plant)}
+onPressOut={() => setPreviewPlant(null)}
+style={{ marginRight: 12 }}
+>
+<PlantThumbnail
+plant={plant}
+isSelected={isSelected}
+selectable
+onPress={() => onToggle(plant.plantId)}
+/>
+</Pressable>
+);
+})}
+</ScrollView>
+</View>
+);
+};
+if (loadingOtherPlants || loadingMyPlants) {
+return (
+<View style={styles.loadingContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+<Text style={styles.loadingText}>Loading liked plants...</Text>
+</View>
+);
+}
+if (errorOtherPlants || errorMyPlants) {
+return (
+<View style={styles.errorContainer}>
+<Text style={styles.errorText}>Couldn’t load plants. Please retry.</Text>
+<TouchableOpacity
+style={styles.closeButton}
+onPress={() => navigation.goBack()}
+>
+<Ionicons name="close" size={24} color="#fff" />
+</TouchableOpacity>
+</View>
+);
+}
+return (
+<View style={styles.modalBackground}>
+{}
+<LinearGradient
+style={styles.modalContainer}
+colors={[COLORS.primary, COLORS.secondary]}
+>
+{}
+<TouchableOpacity
+style={styles.closeButton}
+onPress={() => navigation.goBack()}
+>
+<Ionicons name="close" size={24} color="#fff" />
+</TouchableOpacity>
+{}
+{renderHorizontalSection(
+"They’re Offering?",
+othersPlantsILiked,
+selectedOtherPlantIds,
+toggleOtherPlantSelection
+)}
+{}
+<View style={styles.tradeDividerContainer}>
+<View style={styles.dividerLine} />
+<TouchableOpacity style={styles.tradeButton} onPress={handleTrade}>
+{creatingProposal ? (
+<ActivityIndicator size="small" color="#fff" />
+) : (
+<Text style={styles.tradeButtonText}>TRADE</Text>
+)}
+</TouchableOpacity>
+</View>
+{}
+{renderHorizontalSection(
+"You’re Offering?",
+myPlantsTheyLiked,
+selectedMyPlantIds,
+toggleMyPlantSelection
+)}
+</LinearGradient>
+{}
+<Modal visible={!!previewPlant} transparent animationType="fade">
+<View style={styles.previewOverlayContainer}>
+<View style={styles.previewCardWrapper}>
+{previewPlant && (
+<PlantCardWithInfo plant={previewPlant} compact={false} />
+)}
+</View>
+</View>
+</Modal>
+</View>
+);
+};
+export default MakeTradeProposalScreen;
+const styles = StyleSheet.create({
+modalBackground: {
+flex: 1,
+backgroundColor: 'rgba(0, 0, 0, 0.5)',
+justifyContent: 'center',
+alignItems: 'center',
+},
+modalContainer: {
+width: width * 0.95,
+height: height * 0.97,
+borderRadius: 20,
+padding: 20,
+alignItems: 'center',
+position: 'relative',
+shadowColor: '#000',
+shadowOpacity: 0.25,
+shadowRadius: 10,
+shadowOffset: { width: 0, height: 4 },
+elevation: 10,
+},
+closeButton: {
+position: 'absolute',
+top: 15,
+right: 15,
+backgroundColor: 'rgba(255,255,255,0.3)',
+borderRadius: 20,
+padding: 6,
+zIndex: 5,
+},
+sectionWrapper: {
+width: '100%',
+marginVertical: 10,
+},
+sectionTitle: {
+fontSize: 18,
+color: '#fff',
+fontWeight: '700',
+textAlign: 'center',
+marginBottom: 8,
+},
+horizontalScrollContent: {
+paddingHorizontal: 10,
+},
+tradeDividerContainer: {
+width: '100%',
+height: 70,
+alignItems: 'center',
+justifyContent: 'center',
+marginVertical: 10,
+position: 'relative',
+},
+dividerLine: {
+position: 'absolute',
+top: '50%',
+left: 10,
+right: 10,
+height: 2,
+backgroundColor: '#fff',
+opacity: 0.7,
+},
+tradeButton: {
+width: 100,
+height: 40,
+borderRadius: 20,
+backgroundColor: COLORS.primary,
+alignItems: 'center',
+justifyContent: 'center',
+zIndex: 2,
+shadowColor: '#000',
+shadowOpacity: 0.3,
+shadowRadius: 4,
+shadowOffset: { width: 0, height: 2 },
+elevation: 5,
+},
+tradeButtonText: {
+color: '#fff',
+fontWeight: '700',
+fontSize: 16,
+},
+loadingContainer: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+},
+loadingText: {
+marginTop: 10,
+color: '#fff',
+fontSize: 16,
+},
+errorContainer: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+paddingHorizontal: 20,
+},
+errorText: {
+fontSize: 16,
+color: '#fff',
+textAlign: 'center',
+marginBottom: 10,
+},
+previewOverlayContainer: {
+flex: 1,
+backgroundColor: 'rgba(0,0,0,0.6)',
+justifyContent: 'center',
+alignItems: 'center',
+zIndex: 10,
+},
+previewCardWrapper: {
+width: width * 0.9,
+borderRadius: 12,
+overflow: 'hidden',
+zIndex: 10,
+},
+});
 // File: app\features\main\screens\MyProfileScreen.tsx
 View,
 Text,
@@ -4271,7 +4662,7 @@ isError: srError,
 } = useSearchRadius();
 const [cityCountry, setCityCountry] = useState<string>('');
 const [editProfileVisible, setEditProfileVisible] = useState(false);
-const [showFullSize, setShowFullSize] = useState(false);
+const [viewOption, setViewOption] = useState<'Thumbnails' | 'Full Size'>('Thumbnails');
 const [editCardLayout, setEditCardLayout] = useState({
 x: 0,
 y: 0,
@@ -4318,7 +4709,7 @@ const handleAddPlant = () => {
 navigation.navigate('AddPlant' as never);
 };
 const renderPlantItem = (item: PlantResponse) => {
-if (!showFullSize) {
+if (viewOption === 'Thumbnails') {
 return (
 <PlantThumbnail
 key={item.plantId}
@@ -4404,43 +4795,14 @@ accessibilityLabel={t('profile_add_plant_button')}
 </TouchableOpacity>
 </View>
 {}
-<View style={styles.viewToggleRow}>
-<TouchableOpacity
-onPress={() => setShowFullSize(false)}
-style={[
-styles.segmentButton,
-!showFullSize && styles.segmentButtonActive,
-]}
->
-<Text
-style={[
-styles.segmentButtonText,
-!showFullSize && styles.segmentButtonTextActive,
-]}
->
-{t('Thumbnails')}
-</Text>
-</TouchableOpacity>
-<TouchableOpacity
-onPress={() => setShowFullSize(true)}
-style={[
-styles.segmentButton,
-showFullSize && styles.segmentButtonActive,
-]}
->
-<Text
-style={[
-styles.segmentButtonText,
-showFullSize && styles.segmentButtonTextActive,
-]}
->
-{t('Full Size')}
-</Text>
-</TouchableOpacity>
-</View>
+<ToggleButton
+options={[t('Thumbnails'), t('Full Size')]}
+selected={viewOption}
+onToggle={(option) => setViewOption(option as 'Thumbnails' | 'Full Size')}
+/>
 {}
 {myPlants && myPlants.length > 0 ? (
-<View style={showFullSize ? styles.fullViewContainer : styles.thumbViewContainer}>
+<View style={viewOption === 'Full Size' ? styles.fullViewContainer : styles.thumbViewContainer}>
 {myPlants.map((plant) => renderPlantItem(plant))}
 </View>
 ) : (
@@ -4543,32 +4905,6 @@ color: COLORS.textLight,
 fontSize: 14,
 fontWeight: '600',
 marginLeft: 6,
-},
-viewToggleRow: {
-flexDirection: 'row',
-justifyContent: 'center',
-alignItems: 'center',
-backgroundColor: COLORS.textLight,
-borderRadius: 20,
-alignSelf: 'center',
-padding: 3,
-marginBottom: 15,
-},
-segmentButton: {
-paddingHorizontal: 20,
-paddingVertical: 8,
-borderRadius: 18,
-},
-segmentButtonActive: {
-backgroundColor: COLORS.accentGreen,
-},
-segmentButtonText: {
-fontSize: 14,
-fontWeight: '600',
-color: COLORS.textDark,
-},
-segmentButtonTextActive: {
-color: COLORS.textLight,
 },
 thumbViewContainer: {
 flexDirection: 'row',
@@ -4995,7 +5331,6 @@ data: userProfile,
 isLoading: userLoading,
 refetch: refetchUserProfile,
 } = useMyProfile();
-const queryClient = new QueryClient();
 const [currentLang, setCurrentLang] = useState(i18n.language);
 const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState<boolean>(true);
 const [darkModeEnabled, setDarkModeEnabled] = useState<boolean>(false);
@@ -5055,8 +5390,7 @@ t('Are you sure you want to log out?'),
 text: t('Yes'),
 style: 'destructive',
 onPress: async () => {
-queryClient.removeQueries();
-queryClient.clear();
+authService.logout();
 store.dispatch(logout());
 }
 },
@@ -6251,139 +6585,6 @@ elevation: 6,
 }),
 },
 });
-// File: app\features\main\store\matchesSlice.ts
-
-// File: app\features\main\store\plantsSlice.ts
-
-// File: app\features\main\store\userPreferencesSlice.ts
-interface UserPreferencesState {
-data: UserPreferencesResponse | null;
-status: 'idle' | 'loading' | 'error';
-error: string | null;
-}
-const initialState: UserPreferencesState = {
-data: null,
-status: 'idle',
-error: null,
-};
-export const fetchUserPreferencesThunk = createAsyncThunk<UserPreferencesResponse, void, { rejectValue: string }>(
-'userPreferences/fetch',
-async (_, { rejectWithValue }) => {
-try {
-const preferences = await userPreferencesService.getPreferences();
-return preferences;
-} catch (error: any) {
-return rejectWithValue(error.response?.data?.message || 'Failed to fetch user preferences');
-}
-}
-);
-export const updateUserPreferencesThunk = createAsyncThunk<UserPreferencesResponse, UserPreferencesRequest, { rejectValue: string }>(
-'userPreferences/update',
-async (data, { rejectWithValue }) => {
-try {
-const updated = await userPreferencesService.updatePreferences(data);
-return updated;
-} catch (error: any) {
-return rejectWithValue(error.response?.data?.message || 'Failed to update user preferences');
-}
-}
-);
-export const userPreferencesSlice = createSlice({
-name: 'userPreferences',
-initialState,
-reducers: {
-clearUserPreferences(state) {
-state.data = null;
-state.status = 'idle';
-state.error = null;
-}
-},
-extraReducers: (builder) => {
-builder
-.addCase(fetchUserPreferencesThunk.pending, (state) => {
-state.status = 'loading';
-state.error = null;
-})
-.addCase(fetchUserPreferencesThunk.fulfilled, (state, action: PayloadAction<UserPreferencesResponse>) => {
-state.status = 'idle';
-state.data = action.payload;
-})
-.addCase(fetchUserPreferencesThunk.rejected, (state, action) => {
-state.status = 'error';
-state.error = action.payload as string;
-})
-.addCase(updateUserPreferencesThunk.pending, (state) => {
-state.status = 'loading';
-state.error = null;
-})
-.addCase(updateUserPreferencesThunk.fulfilled, (state, action: PayloadAction<UserPreferencesResponse>) => {
-state.status = 'idle';
-state.data = action.payload;
-})
-.addCase(updateUserPreferencesThunk.rejected, (state, action) => {
-state.status = 'error';
-state.error = action.payload as string;
-});
-}
-});
-export const { clearUserPreferences } = userPreferencesSlice.actions;
-export const selectUserPreferences = (state: RootState) => state.userPreferences.data;
-export const selectUserPreferencesStatus = (state: RootState) => state.userPreferences.status;
-export const selectUserPreferencesError = (state: RootState) => state.userPreferences.error;
-export default userPreferencesSlice.reducer;
-// File: app\features\main\store\userSlice.ts
-export const fetchUserProfile = createAsyncThunk<
-UserResponse,
-number,
-{ rejectValue: string }
->(
-'user/fetchUserProfile',
-async (userId, { rejectWithValue }) => {
-try {
-const response = await api.get<UserResponse>(`/users/${userId}`);
-return response.data;
-} catch (error: any) {
-return rejectWithValue(error.response?.data?.message || 'Failed to fetch user profile');
-}
-}
-);
-interface UserState {
-profile: UserResponse | null;
-status: 'idle' | 'loading' | 'error';
-error: string | null;
-}
-const initialState: UserState = {
-profile: null,
-status: 'idle',
-error: null
-};
-export const userSlice = createSlice({
-name: 'user',
-initialState,
-reducers: {
-clearUserProfile(state) {
-state.profile = null;
-state.status = 'idle';
-state.error = null;
-}
-},
-extraReducers: (builder) => {
-builder
-.addCase(fetchUserProfile.pending, (state) => {
-state.status = 'loading';
-state.error = null;
-})
-.addCase(fetchUserProfile.fulfilled, (state, action: PayloadAction<UserResponse>) => {
-state.status = 'idle';
-state.profile = action.payload;
-})
-.addCase(fetchUserProfile.rejected, (state, action) => {
-state.status = 'error';
-state.error = action.payload as string;
-});
-}
-});
-export const { clearUserProfile } = userSlice.actions;
 // File: app\features\main\styles\headerStyles.ts
 export const headerStyles = StyleSheet.create({
 headerGradient: {
@@ -6714,7 +6915,7 @@ textAlign: 'center',
 // File: app\features\onboarding\screens\OnboardingLocationScreen.tsx
 const { width, height } = Dimensions.get('window');
 const OnboardingLocationScreen: React.FC = () => {
-const queryClient = useQueryClient();
+const updateLocation = useUpdateLocation();
 const [region, setRegion] = useState({
 latitude: 37.78825,
 longitude: -122.4324,
@@ -6740,11 +6941,10 @@ Alert.alert('No location selected', 'Please tap on the map to select your approx
 return;
 }
 try {
-await userService.updateLocation({
+await updateLocation.mutateAsync({
 latitude: selectedLocation.latitude,
 longitude: selectedLocation.longitude,
 });
-queryClient.invalidateQueries('userProfile');
 } catch (error) {
 Alert.alert('Error', 'Failed to update location. Please try again.');
 }
@@ -7080,7 +7280,7 @@ const dispatch = useDispatch();
 const { accessToken } = useSelector((state: RootState) => state.auth);
 const { refreshToken } = useSelector((state: RootState) => state.auth);
 const [initializing, setInitializing] = useState(true);
-const { data: userProfile, isLoading: userProfileLoading } = useMyProfile();
+const { data: userProfile, isLoading: userProfileLoading, refetch: refetchUserProfile} = useMyProfile();
 useEffect(() => {
 const initializeAuth = async () => {
 const storedAccessToken = await storage.getAccessToken();
@@ -7089,16 +7289,12 @@ if (storedAccessToken && storedRefreshToken) {
 dispatch(setInitialTokens({
 accessToken: storedAccessToken,
 refreshToken: storedRefreshToken,
-userId: null,
-email: null,
 }));
 try {
-const profile = await userService.getCurrentUserProfile();
+refetchUserProfile();
 dispatch(setInitialTokens({
 accessToken: store.getState().auth.accessToken,
-refreshToken: store.getState().auth.refreshToken,
-userId: profile.userId,
-email: profile.email,
+refreshToken: store.getState().auth.refreshToken
 }));
 } catch (err) {
 dispatch(logout());
@@ -7149,21 +7345,6 @@ return (
 );
 };
 export default AuthNavigator;
-// File: app\navigation\ConnectionStackNavigator.tsx
-export type ConnectionStackParamList = {
-Connections: undefined;
-Chat: undefined;
-};
-const Stack = createNativeStackNavigator<ConnectionStackParamList>();
-const ConnectionStackNavigator = () => {
-return (
-<Stack.Navigator screenOptions={{ headerShown: false }}>
-<Stack.Screen name="Connections" component={ConnectionsScreen} />
-<Stack.Screen name="Chat" component={ChatScreen} />
-</Stack.Navigator>
-);
-}
-export default ConnectionStackNavigator;
 // File: app\navigation\MainRootStackNavigator.tsx
 const RootStack = createNativeStackNavigator();
 const MainRootStackNavigator = () => (
@@ -7190,6 +7371,11 @@ options={{ presentation: 'modal' }}
 name="OtherProfile"
 component={OtherProfileScreen}
 options={{ presentation: 'modal' }}
+/>
+<RootStack.Screen
+name="MakeTradeProposal"
+component={MakeTradeProposalScreen}
+options={{ presentation: 'transparentModal' }}
 />
 </RootStack.Navigator>
 );
@@ -7238,8 +7424,6 @@ width: 24,
 height: 24,
 },
 });
-// File: app\navigation\NavigationTypes.ts
-
 // File: app\navigation\OnboardingNavigator.tsx
 const Stack = createNativeStackNavigator();
 const OnboardingNavigator = () => {
@@ -7254,36 +7438,6 @@ return (
 );
 };
 export default OnboardingNavigator;
-// File: app\navigation\ProfileStackNavigator.tsx
-export type ProfileStackParamList = {
-ProfileHome: undefined;
-AddPlant: undefined;
-};
-const Stack = createNativeStackNavigator<ProfileStackParamList>();
-const ProfileStackNavigator = () => {
-return (
-<Stack.Navigator screenOptions={{ headerShown: false }}>
-<Stack.Screen name="ProfileHome" component={MyProfileScreen} />
-<Stack.Screen name="AddPlant" component={AddPlantScreen} />
-</Stack.Navigator>
-);
-};
-export default ProfileStackNavigator;
-// File: app\navigation\SwipeStackNavigator.tsx
-export type SwipeStackParamList = {
-SwipeHome: undefined;
-SetUserPreferences: undefined;
-};
-const Stack = createNativeStackNavigator<SwipeStackParamList>();
-const SwipeStackNavigator = () => {
-return (
-<Stack.Navigator screenOptions={{ headerShown: false }}>
-<Stack.Screen name="SwipeHome" component={SwipeScreen} />
-<Stack.Screen name="SetUserPreferences" component={SetUserPreferencesScreen} />
-</Stack.Navigator>
-);
-};
-export default SwipeStackNavigator;
 // File: app\store\hooks.ts
 export const useAppDispatch: () => AppDispatch = useDispatch;
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
@@ -7291,16 +7445,12 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 export const store = configureStore({
 reducer: {
 auth: authSlice.reducer,
-user: userSlice.reducer,
-userPreferences: userPreferencesSlice.reducer,
 globalError: globalErrorSlice.reducer,
 },
 middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(loggingMiddleware),
 });
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-// File: app\store\rootReducer.ts
-
 // File: app\store\middlewares\loggingMiddleware.ts
 export const loggingMiddleware: Middleware = (storeAPI) => (next) => (action: any) => {
 if (__DEV__) {
@@ -7309,8 +7459,6 @@ log.debug("Redux Action Dispatched", { type: action.type, payload: action.payloa
 const result = next(action);
 return result;
 };
-// File: app\store\middlewares\tokenRefreshMiddleware.ts
-
 // File: app\store\slices\globalErrorSlice.ts
 interface GlobalErrorState {
 message: string | null;

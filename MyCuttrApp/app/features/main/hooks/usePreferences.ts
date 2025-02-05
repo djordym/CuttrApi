@@ -7,7 +7,7 @@ export const useUserPreferences = () => {
   const queryClient = useQueryClient();
 
   const query = useQuery<UserPreferencesResponse, Error>(
-    ['userPreferences'],
+    ['myPreferences'],
     userPreferencesService.getPreferences,
     {
       staleTime: 1000 * 60 * 5
@@ -18,7 +18,7 @@ export const useUserPreferences = () => {
     (data: UserPreferencesRequest) => userPreferencesService.updatePreferences(data),
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(['userPreferences']);
+        queryClient.invalidateQueries(['myPreferences']);
         queryClient.invalidateQueries(['likablePlants']);
       }
     }

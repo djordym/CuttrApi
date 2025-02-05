@@ -3,12 +3,14 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions } from 'react-native';
 import MapView, { Marker, MapPressEvent } from 'react-native-maps';
 import { userService } from '../../../api/userService';
-import { useQueryClient } from 'react-query';
+import { useUpdateLocation } from '../../main/hooks/useMyProfileHooks';
+
 
 const { width, height } = Dimensions.get('window');
 
 const OnboardingLocationScreen: React.FC = () => {
-  const queryClient = useQueryClient();
+  // **New Hook: Update User Location**
+  const updateLocation = useUpdateLocation();
   
   // Some default region or your user’s approximate location
   const [region, setRegion] = useState({
@@ -39,12 +41,10 @@ const OnboardingLocationScreen: React.FC = () => {
       return;
     }
     try {
-      // Here we call userService or a Redux thunk to update location
-      await userService.updateLocation({
+      await updateLocation.mutateAsync({
         latitude: selectedLocation.latitude,
         longitude: selectedLocation.longitude,
       });
-      queryClient.invalidateQueries('userProfile');
       
     } catch (error) {
       Alert.alert('Error', 'Failed to update location. Please try again.');

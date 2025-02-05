@@ -6,9 +6,9 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../../store";
 import { useMutation, useQueryClient } from "react-query";
 
-export const useUserPlants = (userId: number) => {
+export const useOtherUserPlants = (userId: number) => {
   return useQuery(
-    ["userPlants", userId],
+    ["otherUserPlants", userId],
     () => plantService.getUserPlants(userId),
     {
       enabled: !!userId, // only fetch if userId is available
@@ -19,15 +19,12 @@ export const useUserPlants = (userId: number) => {
 
 export const useMyPlants = () => {
   const queryClient = useQueryClient();
-  const { userId } = useSelector((state: RootState) => state.auth);
   const query = useQuery<PlantResponse[], Error>(
-    ["myPlants", userId],
+    ["myPlants"],
     () => {
-      if (!userId) throw new Error("User not logged in");
       return plantService.getMyPlants();
     },
     {
-      enabled: !!userId,
       staleTime: 1000 * 60 * 5,
     }
   );
@@ -35,7 +32,7 @@ export const useMyPlants = () => {
   const mutation = useMutation(
     (plantId: number) => plantService.deleteMyPlant(plantId),
     {
-      onSettled: () => queryClient.invalidateQueries(["myPlants", userId]),
+      onSettled: () => queryClient.invalidateQueries(["myPlants"]),
     }
   );
 
