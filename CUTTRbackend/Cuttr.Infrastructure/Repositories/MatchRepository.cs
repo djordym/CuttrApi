@@ -69,9 +69,15 @@ namespace Cuttr.Infrastructure.Repositories
 
                 await _context.Matches.AddAsync(efMatch);
                 await _context.SaveChangesAsync();
+                //return the full match
+                var efMatchFull = await _context.Matches
+                    .AsNoTracking()
+                    .Include(m => m.Plant1)
+                    .Include(m => m.Plant2)
+                    .FirstOrDefaultAsync(m => m.MatchId == efMatch.MatchId);
+
                 _context.Entry(efMatch).State = EntityState.Detached;
-                
-                return EFToBusinessMapper.MapToMatch(efMatch);
+                return EFToBusinessMapper.MapToMatch(efMatchFull);
             }
             catch (Exception ex)
             {

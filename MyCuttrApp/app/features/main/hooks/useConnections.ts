@@ -9,3 +9,9 @@ export function useConnections() {
     connectionService.getMyConnections()
   );
 }
+
+export function useConnection(connectionId: number) {
+  return useQuery<ConnectionResponse, Error>(['connection', connectionId], () =>
+    connectionService.getConnectionById(connectionId)
+  );
+}

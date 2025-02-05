@@ -7,6 +7,8 @@ import ChatScreen from '../features/main/screens/ChatScreen';
 import AddPlantScreen from '../features/main/screens/AddPlantScreen';
 import OtherProfileScreen from '../features/main/screens/OtherProfileScreen';
 import MakeTradeProposalScreen from '../features/main/screens/MakeTradeProposalScreen';
+import BrowseMatchesScreen from '../features/main/screens/BrowseMatchesScreen';
+import TradeProposalsScreen from '../features/main/screens/TradeProposalsScreen';
 
 const RootStack = createNativeStackNavigator();
 
@@ -40,7 +42,18 @@ const MainRootStackNavigator = () => (
       component={MakeTradeProposalScreen}
       options={{ presentation: 'transparentModal' }}
     />
+    <RootStack.Screen
+      name="BrowseMatches"
+      component={BrowseMatchesScreen}
+      options={{ presentation: 'modal' }}
+    />
+    <RootStack.Screen
+      name="TradeProposals"
+      component={TradeProposalsScreen}
+      options={{ presentation: 'modal' }}
+    />
   </RootStack.Navigator>
+
 );
 
 export default MainRootStackNavigator;

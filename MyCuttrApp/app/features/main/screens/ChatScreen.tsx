@@ -12,7 +12,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Image, // <-- Added Image import
+  Image,
+  Animated,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,8 +23,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 // Hooks
 import { useMyProfile } from '../hooks/useMyProfileHooks';
-import { useMessages } from '../hooks/useMessages'; 
-import { useOtherProfile } from '../hooks/useOtherProfile'; // Example custom hook
+import { useMessages } from '../hooks/useMessages';
+import { useOtherProfile } from '../hooks/useOtherProfile';
+
+// For fetching trade proposals
+import { useQuery } from 'react-query';
+import { connectionService } from '../../../api/connectionService';
+import { TradeProposalResponse } from '../../../types/apiTypes';
+import { TradeProposalStatus } from '../../../types/enums';
 
 // Types
 import { MessageResponse, MessageRequest } from '../../../types/apiTypes';
@@ -36,13 +43,21 @@ import { headerStyles } from '../styles/headerStyles';
 import { MessageBubble } from '../components/MessageBubble';
 import ProfileCardShelf, { ProfileCardShelfRef } from '../components/ProfileCardShelf';
 
+// ---------- Custom hook for trade proposals ----------
+const useTradeProposals = (connectionId: number) => {
+  return useQuery<TradeProposalResponse[], Error>(
+    ['tradeProposals', connectionId],
+    () => connectionService.getTradeProposals(connectionId),
+    { staleTime: 1000 * 60 }
+  );
+};
+
 const ChatScreen: React.FC = () => {
   const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
 
-  // We expect both a connectionId and an otherUserId from the previous screen (ConnectionsScreen).
-  // Adjust as needed based on your app’s navigation structure.
+  // Expect connectionId and otherUserId from route parameters
   const { connectionId, otherUserId } = route.params as {
     connectionId: number;
     otherUserId: number;
@@ -72,7 +87,65 @@ const ChatScreen: React.FC = () => {
     isSending,
   } = useMessages(connectionId);
 
-  // Sort messages by ascending timestamp
+  // Trade proposals for this connection (to compute pending proposals)
+  const { data: proposals } = useTradeProposals(connectionId);
+  const pendingProposals = proposals?.filter(
+    (proposal) => proposal.tradeProposalStatus === TradeProposalStatus.Pending
+  ) || [];
+  const pendingCount = pendingProposals.length;
+
+  // --- Animated values for the trade proposals button ---
+  // We'll animate the button's width (icon-only -> expands with text)
+  const buttonWidth = useRef(new Animated.Value(56)).current;
+  // We'll pulse the opacity if there are pending proposals
+  const glimmerAnim = useRef(new Animated.Value(1)).current;
+
+  // Handle the expansions (width + glimmer) when `pendingCount` changes
+  useEffect(() => {
+    if (pendingCount > 0) {
+      // Expand the button to show text
+      Animated.timing(buttonWidth, {
+        toValue: 180, // Adjust as needed
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+
+      // Start pulsing (glimmer)
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glimmerAnim, {
+            toValue: 0.8,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glimmerAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]),
+        { resetBeforeIteration: true }
+      ).start();
+    } else {
+      // Shrink back to icon-only
+      Animated.timing(buttonWidth, {
+        toValue: 56,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+
+      // Stop glimmer by resetting
+      glimmerAnim.setValue(1);
+    }
+  }, [pendingCount, buttonWidth, glimmerAnim]);
+
+  // Animated style for the button
+  const buttonAnimatedStyle = {
+    width: buttonWidth,
+    opacity: glimmerAnim,
+  };
+
+  // Sort messages by ascending sent time
   const sortedMessages = useMemo(() => {
     if (!messages) return [];
     return [...messages].sort(
@@ -80,7 +153,7 @@ const ChatScreen: React.FC = () => {
     );
   }, [messages]);
 
-  // Scroll to bottom on new messages
+  // Auto-scroll to bottom when messages update
   const flatListRef = useRef<FlatList<MessageResponse>>(null);
   useEffect(() => {
     if (sortedMessages.length > 0) {
@@ -90,14 +163,13 @@ const ChatScreen: React.FC = () => {
     }
   }, [sortedMessages]);
 
-  // Input field state
+  // Input state
   const [inputText, setInputText] = useState('');
 
-  // Sending messages
+  // Handle sending a message
   const handleSendMessage = useCallback(() => {
     const text = inputText.trim();
     if (!text) return;
-
     setInputText('');
     const payload: MessageRequest = { messageText: text };
     sendMessage(payload, {
@@ -108,15 +180,12 @@ const ChatScreen: React.FC = () => {
     });
   }, [inputText, sendMessage, t]);
 
-  // Shelf ref - to close it when user focuses on the text input
+  // Ref for ProfileCardShelf (if used) to close it on input focus
   const shelfRef = useRef<ProfileCardShelfRef>(null);
-
   const handleInputFocus = useCallback(() => {
-    // Closes the shelf if it’s open
     shelfRef.current?.closeShelf();
   }, []);
 
-  // Loading / error states
   if (loadingMyProfile || isLoadingMessages || loadingOtherUser) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
@@ -137,19 +206,25 @@ const ChatScreen: React.FC = () => {
     );
   }
 
-  // Navigate to a "Browse Matches" screen for this connection
+  // Navigate to "Browse Matches" screen
   const handleBrowseMatches = () => {
-    //navigation.navigate('BrowseMatches' as never, { connectionId } as never);
+    navigation.navigate('BrowseMatches' as never, { connectionId } as never);
   };
 
-  // Navigate to a screen to create a trade proposal
+  // Navigate to Trade Proposals screen
+  const handleOpenTradeProposals = () => {
+    navigation.navigate('TradeProposals' as never, { connectionId } as never);
+  };
+
+  // Navigate to Make Trade Proposal screen (for creating a new proposal)
   const handleOpenTradeProposal = () => {
     navigation.navigate('MakeTradeProposal' as never, { connectionId, otherUserId } as never);
   };
 
+  // Navigate to the other user's profile screen
   const handleNavigateToProfile = () => {
     navigation.navigate('OtherProfile' as never, { userId: otherUserProfile.userId } as never);
-  }
+  };
 
   return (
     <SafeAreaProvider style={styles.container}>
@@ -159,10 +234,7 @@ const ChatScreen: React.FC = () => {
         colors={[COLORS.primary, COLORS.secondary]}
       >
         <View style={headerStyles.headerColumn1}>
-          <TouchableOpacity
-            style={headerStyles.headerBackButton}
-            onPress={() => navigation.goBack()}
-          >
+          <TouchableOpacity style={headerStyles.headerBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
           </TouchableOpacity>
           {otherUserProfile && (
@@ -171,21 +243,11 @@ const ChatScreen: React.FC = () => {
                 source={{ uri: otherUserProfile.profilePictureUrl }}
                 style={styles.headerUserImage}
               />
-              <Text style={headerStyles.headerTitle}>
-                {otherUserProfile.name}
-              </Text>
+              <Text style={headerStyles.headerTitle}>{otherUserProfile.name}</Text>
             </TouchableOpacity>
           )}
         </View>
       </LinearGradient>
-
-      {/* Shelf showing the other user's profile */}
-      {/* <View style={styles.shelfWrapper}>
-        <ProfileCardShelf
-          ref={shelfRef}
-          userProfile={otherUserProfile}
-        />
-      </View> */}
 
       {/* "Browse Matches" button */}
       <TouchableOpacity style={styles.browseButton} onPress={handleBrowseMatches}>
@@ -193,6 +255,19 @@ const ChatScreen: React.FC = () => {
           {t('chat_browse_matches_button', 'Browse Matches')}
         </Text>
       </TouchableOpacity>
+
+      {/* Pending Proposals Button (Bottom Left) */}
+      <Animated.View style={[styles.pendingButtonContainer, buttonAnimatedStyle]}>
+        <TouchableOpacity style={styles.pendingButton} onPress={handleOpenTradeProposals}>
+          {pendingCount === 0 ? (
+            // Icon-only if no pending proposals
+            <Ionicons name="document-text-outline" size={24} color="#fff" />
+          ) : (
+            // Slide-out text if there are pending proposals
+            <Text style={styles.pendingButtonText}>{pendingCount} pending proposals</Text>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* Chat messages */}
       {sortedMessages.length === 0 ? (
@@ -214,12 +289,12 @@ const ChatScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Floating button for trade proposals */}
+      {/* Floating Trade Proposals Button (right bottom) */}
       <TouchableOpacity style={styles.tradeFab} onPress={handleOpenTradeProposal}>
         <Ionicons name="swap-horizontal" size={26} color="#fff" />
       </TouchableOpacity>
 
-      {/* Message input */}
+      {/* Message Input */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={10}
@@ -231,7 +306,7 @@ const ChatScreen: React.FC = () => {
             onChangeText={setInputText}
             placeholder={t('chat_message_placeholder')}
             multiline
-            onFocus={handleInputFocus} // <-- Close the shelf on focus
+            onFocus={handleInputFocus}
           />
           {isSending ? (
             <ActivityIndicator style={{ marginRight: 12 }} color={COLORS.primary} />
@@ -282,12 +357,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-
-  // Shelf
-  shelfWrapper: {
-    // A simple wrapper around the shelf at the top
-  },
-
   // "Browse Matches" button
   browseButton: {
     margin: 10,
@@ -308,7 +377,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
   // If no messages
   emptyChatContainer: {
     flex: 1,
@@ -321,16 +389,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
-
   // Chat messages list
   listContainer: {
     flex: 1,
   },
   listContent: {
     padding: 8,
-    paddingBottom: 60, // space above the input
+    paddingBottom: 60,
   },
-
   // Input
   inputContainer: {
     flexDirection: 'row',
@@ -357,8 +423,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
   },
-
-  // Trade Proposal FAB
+  // Floating Trade Proposals Button (right bottom)
   tradeFab: {
     position: 'relative',
     alignSelf: 'flex-end',
@@ -370,19 +435,17 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    // Light shadow
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-
-  // New Styles for Header User Info
+  // Header User Info
   headerUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 10, // Adjust as needed
+    marginLeft: 10,
   },
   headerUserImage: {
     borderColor: COLORS.accentGreen,
@@ -391,6 +454,35 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     marginRight: 8,
-    backgroundColor: '#ccc', // Placeholder color in case image fails to load
+    backgroundColor: '#ccc',
+  },
+  // Pending Proposals Button (bottom-left)
+  pendingButtonContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    zIndex: 10,
+    // We animate width, so keep the height consistent with the final shape
+    height: 56,
+  },
+  pendingButton: {
+    flex: 1,
+    backgroundColor: COLORS.accentGreen,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    // Shadows, etc.
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
+  pendingButtonText: {
+    color: COLORS.textLight,
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

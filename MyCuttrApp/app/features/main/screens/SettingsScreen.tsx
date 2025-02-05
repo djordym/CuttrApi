@@ -25,11 +25,12 @@ import { store } from '../../../store';
 import { COLORS } from '../../../theme/colors';
 import { headerStyles } from '../styles/headerStyles';
 import { authService } from '../../../api/authService';
+import { useQueryClient } from 'react-query';
 
 const SettingsScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation();
-
+  const queryClient = useQueryClient();
   // For user data (so we can display user’s email, for instance)
   const {
     data: userProfile,
@@ -52,7 +53,7 @@ const SettingsScreen: React.FC = () => {
   const [newPassword, setNewPassword] = useState<string>('');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState<boolean>(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState<boolean>(false);
-
+  
   // Simulate loading state if necessary
   const [saving, setSaving] = useState<boolean>(false);
 
@@ -122,6 +123,9 @@ const SettingsScreen: React.FC = () => {
           text: t('Yes'),
           style: 'destructive',
           onPress: async () => {
+
+            queryClient.clear();
+            await storage.clearTokens();
             authService.logout();
             store.dispatch(logout());
           }

@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // --- Hooks ---
-import { useLikablePlants } from '../hooks/useSwipe'; // <--- NOTE the usage
+import { useLikablePlants } from '../hooks/useSwipe';
 import { useMyProfile } from '../hooks/useMyProfileHooks';
 import { useUserPreferences } from '../hooks/usePreferences';
 import { useMyPlants } from '../hooks/usePlantHooks';
@@ -24,17 +24,17 @@ import { useMyPlants } from '../hooks/usePlantHooks';
 // --- Components & Services ---
 import { SwipeableCard, SwipeableCardRef } from '../components/SwipeableCard';
 import { SelectPlantsModal } from '../components/SelectPlantsModal';
+import ItsAMatchModal from '../modals/ItsAMatchModal';
 
-// --- Types ---
+// --- Types & Utils ---
 import { PlantResponse, SwipeRequest } from '../../../types/apiTypes';
 import { log } from '../../../utils/logger';
 import { COLORS } from '../../../theme/colors';
 import { headerStyles } from '../styles/headerStyles';
+
 const { width } = Dimensions.get('window');
 
-
-
-interface SwipeScreenProps {}
+interface SwipeScreenProps { }
 
 const SwipeScreen: React.FC<SwipeScreenProps> = () => {
   const navigation = useNavigation();
@@ -45,15 +45,16 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
     isLoading: loadingPlants,
     isError: errorPlants,
     refetch: refetchLikablePlants,
-    sendSwipes,         // <-- from the custom hook
+    sendSwipes,
     isSending: sendingSwipes,
+    matches,
+    clearMatches,
   } = useLikablePlants();
 
   const { data: userProfile } = useMyProfile();
   const {
     data: userPreferences,
     updatePreferences,
-    isUpdating: updatingPrefs,
   } = useUserPreferences();
 
   const {
@@ -81,16 +82,15 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
     }
   }, [likablePlants]);
 
-  // ----- Navigation: filter button -----
+  // ----- Navigation: Filter Button -----
   const handleFilterPress = useCallback(() => {
     navigation.navigate('SetUserPreferences' as never);
   }, [navigation]);
 
-  // ----- Single preference removal -----
+  // ----- Single Preference Removal -----
   const handleRemoveSinglePreference = useCallback(
     async (tagKey: string, valueToRemove: string) => {
       if (!userPreferences) return;
-
       const updatedPrefs = { ...userPreferences };
 
       switch (tagKey) {
@@ -155,15 +155,11 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
   // ----- SWIPE ACTIONS -----
 
   /**
-   * Dislike / Swipe Left (called from onSwipeLeft)
-   * Removes the top card from the stack
+   * Dislike / Swipe Left: immediately removes the top card.
    */
   const handleDislike = (plantId: number) => {
-    // Immediately remove the card from the UI
     setPlantStack((prev) => prev.slice(1));
     if (!myPlants) return;
-
-    // Build the request
     const topCard = likablePlants?.find((p) => p.plantId === plantId);
     if (!topCard) return;
 
@@ -173,7 +169,6 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       isLike: false,
     }));
 
-    // Use sendSwipes from our custom hook
     sendSwipes(requests, {
       onError: () => {
         Alert.alert('Error', 'Failed to send swipes.');
@@ -182,17 +177,15 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
   };
 
   /**
-   * Final "Right-swipe" removal (called after the card animates off screen).
+   * Called after the card animates off screen.
    */
   const handleSwipeRight = (plantId: number) => {
-    // Remove from deck
     setPlantStack((prev) => prev.slice(1));
-    // The like operation is already sent in handleSelectConfirm.
+    // The like request is sent in handleSelectConfirm.
   };
 
   /**
-   * Called the moment the user crosses the right threshold in the gesture handler.
-   * We "pause" the card and open the modal. The card is not fully removed yet.
+   * Begins the like gesture by opening the select modal.
    */
   const handleLikeGestureBegin = (plant: PlantResponse) => {
     setPlantToLike(plant);
@@ -200,29 +193,24 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
   };
 
   /**
-   * If user picks which of their local plants they want to use to "like" the card,
-   * we send that to the API, then animate the card fully off-screen (flyOffRight).
+   * When the user confirms the selection, sends the like request.
    */
   const handleSelectConfirm = (selectedMyPlantIds: number[]) => {
     if (!plantToLike || !myPlants) return;
-
-    // Build requests
     const requests: SwipeRequest[] = myPlants.map((mp) => ({
       swiperPlantId: mp.plantId,
       swipedPlantId: plantToLike.plantId,
-      isLike: selectedMyPlantIds.includes(mp.plantId), // user-chosen
+      isLike: selectedMyPlantIds.includes(mp.plantId),
     }));
 
     sendSwipes(requests, {
       onSuccess: () => {
-        // After successful API call, animate card off-screen
         topCardRef.current?.flyOffRight();
       },
       onError: () => {
         Alert.alert('Error', 'Failed to send swipes.');
       },
       onSettled: () => {
-        // Hide the modal
         setShowSelectModal(false);
         setPlantToLike(null);
       },
@@ -230,7 +218,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
   };
 
   /**
-   * If user cancels, we snap the card back to center (so it remains on top).
+   * Cancels the selection and resets the card position.
    */
   const handleSelectCancel = () => {
     topCardRef.current?.resetPosition();
@@ -238,28 +226,23 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
     setPlantToLike(null);
   };
 
-  // Bottom action buttons
+  // ----- Bottom Action Buttons -----
   const handlePassPress = () => {
     if (!plantStack.length) return;
     const topCard = plantStack[0];
     handleDislike(topCard.plantId);
   };
 
-  /**
-   * If the user taps "Like" button (not physically swiping),
-   * do the same approach: partially move the card and open the modal.
-   */
   const handleLikePress = () => {
     if (!plantStack.length) return;
     const topCard = plantStack[0];
-    // Move the card partially, open the modal
     topCardRef.current?.resetPosition();
     setTimeout(() => {
       handleLikeGestureBegin(topCard);
     }, 10);
   };
 
-  // ----- Header with filters -----
+  // ----- Header with Filters -----
   const renderHeader = () => {
     const prefTags: Array<{ key: string; value: string }> = [];
     if (userPreferences) {
@@ -324,17 +307,17 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={styles.removeTagButton}
-                      onPress={() =>
-                        handleRemoveSinglePreference(item.key, item.value)
-                      }
-                    >
-                  <View style={styles.tagChip}>
-                    <Text style={styles.tagChipText}>{item.value}</Text>
+                  <TouchableOpacity
+                    style={styles.removeTagButton}
+                    onPress={() =>
+                      handleRemoveSinglePreference(item.key, item.value)
+                    }
+                  >
+                    <View style={styles.tagChip}>
+                      <Text style={styles.tagChipText}>{item.value}</Text>
                       <Ionicons name="close-circle" size={16} color="#fff" />
-                  </View>
-                    </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
                 )}
               />
             </View>
@@ -344,7 +327,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
     );
   };
 
-  // ----- Main deck rendering -----
+  // ----- Main Card Stack Rendering -----
   const renderCardStack = () => {
     if (loadingPlants || loadingMyPlants) {
       return (
@@ -390,16 +373,13 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       );
     }
 
-    // Show up to 3 for stacking
     const visibleCards = plantStack.slice(0, 3);
     return (
       <View style={styles.deckContainer}>
         {visibleCards
           .map((plant, index) => {
             const isTopCard = index === 0;
-            // a small offset for the “layered” look
             const offset = (visibleCards.length - 1 - index) * 5;
-
             return (
               <View
                 key={plant.plantId}
@@ -431,7 +411,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
           <TouchableOpacity
             onPress={handlePassPress}
             style={styles.actionButtonWrapper}
-            disabled={sendingSwipes} // optionally disable while swipes are sending
+            disabled={sendingSwipes}
           >
             <LinearGradient
               colors={[COLORS.accentRed, COLORS.accentLightRed]}
@@ -446,7 +426,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
           <TouchableOpacity
             onPress={handleLikePress}
             style={styles.actionButtonWrapper}
-            disabled={sendingSwipes} // optionally disable while swipes are sending
+            disabled={sendingSwipes}
           >
             <LinearGradient
               colors={[COLORS.primary, COLORS.secondary]}
@@ -460,14 +440,22 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Modal for selecting your local plants to “like” with */}
           <SelectPlantsModal
             visible={showSelectModal}
             onConfirm={handleSelectConfirm}
             onClose={handleSelectCancel}
           />
+      {matches.length > 0 && userProfile && (
+        <ItsAMatchModal
+          visible={matches.length > 0}
+          matches={matches}
+          currentUserId={userProfile.userId}
+          onClose={clearMatches}
+        />
+      )}
         </View>
       )}
+
     </SafeAreaProvider>
   );
 };

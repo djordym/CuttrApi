@@ -236,18 +236,21 @@ timeout: 10000,
 });
 api.interceptors.request.use(
 async (config) => {
-const state: RootState = store.getState();
-const token = state.auth.accessToken;
-if (token && config.headers) {
-config.headers.Authorization = `Bearer ${token}`;
-}
-log.debug("API Request", {
-baseUrl : api.defaults.baseURL,
+if (config.url && config.url.includes("/auth/refresh")) {
+log.debug("API Request (refresh)", {
+baseUrl: api.defaults.baseURL,
 url: config.url,
 method: config.method,
 data: config.data,
 headers: config.headers,
 });
+return config;
+}
+const state: RootState = store.getState();
+const token = state.auth.accessToken;
+if (token && config.headers) {
+config.headers.Authorization = `Bearer ${token}`;
+}
 return config;
 },
 (error) => {
@@ -261,45 +264,53 @@ log.debug("API Response", {
 url: response.config.url,
 status: response.status,
 data: response.data,
-header: response.headers,
+headers: response.headers,
 });
 return response;
 },
 async (error) => {
-log.error("API Response Error", {
-url: error.config.url,
-message: error.message,
-status: error.response.status,
-data: error.response.data,
-headers: error.response.headers,
-});
 if (!error.response) {
 store.dispatch(setGlobalError("Network Error: Unable to connect."));
 return Promise.reject(error);
 }
 const { status } = error.response;
 const originalRequest = error.config;
+if (
+originalRequest.url &&
+originalRequest.url.includes("/auth/refresh")
+) {
+log.error(
+"Refresh endpoint failed. Forcing logout.",
+error.response.data
+);
+store.dispatch(logout());
+return Promise.reject(error);
+}
 if (status === 401 && !originalRequest._retry) {
 if (!isRefreshing) {
 isRefreshing = true;
 originalRequest._retry = true;
 try {
+log.debug("Refreshing token...");
 const result = await store.dispatch(refreshTokenThunk());
 let newTokens: AuthTokenResponse | undefined;
 if (refreshTokenThunk.fulfilled.match(result)) {
 newTokens = result.payload;
-console.log("New tokens:", newTokens);
+log.debug("New tokens:", newTokens);
 } else {
-console.error(
+log.error(
 "Token refresh failed:",
 result.payload || result.error.message
 );
 }
 isRefreshing = false;
-pendingRequests.forEach((cb) => cb(newTokens?.accessToken || ""));
+pendingRequests.forEach((cb) =>
+cb(newTokens?.accessToken || "")
+);
 pendingRequests = [];
 return api(originalRequest);
 } catch (refreshError) {
+log.error("Refresh token failed, logging out:", refreshError);
 isRefreshing = false;
 pendingRequests = [];
 store.dispatch(logout());
@@ -368,14 +379,10 @@ data
 };
 // File: app\api\matchService.ts
 export const matchService = {
-getMyMatches: async (): Promise<MatchResponse[]> => {
-const response = await api.get<MatchResponse[]>('/matches/me');
+getMyMatchesForConnectionId: async (connectionId: number): Promise<MatchResponse[]> => {
+const response = await api.get<MatchResponse[]>(`/matches/connection/${connectionId}`);
 return response.data;
 },
-getMatchById: async (matchId: number): Promise<MatchResponse> => {
-const response = await api.get<MatchResponse>(`/matches/${matchId}`);
-return response.data;
-}
 };
 // File: app\api\messageService.ts
 export const messageService = {
@@ -503,8 +510,8 @@ return response.data;
 };
 // File: app\api\swipeService.ts
 export const swipeService = {
-sendSwipes: async (swipes: SwipeRequest[]): Promise<SwipeResponse> => {
-const response = await api.post<SwipeResponse>('/swipes/me', swipes);
+sendSwipes: async (swipes: SwipeRequest[]): Promise<SwipeResponse[]> => {
+const response = await api.post<SwipeResponse[]>('/swipes/me', swipes);
 return response.data;
 },
 };
@@ -917,13 +924,10 @@ state.accessToken = action.payload.accessToken;
 state.refreshToken = action.payload.refreshToken;
 },
 logout(state) {
-const queryClient = useQueryClient();
 state.accessToken = null;
 state.refreshToken = null;
 state.error = null;
 state.status = 'idle';
-queryClient.clear();
-storage.clearTokens();
 }
 },
 extraReducers: (builder) => {
@@ -959,14 +963,11 @@ state.accessToken = action.payload.accessToken;
 state.refreshToken = action.payload.refreshToken;
 })
 .addCase(refreshTokenThunk.rejected, (state) => {
-const queryClient = useQueryClient();
 state.accessToken = null;
 state.refreshToken = null;
 state.error = null;
 state.status = 'idle';
-queryClient.clear();
-storage.clearTokens();
-});
+r });
 }
 });
 export const { logout, setInitialTokens } = authSlice.actions;
@@ -1846,6 +1847,39 @@ const styles = StyleSheet.create({
 modalOverlay: {
 flex: 1,
 backgroundColor: 'rgba(0,0,0,0.45)',
+},
+});
+// File: app\features\main\components\MatchCard.tsx
+interface MatchCardProps {
+match: MatchResponse;
+currentUserId: number;
+}
+const MatchCard: React.FC<MatchCardProps> = ({ match, currentUserId }) => {
+const currentUserPlant =
+match.plant1.userId === currentUserId ? match.plant1 : match.plant2;
+const connectionPlant =
+match.plant1.userId === currentUserId ? match.plant2 : match.plant1;
+return (
+<View style={styles.card}>
+<PlantThumbnail plant={currentUserPlant} selectable={false} />
+<PlantThumbnail plant={connectionPlant} selectable={false} />
+</View>
+);
+};
+export default MatchCard;
+const styles = StyleSheet.create({
+card: {
+flexDirection: 'row',
+justifyContent: 'space-around',
+marginVertical: 8,
+padding: 8,
+backgroundColor: '#fff',
+borderRadius: 12,
+shadowColor: '#000',
+shadowOpacity: 0.1,
+shadowRadius: 6,
+shadowOffset: { width: 0, height: 3 },
+elevation: 3,
 },
 });
 // File: app\features\main\components\MessageBubble.tsx
@@ -3157,6 +3191,11 @@ return useQuery<ConnectionResponse[], Error>('myConnections', () =>
 connectionService.getMyConnections()
 );
 }
+export function useConnection(connectionId: number) {
+return useQuery<ConnectionResponse, Error>(['connection', connectionId], () =>
+connectionService.getConnectionById(connectionId)
+);
+}
 // File: app\features\main\hooks\useMessages.ts
 export const useMessages = (connectionId: number) => {
 const queryClient = useQueryClient();
@@ -3187,6 +3226,7 @@ isSending: sendMessageMutation.isLoading,
 };
 // File: app\features\main\hooks\useMyProfileHooks.ts
 export const useMyProfile = () => {
+const { accessToken } = useAppSelector(state => state.auth);
 return useQuery<UserResponse, Error>(
 ['myProfile'],
 userService.getCurrentUserProfile,
@@ -3344,13 +3384,18 @@ isError,
 };
 };
 // File: app\features\main\hooks\useSwipe.ts
+PlantResponse,
+SwipeRequest,
+SwipeResponse,
+} from '../../../types/apiTypes';
 export const useLikablePlants = () => {
 const queryClient = useQueryClient();
+const [matches, setMatches] = useState<SwipeResponse[]>([]);
 const query = useQuery<PlantResponse[], Error>(
 ['likablePlants'],
 plantService.getLikablePlants,
 {
-staleTime: 1000 * 60 * 1,
+staleTime: 1000 * 60,
 refetchOnWindowFocus: true,
 retry: 1,
 }
@@ -3358,16 +3403,22 @@ retry: 1,
 const mutation = useMutation(
 (data: SwipeRequest[]) => swipeService.sendSwipes(data),
 {
-onSuccess: (swipeResponse) => {
-if (swipeResponse.isMatch) {
+onSuccess: (swipeResponses: SwipeResponse[]) => {
+const newMatches = swipeResponses.filter((resp) => resp.isMatch);
+if (newMatches.length > 0) {
+setMatches((prev) => [...prev, ...newMatches]);
 queryClient.invalidateQueries(['myConnections']);
 }
+},
 }
-});
+);
+const clearMatches = () => setMatches([]);
 return {
 ...query,
 sendSwipes: mutation.mutate,
-isSending: mutation.isLoading
+isSending: mutation.isLoading,
+matches,
+clearMatches,
 };
 };
 // File: app\features\main\hooks\useTradeProposalHooks.ts
@@ -3383,15 +3434,141 @@ queryClient.invalidateQueries(['tradeProposals', connectionId]);
 );
 };
 // File: app\features\main\hooks\useUserMatches.ts
-export const useUserMatches = () => {
+export const useUserMatches = (connectionId: number) => {
 return useQuery<MatchResponse[]>(
-'userMatches',
-() => matchService.getMyMatches(),
+['connectionMatches', connectionId],
+() => matchService.getMyMatchesForConnectionId(connectionId),
 {
 staleTime: 1000 * 60,
+refetchOnWindowFocus: true,
 }
 );
 };
+// File: app\features\main\modals\ItsAMatchModal.tsx
+Modal,
+View,
+Text,
+StyleSheet,
+TouchableOpacity,
+FlatList,
+Image,
+ScrollView,
+} from 'react-native';
+SwipeResponse,
+ConnectionResponse,
+MatchResponse
+} from '../../../types/apiTypes';
+interface ItsAMatchModalProps {
+visible: boolean;
+matches: SwipeResponse[];
+currentUserId: number;
+onClose: () => void;
+}
+const ItsAMatchModal: React.FC<ItsAMatchModalProps> = ({
+visible,
+matches,
+currentUserId,
+onClose,
+}) => {
+if (!matches.length) {
+return null;
+}
+const { connection } = matches[0];
+const otherUser =
+connection.user1.userId === currentUserId
+? connection.user2
+: connection.user1;
+const matchData = matches.map((swipeResp) => swipeResp.match);
+return (
+<Modal visible={visible} transparent animationType="slide">
+<View style={styles.overlay}>
+<View style={styles.modalContainer}>
+<Text style={styles.title}>{t('new_matches')}</Text>
+{}
+<View style={styles.connectionHeader}>
+<Image
+source={{ uri: otherUser.profilePictureUrl }}
+style={styles.connectionImage}
+/>
+<Text style={styles.connectionName}>{otherUser.name}</Text>
+</View>
+{}
+<FlatList
+data={matchData}
+keyExtractor={(item) => item.matchId.toString()}
+showsVerticalScrollIndicator={false}
+renderItem={({ item }) => (
+<MatchCard match={item} currentUserId={currentUserId} />
+)}
+contentContainerStyle={styles.matchesList}
+/>
+{}
+<TouchableOpacity style={styles.closeButton} onPress={onClose}>
+<Text style={styles.closeButtonText}>Close</Text>
+</TouchableOpacity>
+</View>
+</View>
+</Modal>
+);
+};
+export default ItsAMatchModal;
+const styles = StyleSheet.create({
+overlay: {
+flex: 1,
+backgroundColor: 'rgba(0,0,0,0.6)',
+justifyContent: 'center',
+padding: 20,
+},
+modalContainer: {
+flex: 1,
+backgroundColor: '#fff',
+borderRadius: 16,
+padding: 20,
+marginVertical: 40,
+},
+title: {
+fontSize: 24,
+fontWeight: '700',
+color: COLORS.accentGreen,
+marginBottom: 16,
+textAlign: 'center',
+},
+contentContainer: {
+paddingBottom: 20,
+},
+connectionHeader: {
+flexDirection: 'row',
+alignItems: 'center',
+marginBottom: 10,
+alignSelf: 'center',
+},
+connectionImage: {
+width: 50,
+height: 50,
+borderRadius: 25,
+marginRight: 12,
+},
+connectionName: {
+fontSize: 18,
+fontWeight: '600',
+color: COLORS.textDark,
+},
+matchesList: {
+padding: 10,
+},
+closeButton: {
+backgroundColor: COLORS.accentGreen,
+paddingVertical: 12,
+borderRadius: 8,
+alignItems: 'center',
+marginTop: 10,
+},
+closeButtonText: {
+color: COLORS.textLight,
+fontSize: 16,
+fontWeight: '600',
+},
+});
 // File: app\features\main\screens\AddPlantScreen.tsx
 View,
 Text,
@@ -5326,6 +5503,7 @@ TextInput,
 const SettingsScreen: React.FC = () => {
 const { t, i18n } = useTranslation();
 const navigation = useNavigation();
+const queryClient = useQueryClient();
 const {
 data: userProfile,
 isLoading: userLoading,
@@ -5390,6 +5568,8 @@ t('Are you sure you want to log out?'),
 text: t('Yes'),
 style: 'destructive',
 onPress: async () => {
+queryClient.clear();
+await storage.clearTokens();
 authService.logout();
 store.dispatch(logout());
 }
@@ -6094,7 +6274,7 @@ Platform,
 FlatList,
 } from 'react-native';
 const { width } = Dimensions.get('window');
-interface SwipeScreenProps {}
+interface SwipeScreenProps { }
 const SwipeScreen: React.FC<SwipeScreenProps> = () => {
 const navigation = useNavigation();
 const {
@@ -6104,12 +6284,13 @@ isError: errorPlants,
 refetch: refetchLikablePlants,
 sendSwipes,
 isSending: sendingSwipes,
+matches,
+clearMatches,
 } = useLikablePlants();
 const { data: userProfile } = useMyProfile();
 const {
 data: userPreferences,
 updatePreferences,
-isUpdating: updatingPrefs,
 } = useUserPreferences();
 const {
 data: myPlants,
@@ -6438,12 +6619,19 @@ color={COLORS.textLight}
 />
 </LinearGradient>
 </TouchableOpacity>
-{}
 <SelectPlantsModal
 visible={showSelectModal}
 onConfirm={handleSelectConfirm}
 onClose={handleSelectCancel}
 />
+{matches.length > 0 && userProfile && (
+<ItsAMatchModal
+visible={matches.length > 0}
+matches={matches}
+currentUserId={userProfile.userId}
+onClose={clearMatches}
+/>
+)}
 </View>
 )}
 </SafeAreaProvider>
@@ -7303,7 +7491,7 @@ dispatch(logout());
 setInitializing(false);
 };
 initializeAuth();
-}, [dispatch]);
+}, [dispatch, accessToken]);
 if (initializing) {
 return (
 <View style={styles.loadingContainer}>
@@ -7654,6 +7842,7 @@ isResolved: boolean;
 }
 export interface SwipeResponse {
 isMatch: boolean;
+connection: ConnectionResponse;
 match: MatchResponse;
 }
 export interface UserLoginResponse {

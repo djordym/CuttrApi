@@ -2,9 +2,11 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { userService } from '../../../api/userService';
 import { UserResponse, UserUpdateRequest, UpdateLocationRequest, UserProfileImageUpdateRequest } from '../../../types/apiTypes';
+import { useAppSelector } from '../../../store/hooks';
 
 // Fetch User Profile
 export const useMyProfile = () => {
+  const { accessToken } = useAppSelector(state => state.auth);
   return useQuery<UserResponse, Error>(
     ['myProfile'],
     userService.getCurrentUserProfile,

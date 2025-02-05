@@ -146,6 +146,7 @@ export interface ReportResponse {
 
 export interface SwipeResponse {
     isMatch: boolean;
+    connection: ConnectionResponse;
     match: MatchResponse;
 }
 

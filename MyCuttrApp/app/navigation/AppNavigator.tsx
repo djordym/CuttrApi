@@ -21,6 +21,7 @@ const AppNavigator = () => {
   const [initializing, setInitializing] = useState(true);
   const { data: userProfile, isLoading: userProfileLoading, refetch: refetchUserProfile} = useMyProfile();
 
+
 // 1. Attempt to load tokens from storage
 useEffect(() => {
   const initializeAuth = async () => {
@@ -51,7 +52,7 @@ useEffect(() => {
   };
 
   initializeAuth();
-}, [dispatch]);
+}, [dispatch, accessToken]);
 
   // Show spinner while initializing tokens
   if (initializing) {

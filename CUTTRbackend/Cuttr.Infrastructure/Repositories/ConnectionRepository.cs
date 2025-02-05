@@ -95,10 +95,16 @@ namespace Cuttr.Infrastructure.Repositories
                 await _context.Connections.AddAsync(efConnection);
                 await _context.SaveChangesAsync();
 
+                //return the full created connection
+                var efConnectionFull = await _context.Connections
+                    .Include(c => c.User1)
+                    .Include(c => c.User2)
+                    .FirstOrDefaultAsync(c => c.ConnectionId == efConnection.ConnectionId);
+
                 // Detach the entity to prevent tracking
                 _context.Entry(efConnection).State = EntityState.Detached;
 
-                var createdConnection = EFToBusinessMapper.MapToConnection(efConnection);
+                var createdConnection = EFToBusinessMapper.MapToConnection(efConnectionFull);
                 _logger.LogInformation("Successfully created connection with ID {ConnectionId}.", createdConnection.ConnectionId);
                 return createdConnection;
             }

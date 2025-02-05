@@ -22,7 +22,7 @@ namespace Cuttr.Api.Controllers
         }
 
         // GET: api/matches/me
-        [HttpGet("{connectionId}")]
+        [HttpGet("connection/{connectionId}")]
         public async Task<IActionResult> GetMatches(int connectionId)
         {
             try
