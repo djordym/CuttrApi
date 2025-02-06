@@ -198,6 +198,9 @@ export interface TradeProposalResponse{
     declinedAt: Date;
     completedAt: Date;
     connection: ConnectionResponse;
+    proposalOwnerUserId: number;
+    ownerCompletionConfirmed: boolean;
+    responderCompletionConfirmed: boolean;
 }
 
 

@@ -1,5 +1,4 @@
-// src/features/main/screens/MakeTradeProposalScreen.tsx
-
+// File: app/features/main/screens/MakeTradeProposalScreen.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -10,10 +9,8 @@ import {
   Alert,
   Dimensions,
   ScrollView,
-  Modal,
-  Pressable,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -25,6 +22,7 @@ import { useCreateTradeProposal } from '../hooks/useTradeProposalHooks';
 import { PlantResponse } from '../../../types/apiTypes';
 import PlantThumbnail from '../components/PlantThumbnail';
 import PlantCardWithInfo from '../components/PlantCardWithInfo';
+import InfoModal from '../modals/InfoModal';
 import { COLORS } from '../../../theme/colors';
 
 const { width, height } = Dimensions.get('window');
@@ -39,7 +37,6 @@ const MakeTradeProposalScreen: React.FC = () => {
   const route = useRoute();
   const { connectionId, otherUserId } = route.params as MakeTradeProposalRouteParams;
 
-  // Fetching liked plants
   const {
     data: othersPlantsILiked,
     isLoading: loadingOtherPlants,
@@ -52,18 +49,13 @@ const MakeTradeProposalScreen: React.FC = () => {
     isError: errorMyPlants,
   } = usePlantsLikedByUserFromMe(otherUserId);
 
-  // Mutation to create the trade proposal
   const { mutate: createTradeProposal, isLoading: creatingProposal } =
     useCreateTradeProposal(connectionId);
 
-  // State for selections
   const [selectedOtherPlantIds, setSelectedOtherPlantIds] = useState<number[]>([]);
   const [selectedMyPlantIds, setSelectedMyPlantIds] = useState<number[]>([]);
+  const [plantInfo, setPlantInfo] = useState<PlantResponse | null>(null);
 
-  // State to handle previewing a full plant card on long press
-  const [previewPlant, setPreviewPlant] = useState<PlantResponse | null>(null);
-
-  // Toggle selection functions
   const toggleOtherPlantSelection = (plantId: number) => {
     setSelectedOtherPlantIds((prev) =>
       prev.includes(plantId) ? prev.filter((id) => id !== plantId) : [...prev, plantId]
@@ -76,7 +68,6 @@ const MakeTradeProposalScreen: React.FC = () => {
     );
   };
 
-  // Handle Trade
   const handleTrade = () => {
     if (selectedOtherPlantIds.length === 0 && selectedMyPlantIds.length === 0) {
       Alert.alert('Empty Trade', 'Select at least one plant to trade!');
@@ -99,7 +90,6 @@ const MakeTradeProposalScreen: React.FC = () => {
     });
   };
 
-  // Function to render a horizontal scroll of thumbnails
   const renderHorizontalSection = (
     label: string,
     data: PlantResponse[] | undefined,
@@ -107,7 +97,6 @@ const MakeTradeProposalScreen: React.FC = () => {
     onToggle: (id: number) => void
   ) => {
     if (!data) return null;
-
     return (
       <View style={styles.sectionWrapper}>
         <Text style={styles.sectionTitle}>{label}</Text>
@@ -118,22 +107,15 @@ const MakeTradeProposalScreen: React.FC = () => {
         >
           {data.map((plant) => {
             const isSelected = selectedIds.includes(plant.plantId);
-
             return (
-              <Pressable
+              <PlantThumbnail
                 key={plant.plantId}
-                onLongPress={() => setPreviewPlant(plant)}
-                // We'll hide preview on "pressOut"
-                onPressOut={() => setPreviewPlant(null)}
-                style={{ marginRight: 12 }}
-              >
-                <PlantThumbnail
-                  plant={plant}
-                  isSelected={isSelected}
-                  selectable
-                  onPress={() => onToggle(plant.plantId)}
-                />
-              </Pressable>
+                plant={plant}
+                isSelected={isSelected}
+                selectable
+                onPress={() => onToggle(plant.plantId)}
+                onInfoPress={() => setPlantInfo(plant)}
+              />
             );
           })}
         </ScrollView>
@@ -141,7 +123,6 @@ const MakeTradeProposalScreen: React.FC = () => {
     );
   };
 
-  // Handle Loading and Error States
   if (loadingOtherPlants || loadingMyPlants) {
     return (
       <View style={styles.loadingContainer}>
@@ -155,10 +136,7 @@ const MakeTradeProposalScreen: React.FC = () => {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Couldn’t load plants. Please retry.</Text>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -167,77 +145,54 @@ const MakeTradeProposalScreen: React.FC = () => {
 
   return (
     <View style={styles.modalBackground}>
-      {/* Semi-transparent dark background */}
-      <LinearGradient
-        style={styles.modalContainer}
-        colors={[COLORS.primary, COLORS.secondary]}
-      >
-        {/* Close (X) button */}
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={() => navigation.goBack()}
-        >
+      <LinearGradient style={styles.modalContainer} colors={[COLORS.primary, COLORS.secondary]}>
+        <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color="#fff" />
         </TouchableOpacity>
 
-        {/* "They’re Offering?" */}
-        {renderHorizontalSection(
-          "They’re Offering?",
-          othersPlantsILiked,
-          selectedOtherPlantIds,
-          toggleOtherPlantSelection
-        )}
+        {renderHorizontalSection("They’re Offering?", othersPlantsILiked, selectedOtherPlantIds, toggleOtherPlantSelection)}
 
-        {/* Trade Divider with trade button */}
+        {/* Enhanced Divider with a Cool Gradient Trade Button */}
         <View style={styles.tradeDividerContainer}>
           <View style={styles.dividerLine} />
-          <TouchableOpacity style={styles.tradeButton} onPress={handleTrade}>
-            {creatingProposal ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.tradeButtonText}>TRADE</Text>
-            )}
+          <TouchableOpacity style={styles.tradeButtonWrapper} onPress={handleTrade}>
+            <LinearGradient colors={['#ff8c00', '#ff4500']} style={styles.tradeButton}>
+              {creatingProposal ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <View style={styles.tradeButtonContent}>
+                  <Ionicons name="swap-horizontal" size={20} color="#fff" />
+                  <Text style={styles.tradeButtonText}> TRADE</Text>
+                </View>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
+          <View style={styles.dividerLine} />
         </View>
 
-        {/* "You’re Offering?" */}
-        {renderHorizontalSection(
-          "You’re Offering?",
-          myPlantsTheyLiked,
-          selectedMyPlantIds,
-          toggleMyPlantSelection
-        )}
+        {renderHorizontalSection("You’re Offering?", myPlantsTheyLiked, selectedMyPlantIds, toggleMyPlantSelection)}
       </LinearGradient>
 
-      {/* Modal-like overlay for previewing the full card when long pressed */}
-      <Modal visible={!!previewPlant} transparent animationType="fade">
-        <View style={styles.previewOverlayContainer}>
-          <View style={styles.previewCardWrapper}>
-            {previewPlant && (
-              <PlantCardWithInfo plant={previewPlant} compact={false} />
-            )}
-          </View>
-        </View>
-      </Modal>
+      {/* Reusable InfoModal */}
+      <InfoModal visible={!!plantInfo} onClose={() => setPlantInfo(null)}>
+        {plantInfo && <PlantCardWithInfo plant={plantInfo} compact={false} />}
+      </InfoModal>
     </View>
   );
 };
 
 export default MakeTradeProposalScreen;
 
-// -------------------------------------------------------
-// Styles
-// -------------------------------------------------------
 const styles = StyleSheet.create({
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent overlay
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    // Center content vertically and horizontally
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContainer: {
-    width: width * 0.95,
-    height: height * 0.97,
+    margin: 20,
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
@@ -271,41 +226,41 @@ const styles = StyleSheet.create({
   horizontalScrollContent: {
     paddingHorizontal: 10,
   },
+  // New Divider and Trade Button Styles
   tradeDividerContainer: {
-    width: '100%',
-    height: 70,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 10,
-    position: 'relative',
+    marginVertical: 20,
+    width: '100%',
   },
   dividerLine: {
-    position: 'absolute',
-    top: '50%',
-    left: 10,
-    right: 10,
-    height: 2,
+    flex: 1,
+    height: 1,
     backgroundColor: '#fff',
     opacity: 0.7,
   },
+  tradeButtonWrapper: {
+    marginHorizontal: 10,
+  },
   tradeButton: {
-    width: 100,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2, // On top of the divider
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
     shadowColor: '#000',
     shadowOpacity: 0.3,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 5,
   },
+  tradeButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   tradeButtonText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
+    marginLeft: 5,
   },
   loadingContainer: {
     flex: 1,
@@ -328,20 +283,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     marginBottom: 10,
-  },
-
-  // Preview overlay (long press)
-  previewOverlayContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  previewCardWrapper: {
-    width: width * 0.9,
-    borderRadius: 12,
-    overflow: 'hidden',
-    zIndex: 10,
   },
 });

@@ -282,12 +282,10 @@ namespace Cuttr.Infrastructure.Mappers
             if (ef == null)
                 return null;
 
-            return new TradeProposal
+            var tradeProposal = new TradeProposal
             {
                 TradeProposalId = ef.TradeProposalId,
                 ConnectionId = ef.ConnectionId,
-                ItemsProposedByUser1 = (ef.ItemsProposedByUser1).Select(MapToPlantWithoutUser).ToList(),
-                ItemsProposedByUser2 = (ef.ItemsProposedByUser2).Select(MapToPlantWithoutUser).ToList(),
                 TradeProposalStatus = !string.IsNullOrWhiteSpace(ef.TradeProposalStatus)
                         ? Enum.Parse<TradeProposalStatus>(ef.TradeProposalStatus)
                         : TradeProposalStatus.Pending,
@@ -295,8 +293,27 @@ namespace Cuttr.Infrastructure.Mappers
                 AcceptedAt = ef.AcceptedAt,
                 DeclinedAt = ef.DeclinedAt,
                 CompletedAt = ef.CompletedAt,
-                Connection = MapToConnection(ef.Connection)
+                Connection = MapToConnection(ef.Connection),
+                PlantIdsProposedByUser1 = ef.TradeProposalPlants
+                    .Where(tpp => tpp.IsProposedByUser1)
+                    .Select(tpp => tpp.PlantId)
+                    .ToList(),
+                PlantIdsProposedByUser2 = ef.TradeProposalPlants
+                    .Where(tpp => !tpp.IsProposedByUser1)
+                    .Select(tpp => tpp.PlantId)
+                    .ToList(),
+                PlantsProposedByUser1 = ef.TradeProposalPlants
+                    .Where(tpp => tpp.IsProposedByUser1 && tpp.Plant != null)
+                    .Select(tpp => MapToPlant(tpp.Plant))
+                    .ToList(),
+                PlantsProposedByUser2 = ef.TradeProposalPlants
+                    .Where(tpp => !tpp.IsProposedByUser1 && tpp.Plant != null)
+                    .Select(tpp => MapToPlant(tpp.Plant))
+                    .ToList()
             };
+
+            return tradeProposal;
+
         }
 
         // Helper method to deserialize Plantstage

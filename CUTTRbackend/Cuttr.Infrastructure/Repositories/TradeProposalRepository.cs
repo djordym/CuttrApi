@@ -21,18 +21,24 @@ namespace Cuttr.Infrastructure.Repositories
 
         public async Task<TradeProposal> GetByIdAsync(int proposalId)
         {
-            var ef = await _dbContext.TradeProposals
-                .Include(tp => tp.Connection) // If you need the connection details
+            var ef = await _dbContext.TradeProposals.AsNoTracking()
+                .Include(tp => tp.Connection)
+                .Include(tp => tp.TradeProposalPlants)
+                    .ThenInclude(tpp => tpp.Plant)
                 .FirstOrDefaultAsync(tp => tp.TradeProposalId == proposalId);
 
-            if (ef == null) return null;
+            if (ef == null)
+                return null;
 
             return EFToBusinessMapper.MapToTradeProposal(ef);
         }
 
         public async Task<IEnumerable<TradeProposal>> GetByConnectionIdAsync(int connectionId)
         {
-            var efList = await _dbContext.TradeProposals
+            var efList = await _dbContext.TradeProposals.AsNoTracking()
+                .Include(tp => tp.Connection)
+                .Include(tp => tp.TradeProposalPlants)
+                    .ThenInclude(tpp => tpp.Plant)
                 .Where(tp => tp.ConnectionId == connectionId)
                 .OrderBy(tp => tp.CreatedAt)
                 .ToListAsync();
@@ -42,7 +48,9 @@ namespace Cuttr.Infrastructure.Repositories
 
         public async Task<TradeProposal> CreateAsync(TradeProposal proposal)
         {
+            // Map the business model to the new EF entity structure.
             var ef = BusinessToEFMapper.MapToTradeProposalEF(proposal);
+
             _dbContext.TradeProposals.Add(ef);
             await _dbContext.SaveChangesAsync();
 
@@ -52,10 +60,14 @@ namespace Cuttr.Infrastructure.Repositories
         public async Task<TradeProposal> UpdateAsync(TradeProposal proposal)
         {
             var ef = BusinessToEFMapper.MapToTradeProposalEF(proposal);
+
             _dbContext.TradeProposals.Update(ef);
             await _dbContext.SaveChangesAsync();
 
             return EFToBusinessMapper.MapToTradeProposal(ef);
         }
+
+
+
     }
 }

@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { userService } from '../../../api/userService';
 import { UpdateLocationRequest } from '../../../types/apiTypes';
 import { log } from '../../../utils/logger';
-import ConfirmCancelButtons from './ConfirmCancelButtons';
+import ConfirmCancelButtons from '../components/ConfirmCancelButtons';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../theme/colors';
 

@@ -125,14 +125,17 @@ namespace Cuttr.Business.Mappers
             {
                 TradeProposalId = tp.TradeProposalId,
                 ConnectionId = tp.ConnectionId,
-                PlantsProposedByUser1 = (tp.ItemsProposedByUser1).Select(MapToPlantResponse).ToList(),
-                PlantsProposedByUser2 = (tp.ItemsProposedByUser2).Select(MapToPlantResponse).ToList(),
+                PlantsProposedByUser1 = (tp.PlantsProposedByUser1).Select(MapToPlantResponse).ToList(),
+                PlantsProposedByUser2 = (tp.PlantsProposedByUser2).Select(MapToPlantResponse).ToList(),
                 TradeProposalStatus = tp.TradeProposalStatus,
                 CreatedAt = tp.CreatedAt,
                 AcceptedAt = tp.AcceptedAt,
                 DeclinedAt = tp.DeclinedAt,
                 CompletedAt = tp.CompletedAt,
-                Connection = MapToConnectionResponse(tp.Connection)
+                Connection = MapToConnectionResponse(tp.Connection),
+                ProposalOwnerUserId = tp.ProposalOwnerUserId,
+                OwnerCompletionConfirmed = tp.OwnerCompletionConfirmed,
+                ResponderCompletionConfirmed = tp.ResponderCompletionConfirmed
             };
         }
 

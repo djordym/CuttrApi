@@ -3185,6 +3185,213 @@ activeButtonText: {
 color: COLORS.textLight,
 },
 });
+// File: app\features\main\components\TradeProposalComponent.tsx
+interface TradeProposalCardProps {
+proposal: TradeProposalResponse;
+currentUserId: number;
+onUpdateStatus: (proposalId: number, newStatus: TradeProposalStatus) => void;
+}
+export const TradeProposalCard: React.FC<TradeProposalCardProps> = ({
+proposal,
+currentUserId,
+onUpdateStatus,
+}) => {
+const isSender = currentUserId === proposal.connection.user1.userId;
+const myPlants = isSender ? proposal.plantsProposedByUser1 : proposal.plantsProposedByUser2;
+const otherPlants = isSender ? proposal.plantsProposedByUser2 : proposal.plantsProposedByUser1;
+const createdDate = new Date(proposal.createdAt).toLocaleDateString();
+let actions = null;
+if (proposal.tradeProposalStatus === TradeProposalStatus.Pending) {
+if (isSender) {
+actions = (
+<TouchableOpacity
+style={[styles.actionButton, styles.cancelButton]}
+onPress={() =>
+Alert.alert(
+"Cancel Proposal",
+"Are you sure you want to cancel this proposal?",
+[
+{ text: "No" },
+{
+text: "Yes",
+onPress: () => onUpdateStatus(proposal.tradeProposalId, TradeProposalStatus.Rejected),
+style: "destructive",
+},
+]
+)
+}
+>
+<Text style={styles.actionButtonText}>Cancel</Text>
+</TouchableOpacity>
+);
+} else {
+actions = (
+<View style={styles.actionRow}>
+<TouchableOpacity
+style={[styles.actionButton, styles.acceptButton]}
+onPress={() =>
+Alert.alert(
+"Accept Proposal",
+"Do you want to accept this proposal?",
+[
+{ text: "No" },
+{ text: "Yes", onPress: () => onUpdateStatus(proposal.tradeProposalId, TradeProposalStatus.Accepted) },
+]
+)
+}
+>
+<Text style={styles.actionButtonText}>Accept</Text>
+</TouchableOpacity>
+<TouchableOpacity
+style={[styles.actionButton, styles.rejectButton]}
+onPress={() =>
+Alert.alert(
+"Decline Proposal",
+"Do you want to decline this proposal?",
+[
+{ text: "No" },
+{ text: "Yes", onPress: () => onUpdateStatus(proposal.tradeProposalId, TradeProposalStatus.Rejected) },
+]
+)
+}
+>
+<Text style={styles.actionButtonText}>Decline</Text>
+</TouchableOpacity>
+</View>
+);
+}
+} else if (proposal.tradeProposalStatus === TradeProposalStatus.Accepted) {
+actions = (
+<TouchableOpacity
+style={[styles.actionButton, styles.completeButton]}
+onPress={() =>
+Alert.alert(
+"Complete Trade",
+"Mark this trade as completed?",
+[
+{ text: "No" },
+{ text: "Yes", onPress: () => onUpdateStatus(proposal.tradeProposalId, TradeProposalStatus.Completed) },
+]
+)
+}
+>
+<Text style={styles.actionButtonText}>Mark Completed</Text>
+</TouchableOpacity>
+);
+}
+return (
+<View style={styles.card}>
+<Text style={styles.cardTitle}>Proposal #{proposal.tradeProposalId}</Text>
+<Text style={styles.cardSubtitle}>Created on: {createdDate}</Text>
+<View style={styles.plantSection}>
+<View style={styles.plantColumn}>
+<Text style={styles.columnTitle}>{isSender ? "Your Offer" : "Their Offer"}</Text>
+<View style={styles.plantList}>
+{myPlants.map((plant) => (
+<Text key={plant.plantId} style={styles.plantText}>
+{plant.speciesName}
+</Text>
+))}
+</View>
+</View>
+<View style={styles.plantColumn}>
+<Text style={styles.columnTitle}>{isSender ? "Their Offer" : "Your Offer"}</Text>
+<View style={styles.plantList}>
+{otherPlants.map((plant) => (
+<Text key={plant.plantId} style={styles.plantText}>
+{plant.speciesName}
+</Text>
+))}
+</View>
+</View>
+</View>
+<Text style={styles.statusText}>Status: {proposal.tradeProposalStatus}</Text>
+{actions}
+</View>
+);
+};
+export default TradeProposalCard;
+const styles = StyleSheet.create({
+card: {
+backgroundColor: "#fff",
+borderRadius: 12,
+padding: 16,
+marginBottom: 16,
+shadowColor: "#000",
+shadowOpacity: 0.12,
+shadowRadius: 6,
+shadowOffset: { width: 0, height: 3 },
+elevation: 3,
+},
+cardTitle: {
+fontSize: 18,
+fontWeight: "700",
+color: COLORS.textDark,
+marginBottom: 4,
+},
+cardSubtitle: {
+fontSize: 14,
+color: COLORS.textDark,
+marginBottom: 12,
+},
+plantSection: {
+flexDirection: "row",
+justifyContent: "space-between",
+marginBottom: 12,
+},
+plantColumn: {
+flex: 1,
+alignItems: "center",
+},
+columnTitle: {
+fontSize: 14,
+fontWeight: "600",
+color: COLORS.textDark,
+marginBottom: 4,
+},
+plantList: {
+},
+plantText: {
+fontSize: 13,
+color: COLORS.textDark,
+},
+statusText: {
+fontSize: 14,
+fontWeight: "600",
+color: COLORS.textDark,
+marginBottom: 12,
+textAlign: "center",
+},
+actionRow: {
+flexDirection: "row",
+justifyContent: "space-around",
+},
+actionButton: {
+flex: 1,
+paddingVertical: 10,
+marginHorizontal: 4,
+borderRadius: 8,
+alignItems: "center",
+justifyContent: "center",
+},
+acceptButton: {
+backgroundColor: COLORS.primary,
+},
+rejectButton: {
+backgroundColor: COLORS.accentRed,
+},
+cancelButton: {
+backgroundColor: COLORS.accentRed,
+},
+completeButton: {
+backgroundColor: COLORS.secondary,
+},
+actionButtonText: {
+color: "#fff",
+fontWeight: "600",
+fontSize: 14,
+},
+})
 // File: app\features\main\hooks\useConnections.ts
 export function useConnections() {
 return useQuery<ConnectionResponse[], Error>('myConnections', () =>
@@ -3429,6 +3636,30 @@ return useMutation<TradeProposalResponse, Error, TradeProposalRequest>(
 {
 onSuccess: () => {
 queryClient.invalidateQueries(['tradeProposals', connectionId]);
+},
+}
+);
+};
+export const useTradeProposals = (connectionId: number) => {
+return useQuery<TradeProposalResponse[], Error>(
+["tradeProposals", connectionId],
+() => connectionService.getTradeProposals(connectionId),
+{ staleTime: 1000 * 60 }
+);
+};
+export const useUpdateTradeProposalStatus = (connectionId: number) => {
+const queryClient = useQueryClient();
+return useMutation(
+({
+proposalId,
+newStatus,
+}: {
+proposalId: number;
+newStatus: TradeProposalStatus;
+}) => connectionService.updateTradeProposalStatus(connectionId, proposalId, { newStatus }),
+{
+onSuccess: () => {
+queryClient.invalidateQueries(["tradeProposals", connectionId]);
 },
 }
 );
@@ -3950,6 +4181,106 @@ marginLeft: 13,
 marginBottom: 15,
 },
 });
+// File: app\features\main\screens\BrowseMatchesScreen.tsx
+View,
+Text,
+ActivityIndicator,
+FlatList,
+TouchableOpacity,
+StyleSheet,
+} from "react-native";
+type RouteParams = {
+connectionId: number;
+};
+const BrowseMatchesScreen: React.FC = () => {
+const route = useRoute();
+const { connectionId } = route.params as RouteParams;
+const navigation = useNavigation();
+const { data: matches, isLoading, isError, refetch } = useUserMatches(connectionId);
+const { data: myProfile, isLoading: profileLoading, isError: profileError } = useMyProfile();
+if (isLoading || profileLoading) {
+return (
+<SafeAreaProvider style={styles.loadingContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+</SafeAreaProvider>
+);
+}
+if (isError || profileError) {
+return (
+<SafeAreaProvider style={styles.errorContainer}>
+<Text style={styles.errorText}>Failed to load matches.</Text>
+<TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+<Text style={styles.retryButtonText}>Retry</Text>
+</TouchableOpacity>
+</SafeAreaProvider>
+);
+}
+const renderItem = ({ item }: { item: any }) => (
+<MatchCard match={item} currentUserId={myProfile!.userId} />
+);
+return (
+<SafeAreaProvider style={styles.container}>
+<LinearGradient
+colors={[COLORS.primary, COLORS.secondary]}
+style={headerStyles.headerGradient}
+>
+<View style={headerStyles.headerColumn1}>
+<TouchableOpacity
+style={headerStyles.headerBackButton}
+onPress={() => navigation.goBack()}
+>
+<Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
+</TouchableOpacity>
+<Text style={headerStyles.headerTitle}>Browse Matches</Text>
+</View>
+</LinearGradient>
+<FlatList
+data={matches}
+keyExtractor={(item) => item.matchId.toString()}
+renderItem={renderItem}
+contentContainerStyle={styles.listContent}
+/>
+</SafeAreaProvider>
+);
+};
+export default BrowseMatchesScreen;
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+},
+loadingContainer: {
+flex: 1,
+justifyContent: "center",
+alignItems: "center",
+},
+errorContainer: {
+flex: 1,
+justifyContent: "center",
+alignItems: "center",
+paddingHorizontal: 20,
+},
+errorText: {
+fontSize: 16,
+color: COLORS.textDark,
+marginBottom: 10,
+textAlign: "center",
+},
+retryButton: {
+backgroundColor: COLORS.primary,
+paddingVertical: 10,
+paddingHorizontal: 20,
+borderRadius: 8,
+},
+retryButtonText: {
+color: "#fff",
+fontWeight: "600",
+fontSize: 16,
+},
+listContent: {
+paddingHorizontal: 16,
+},
+});
 // File: app\features\main\screens\ChatScreen.tsx
 View,
 Text,
@@ -3962,7 +4293,15 @@ KeyboardAvoidingView,
 Platform,
 Alert,
 Image,
+Animated,
 } from 'react-native';
+const useTradeProposals = (connectionId: number) => {
+return useQuery<TradeProposalResponse[], Error>(
+['tradeProposals', connectionId],
+() => connectionService.getTradeProposals(connectionId),
+{ staleTime: 1000 * 60 }
+);
+};
 const ChatScreen: React.FC = () => {
 const { t } = useTranslation();
 const route = useRoute();
@@ -3989,6 +4328,48 @@ refetchMessages,
 sendMessage,
 isSending,
 } = useMessages(connectionId);
+const { data: proposals } = useTradeProposals(connectionId);
+const pendingProposals = proposals?.filter(
+(proposal) => proposal.tradeProposalStatus === TradeProposalStatus.Pending
+) || [];
+const pendingCount = pendingProposals.length;
+const buttonWidth = useRef(new Animated.Value(56)).current;
+const glimmerAnim = useRef(new Animated.Value(1)).current;
+useEffect(() => {
+if (pendingCount > 0) {
+Animated.timing(buttonWidth, {
+toValue: 180,
+duration: 300,
+useNativeDriver: false,
+}).start();
+Animated.loop(
+Animated.sequence([
+Animated.timing(glimmerAnim, {
+toValue: 0.8,
+duration: 500,
+useNativeDriver: true,
+}),
+Animated.timing(glimmerAnim, {
+toValue: 1,
+duration: 500,
+useNativeDriver: true,
+}),
+]),
+{ resetBeforeIteration: true }
+).start();
+} else {
+Animated.timing(buttonWidth, {
+toValue: 56,
+duration: 300,
+useNativeDriver: false,
+}).start();
+glimmerAnim.setValue(1);
+}
+}, [pendingCount, buttonWidth, glimmerAnim]);
+const buttonAnimatedStyle = {
+width: buttonWidth,
+opacity: glimmerAnim,
+};
 const sortedMessages = useMemo(() => {
 if (!messages) return [];
 return [...messages].sort(
@@ -4039,13 +4420,17 @@ return (
 );
 }
 const handleBrowseMatches = () => {
+navigation.navigate('BrowseMatches' as never, { connectionId } as never);
+};
+const handleOpenTradeProposals = () => {
+navigation.navigate('TradeProposals' as never, { connectionId } as never);
 };
 const handleOpenTradeProposal = () => {
 navigation.navigate('MakeTradeProposal' as never, { connectionId, otherUserId } as never);
 };
 const handleNavigateToProfile = () => {
 navigation.navigate('OtherProfile' as never, { userId: otherUserProfile.userId } as never);
-}
+};
 return (
 <SafeAreaProvider style={styles.container}>
 {}
@@ -4054,10 +4439,7 @@ style={[headerStyles.headerGradient, { marginBottom: 0 }]}
 colors={[COLORS.primary, COLORS.secondary]}
 >
 <View style={headerStyles.headerColumn1}>
-<TouchableOpacity
-style={headerStyles.headerBackButton}
-onPress={() => navigation.goBack()}
->
+<TouchableOpacity style={headerStyles.headerBackButton} onPress={() => navigation.goBack()}>
 <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
 </TouchableOpacity>
 {otherUserProfile && (
@@ -4066,21 +4448,27 @@ onPress={() => navigation.goBack()}
 source={{ uri: otherUserProfile.profilePictureUrl }}
 style={styles.headerUserImage}
 />
-<Text style={headerStyles.headerTitle}>
-{otherUserProfile.name}
-</Text>
+<Text style={headerStyles.headerTitle}>{otherUserProfile.name}</Text>
 </TouchableOpacity>
 )}
 </View>
 </LinearGradient>
-{}
-{}
 {}
 <TouchableOpacity style={styles.browseButton} onPress={handleBrowseMatches}>
 <Text style={styles.browseButtonText}>
 {t('chat_browse_matches_button', 'Browse Matches')}
 </Text>
 </TouchableOpacity>
+{}
+<Animated.View style={[styles.pendingButtonContainer, buttonAnimatedStyle]}>
+<TouchableOpacity style={styles.pendingButton} onPress={handleOpenTradeProposals}>
+{pendingCount === 0 ? (
+<Ionicons name="document-text-outline" size={24} color="#fff" />
+) : (
+<Text style={styles.pendingButtonText}>{pendingCount} pending proposals</Text>
+)}
+</TouchableOpacity>
+</Animated.View>
 {}
 {sortedMessages.length === 0 ? (
 <View style={styles.emptyChatContainer}>
@@ -4164,8 +4552,6 @@ marginTop: 10,
 retryButtonText: {
 color: '#fff',
 fontWeight: '600',
-},
-shelfWrapper: {
 },
 browseButton: {
 margin: 10,
@@ -4259,6 +4645,32 @@ height: 60,
 borderRadius: 30,
 marginRight: 8,
 backgroundColor: '#ccc',
+},
+pendingButtonContainer: {
+position: 'absolute',
+bottom: 100,
+left: 20,
+zIndex: 10,
+height: 56,
+},
+pendingButton: {
+flex: 1,
+backgroundColor: COLORS.accentGreen,
+borderRadius: 28,
+alignItems: 'center',
+justifyContent: 'center',
+flexDirection: 'row',
+paddingHorizontal: 12,
+shadowColor: '#000',
+shadowOpacity: 0.3,
+shadowRadius: 4,
+shadowOffset: { width: 0, height: 2 },
+elevation: 5,
+},
+pendingButtonText: {
+color: COLORS.textLight,
+fontWeight: '600',
+fontSize: 14,
 },
 });
 // File: app\features\main\screens\ConnectionsScreen.tsx
@@ -4549,7 +4961,7 @@ const { mutate: createTradeProposal, isLoading: creatingProposal } =
 useCreateTradeProposal(connectionId);
 const [selectedOtherPlantIds, setSelectedOtherPlantIds] = useState<number[]>([]);
 const [selectedMyPlantIds, setSelectedMyPlantIds] = useState<number[]>([]);
-const [previewPlant, setPreviewPlant] = useState<PlantResponse | null>(null);
+const [plantInfo, setPlantInfo] = useState<PlantResponse | null>(null);
 const toggleOtherPlantSelection = (plantId: number) => {
 setSelectedOtherPlantIds((prev) =>
 prev.includes(plantId) ? prev.filter((id) => id !== plantId) : [...prev, plantId]
@@ -4599,19 +5011,12 @@ contentContainerStyle={styles.horizontalScrollContent}
 {data.map((plant) => {
 const isSelected = selectedIds.includes(plant.plantId);
 return (
-<Pressable
-key={plant.plantId}
-onLongPress={() => setPreviewPlant(plant)}
-onPressOut={() => setPreviewPlant(null)}
-style={{ marginRight: 12 }}
->
 <PlantThumbnail
 plant={plant}
 isSelected={isSelected}
 selectable
 onPress={() => onToggle(plant.plantId)}
 />
-</Pressable>
 );
 })}
 </ScrollView>
@@ -4680,11 +5085,11 @@ toggleMyPlantSelection
 )}
 </LinearGradient>
 {}
-<Modal visible={!!previewPlant} transparent animationType="fade">
+<Modal visible={!!plantInfo} transparent animationType="fade">
 <View style={styles.previewOverlayContainer}>
 <View style={styles.previewCardWrapper}>
-{previewPlant && (
-<PlantCardWithInfo plant={previewPlant} compact={false} />
+{plantInfo && (
+<PlantCardWithInfo plant={plantInfo} compact={false} />
 )}
 </View>
 </View>
@@ -6773,6 +7178,128 @@ elevation: 6,
 }),
 },
 });
+// File: app\features\main\screens\TradeProposalsScreen.tsx
+type RouteParams = {
+connectionId: number;
+};
+const TradeProposalsScreen: React.FC = () => {
+const route = useRoute();
+const navigation = useNavigation();
+const { connectionId } = route.params as RouteParams;
+const { data: myProfile, isLoading: profileLoading, isError: profileError } = useMyProfile();
+const {
+data: proposals,
+isLoading,
+isError,
+refetch,
+} = useTradeProposals(connectionId);
+const { mutate: updateStatus } = useUpdateTradeProposalStatus(connectionId);
+const handleUpdateStatus = (proposalId: number, newStatus: TradeProposalStatus) => {
+updateStatus({ proposalId, newStatus });
+};
+if (isLoading || profileLoading) {
+return (
+<SafeAreaProvider style={styles.loadingContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+</SafeAreaProvider>
+);
+}
+if (isError || profileError) {
+return (
+<SafeAreaProvider style={styles.errorContainer}>
+<Text style={styles.errorText}>Failed to load trade proposals.</Text>
+<TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+<Text style={styles.retryButtonText}>Retry</Text>
+</TouchableOpacity>
+</SafeAreaProvider>
+);
+}
+const renderItem = ({ item }: { item: TradeProposalResponse }) => {
+return (
+<TradeProposalCard
+proposal={item}
+currentUserId={myProfile!.userId}
+onUpdateStatus={handleUpdateStatus}
+/>
+);
+};
+return (
+<SafeAreaProvider style={styles.container}>
+<LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={headerStyles.headerGradient}>
+<View style={headerStyles.headerRow}>
+<TouchableOpacity
+style={headerStyles.headerBackButton}
+onPress={() => navigation.goBack()}
+>
+<Text style={headerStyles.headerTitle}>Back</Text>
+</TouchableOpacity>
+<Text style={headerStyles.headerTitle}>Trade Proposals</Text>
+<View style={{ width: 50 }} />
+</View>
+</LinearGradient>
+{proposals && proposals.length > 0 ? (
+<FlatList
+data={proposals}
+keyExtractor={(item) => item.tradeProposalId.toString()}
+renderItem={renderItem}
+contentContainerStyle={styles.listContent}
+/>
+) : (
+<View style={styles.emptyContainer}>
+<Text style={styles.emptyText}>No trade proposals found.</Text>
+</View>
+)}
+</SafeAreaProvider>
+);
+};
+export default TradeProposalsScreen;
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+backgroundColor: COLORS.background,
+},
+loadingContainer: {
+flex: 1,
+justifyContent: "center",
+alignItems: "center",
+},
+errorContainer: {
+flex: 1,
+justifyContent: "center",
+alignItems: "center",
+paddingHorizontal: 20,
+},
+errorText: {
+fontSize: 16,
+color: COLORS.textDark,
+marginBottom: 10,
+textAlign: "center",
+},
+retryButton: {
+backgroundColor: COLORS.primary,
+paddingVertical: 10,
+paddingHorizontal: 20,
+borderRadius: 8,
+},
+retryButtonText: {
+color: "#fff",
+fontWeight: "600",
+fontSize: 16,
+},
+listContent: {
+padding: 16,
+},
+emptyContainer: {
+flex: 1,
+justifyContent: "center",
+alignItems: "center",
+paddingHorizontal: 20,
+},
+emptyText: {
+fontSize: 16,
+color: COLORS.textDark,
+},
+});
 // File: app\features\main\styles\headerStyles.ts
 export const headerStyles = StyleSheet.create({
 headerGradient: {
@@ -7564,6 +8091,16 @@ options={{ presentation: 'modal' }}
 name="MakeTradeProposal"
 component={MakeTradeProposalScreen}
 options={{ presentation: 'transparentModal' }}
+/>
+<RootStack.Screen
+name="BrowseMatches"
+component={BrowseMatchesScreen}
+options={{ presentation: 'modal' }}
+/>
+<RootStack.Screen
+name="TradeProposals"
+component={TradeProposalsScreen}
+options={{ presentation: 'modal' }}
 />
 </RootStack.Navigator>
 );

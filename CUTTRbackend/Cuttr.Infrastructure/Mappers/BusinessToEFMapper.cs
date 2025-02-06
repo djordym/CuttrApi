@@ -234,23 +234,53 @@ namespace Cuttr.Infrastructure.Mappers
             };
         }
 
-        public static TradeProposalEF MapToTradeProposalEF(TradeProposal tp)
+        public static TradeProposalEF MapToTradeProposalEF(TradeProposal proposal)
         {
-            if (tp == null)
+            if (proposal == null)
                 return null;
-            return new TradeProposalEF
+
+            var ef = new TradeProposalEF
             {
-                TradeProposalId = tp.TradeProposalId,
-                ConnectionId = tp.ConnectionId,
-                PlantIdsProposedByUser1 = tp.PlantIdsProposedByUser1 != null ? SerializePlantIds(tp.PlantIdsProposedByUser1) : null,
-                PlantIdsProposedByUser2 = tp.PlantIdsProposedByUser2 != null ? SerializePlantIds(tp.PlantIdsProposedByUser2) : null,
-                TradeProposalStatus = tp.TradeProposalStatus.ToString(),
-                CreatedAt = tp.CreatedAt,
-                AcceptedAt = tp.AcceptedAt,
-                DeclinedAt = tp.DeclinedAt,
-                CompletedAt = tp.CompletedAt,
-                Connection = MapToConnectionEF(tp.Connection)
+                TradeProposalId = proposal.TradeProposalId,
+                ConnectionId = proposal.ConnectionId,
+                TradeProposalStatus = proposal.TradeProposalStatus.ToString(),
+                CreatedAt = proposal.CreatedAt,
+                AcceptedAt = proposal.AcceptedAt,
+                DeclinedAt = proposal.DeclinedAt,
+                CompletedAt = proposal.CompletedAt
+
+                // No need to set Connection here unless you want to update it.
             };
+
+            // Map the plants proposed by User1.
+            if (proposal.PlantIdsProposedByUser1 != null)
+            {
+                foreach (var plantId in proposal.PlantIdsProposedByUser1)
+                {
+                    ef.TradeProposalPlants.Add(new TradeProposalPlantEF
+                    {
+                        TradeProposalId = proposal.TradeProposalId,
+                        PlantId = plantId,
+                        IsProposedByUser1 = true
+                    });
+                }
+            }
+
+            // Map the plants proposed by User2.
+            if (proposal.PlantIdsProposedByUser2 != null)
+            {
+                foreach (var plantId in proposal.PlantIdsProposedByUser2)
+                {
+                    ef.TradeProposalPlants.Add(new TradeProposalPlantEF
+                    {
+                        TradeProposalId = proposal.TradeProposalId,
+                        PlantId = plantId,
+                        IsProposedByUser1 = false
+                    });
+                }
+            }
+
+            return ef;
         }
 
         public static string SerializePreferedPlantStages(List<PlantStage> plantStages)

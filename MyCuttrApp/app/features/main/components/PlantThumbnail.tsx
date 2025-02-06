@@ -1,22 +1,13 @@
-// PlantThumbnail.tsx
+// File: app/features/main/components/PlantThumbnail.tsx
 import React from 'react';
-import {
-  TouchableOpacity,
-  View,
-  Image,
-  Text,
-  StyleSheet,
-  Platform,
-  StyleProp,
-  ViewStyle,
-  Dimensions,
-} from 'react-native';
+import { TouchableOpacity, View, Image, Text, StyleSheet, Platform, Dimensions, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../theme/colors';
 import { PlantResponse } from '../../../types/apiTypes';
-import { MaterialIcons } from '@expo/vector-icons';
 
-interface PlantThumbnailProps {
+const screenWidth = Dimensions.get('window').width;
+
+export interface PlantThumbnailProps {
   plant: PlantResponse;
   onPress?: () => void;
   isSelected?: boolean;
@@ -24,12 +15,11 @@ interface PlantThumbnailProps {
   selectable?: boolean;
   deletable?: boolean;
   OnDelete?: () => void;
-  OnEdit?: () => void;
+  // <-- NEW prop for info icon press:
+  onInfoPress?: () => void;
 }
 
-const screenWidth = Dimensions.get('window').width;
-
-export const PlantThumbnail: React.FC<PlantThumbnailProps> = ({
+const PlantThumbnail: React.FC<PlantThumbnailProps> = ({
   plant,
   onPress,
   isSelected = false,
@@ -37,6 +27,7 @@ export const PlantThumbnail: React.FC<PlantThumbnailProps> = ({
   selectable = false,
   deletable = false,
   OnDelete,
+  onInfoPress,
 }) => {
   return (
     <View style={[styles.outerContainer, isSelected && styles.selected]}>
@@ -56,24 +47,24 @@ export const PlantThumbnail: React.FC<PlantThumbnailProps> = ({
             <Ionicons name="leaf" size={40} color={COLORS.accentGreen} />
           </View>
         )}
+        {/* Render an info icon if onInfoPress is provided */}
+        {onInfoPress && (
+          <TouchableOpacity style={styles.infoIconContainer} onPress={onInfoPress}>
+            <Ionicons name="information-circle-outline" size={20} color={COLORS.textLight} />
+          </TouchableOpacity>
+        )}
         <View style={styles.thumbTextWrapper}>
-          <Text style={styles.thumbPlantName}>
-            {plant.speciesName}
-          </Text>
+          <Text style={styles.thumbPlantName}>{plant.speciesName}</Text>
         </View>
       </TouchableOpacity>
       {deletable && (
         <TouchableOpacity style={styles.deleteButton} onPress={OnDelete}>
-          <Ionicons
-            name="close-circle"
-            size={24}
-            color={COLORS.accentRed}/>
+          <Ionicons name="close-circle" size={24} color={COLORS.accentRed} />
         </TouchableOpacity>
       )}
-      
     </View>
   );
-}
+};
 
 export default PlantThumbnail;
 
@@ -134,7 +125,6 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     textAlign: 'center',
   },
-  
   deleteButton: {
     position: 'absolute',
     top: -8,
@@ -142,12 +132,13 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     backgroundColor: 'white',
   },
-  editButton: {
+  infoIconContainer: {
     position: 'absolute',
-    bottom: 20,
-    right: -8,
-    borderRadius: 50,
-    padding: 5,
-    backgroundColor: COLORS.accentGreen,
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 2,
+    zIndex: 2,
   },
 });

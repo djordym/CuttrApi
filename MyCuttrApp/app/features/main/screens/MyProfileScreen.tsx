@@ -23,7 +23,7 @@ import { useMyPlants } from '../hooks/usePlantHooks';
 import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
-import { EditProfileModal } from '../components/EditProfileModal';
+import { EditProfileModal } from '../modals/EditProfileModal';
 import { PlantThumbnail } from '../components/PlantThumbnail';
 import { headerStyles } from '../styles/headerStyles';
 import { ProfileCard } from '../components/ProfileCard';

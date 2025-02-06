@@ -253,10 +253,11 @@ namespace Cuttr.Business.Managers
                     TradeProposalStatus = Enums.TradeProposalStatus.Pending,
                     CreatedAt = DateTime.UtcNow,
                     PlantIdsProposedByUser1 = request.UserPlantIds,
-                    PlantIdsProposedByUser2 = request.OtherPlantIds
+                    PlantIdsProposedByUser2 = request.OtherPlantIds,
+                    ProposalOwnerUserId = userId
                 };
 
-                await _tradeProposalRepository.CreateAsync(newProposal);
+                TradeProposal fulltradeprop = await _tradeProposalRepository.CreateAsync(newProposal);
                 _logger.LogInformation("Trade proposal created with ID {ProposalId} in connection ID {ConnectionId}.", newProposal.TradeProposalId, connectionId);
 
                 // 4) Return response
@@ -323,8 +324,6 @@ namespace Cuttr.Business.Managers
                         }
                         proposal.TradeProposalStatus = Enums.TradeProposalStatus.Completed;
                         proposal.CompletedAt = DateTime.UtcNow;
-                        // Optionally mark plants as traded
-                        await MarkPlantsAsTraded(proposal);
                         break;
 
                     default:
@@ -366,31 +365,5 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        private async Task MarkPlantsAsTraded(TradeProposal proposal)
-        {
-            //_logger.LogInformation("Marking plants as traded for trade proposal ID {ProposalId}.", proposal.TradeProposalId);
-            //try
-            //{
-            //    var plantIdsUser1 = proposal.PlantIdsProposedByUser1?.Split(',').Select(int.Parse).ToList() ?? new List<int>();
-            //    var plantIdsUser2 = proposal.PlantIdsProposedByUser2?.Split(',').Select(int.Parse).ToList() ?? new List<int>();
-
-            //    var allPlantIds = plantIdsUser1.Concat(plantIdsUser2).Distinct();
-
-            //    var plants = await _plantRepository.GetPlantsByIdsAsync(allPlantIds);
-            //    foreach (var plant in plants)
-            //    {
-            //        plant.IsClosed = true; // Assuming there's an IsClosed property
-            //        // Additional logic can be added here as needed
-            //    }
-
-            //    await _plantRepository.UpdatePlantsAsync(plants);
-            //    _logger.LogInformation("Successfully marked plants as traded for trade proposal ID {ProposalId}.", proposal.TradeProposalId);
-            //}
-            //catch (Exception ex)
-            //{
-            //    _logger.LogError(ex, "Error marking plants as traded for trade proposal ID {ProposalId}.", proposal.TradeProposalId);
-            //    throw new BusinessException("An error occurred while marking plants as traded.", ex);
-            //}
-        }
     }
 }

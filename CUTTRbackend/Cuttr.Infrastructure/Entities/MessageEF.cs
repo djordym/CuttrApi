@@ -28,7 +28,7 @@ namespace Cuttr.Infrastructure.Entities
         public bool IsRead { get; set; }
 
         // Navigation properties
-        [ForeignKey("MatchId")]
+        [ForeignKey("ConnectionId")]
         public virtual ConnectionEF Connection { get; set; }
 
         [ForeignKey("SenderUserId")]

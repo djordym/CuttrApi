@@ -23,7 +23,7 @@ import { useMyPlants } from '../hooks/usePlantHooks';
 
 // --- Components & Services ---
 import { SwipeableCard, SwipeableCardRef } from '../components/SwipeableCard';
-import { SelectPlantsModal } from '../components/SelectPlantsModal';
+import { SelectPlantsModal } from '../modals/SelectPlantsModal';
 import ItsAMatchModal from '../modals/ItsAMatchModal';
 
 // --- Types & Utils ---

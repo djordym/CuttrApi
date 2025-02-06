@@ -8,7 +8,7 @@ directory = '.'
 extensions = ['.cs', '.py', '.html', '.js', '.php', '.txt']
 
 # Set the list of directories to exclude
-exclude_dirs = ['styles', 'fpdf', 'email', 'image']
+exclude_dirs = ['styles', 'fpdf', 'email', 'image', 'Migrations']
 
 # Set the image file extensions
 image_extensions = ['.png', '.jpg', '.giff']

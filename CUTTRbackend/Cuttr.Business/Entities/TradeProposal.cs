@@ -16,16 +16,10 @@ namespace Cuttr.Business.Entities
         public List<int> PlantIdsProposedByUser1 { get; set; }
         public List<int> PlantIdsProposedByUser2 { get; set; }
 
-        // E.g. JSON or child rows that reference which plants 
-        // are being traded on each side
-        public List<Plant> ItemsProposedByUser1 { get; set; }
-        public List<Plant> ItemsProposedByUser2 { get; set; }
-
-        // If you keep it simpler: just store a single "PlantId from user1" 
-        // and "PlantId from user2" if it's strictly 1-1 trades.
+        public List<Plant> PlantsProposedByUser1 { get; set; }
+        public List<Plant> PlantsProposedByUser2 { get; set; }
 
         public TradeProposalStatus TradeProposalStatus { get; set; }
-        // e.g. { Proposed = 1, Accepted, Declined, Completed }
 
         public DateTime CreatedAt { get; set; }
         public DateTime? AcceptedAt { get; set; }
@@ -34,5 +28,10 @@ namespace Cuttr.Business.Entities
 
         // Navigation
         public Connection Connection { get; set; }
+
+        public int ProposalOwnerUserId { get; set; }
+        public bool OwnerCompletionConfirmed { get; set; }
+        public bool ResponderCompletionConfirmed { get; set; }
+
     }
 }
