@@ -15,5 +15,6 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
         Task<IEnumerable<ConnectionResponse>> GetConnectionsForUserAsync(int userId);
         Task<IEnumerable<TradeProposalResponse>> GetTradeProposalsAsync(int connectionId, int userId);
         Task UpdateTradeProposalStatusAsync(int connectionId, int proposalId, int userId, UpdateTradeProposalStatusRequest request);
+        Task ConfirmTradeProposalCompletionAsync(int connectionId, int proposalId, int userId);
     }
 }

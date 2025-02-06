@@ -1,6 +1,6 @@
 // File: app/navigation/AppNavigator.tsx
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text, Button } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import AuthNavigator from './AuthNavigator';
@@ -13,14 +13,21 @@ import { userService } from '../api/userService';
 import { logout } from '../features/auth/store/authSlice';
 import { store } from '../store';
 import MainRootStackNavigator from './MainRootStackNavigator';
+import { log } from '../utils/logger';
 
 const AppNavigator = () => {
   const dispatch = useDispatch();
   const { accessToken } = useSelector((state: RootState) => state.auth);
   const { refreshToken } = useSelector((state: RootState) => state.auth);
   const [initializing, setInitializing] = useState(true);
-  const { data: userProfile, isLoading: userProfileLoading, refetch: refetchUserProfile} = useMyProfile();
-
+  const {
+    data: userProfile,
+    isLoading: userProfileLoading,
+    isError: userProfileError,
+    error: userProfileErrorDetails,
+    refetch: refetchUserProfile,
+  } = useMyProfile();
+  
 
 // 1. Attempt to load tokens from storage
 useEffect(() => {
@@ -37,6 +44,7 @@ useEffect(() => {
 
       // 2. Now fetch /me using these tokens
       try {
+        log.debug('Fetching /me to get user profile');
         refetchUserProfile();
         dispatch(setInitialTokens({
           accessToken: store.getState().auth.accessToken,
@@ -63,6 +71,9 @@ useEffect(() => {
     );
   }
 
+  
+  
+
   // 1. If no token -> show Auth flow
   if (!accessToken) {
     return <AuthNavigator />;
@@ -73,6 +84,17 @@ useEffect(() => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1EAE98" />
+      </View>
+    );
+  }
+
+  if (userProfileError) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>
+          Error retrieving profile: {userProfileErrorDetails?.message || "Unknown error"}
+        </Text>
+        <Button title="Retry" onPress={refetchUserProfile} />
       </View>
     );
   }
@@ -93,5 +115,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
   },
 });

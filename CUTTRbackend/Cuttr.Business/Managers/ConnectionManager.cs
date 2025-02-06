@@ -278,10 +278,10 @@ namespace Cuttr.Business.Managers
 
         public async Task UpdateTradeProposalStatusAsync(int connectionId, int proposalId, int userId, UpdateTradeProposalStatusRequest request)
         {
-            _logger.LogInformation("Updating trade proposal ID {ProposalId} status to {NewStatus} in connection ID {ConnectionId} by user ID {UserId}.", proposalId, request.NewStatus, connectionId, userId);
+            _logger.LogInformation("Updating trade proposal ID {ProposalId} status to {NewStatus} in connection ID {ConnectionId} by user ID {UserId}.",
+                proposalId, request.NewStatus, connectionId, userId);
             try
             {
-                // 1) Ensure connection is valid & user is participant
                 var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
                 if (connection == null)
                 {
@@ -291,7 +291,6 @@ namespace Cuttr.Business.Managers
 
                 EnsureUserIsParticipantOfConnection(connection, userId);
 
-                // 2) Load the proposal
                 var proposal = await _tradeProposalRepository.GetByIdAsync(proposalId);
                 if (proposal == null || proposal.ConnectionId != connectionId)
                 {
@@ -299,7 +298,6 @@ namespace Cuttr.Business.Managers
                     throw new NotFoundException($"Trade proposal with ID {proposalId} not found in connection {connectionId}.");
                 }
 
-                // 3) Update status according to request.NewStatus
                 switch (request.NewStatus)
                 {
                     case Enums.TradeProposalStatus.Accepted:
@@ -353,6 +351,54 @@ namespace Cuttr.Business.Managers
                 throw new BusinessException("An error occurred while updating the trade proposal.", ex);
             }
         }
+
+        public async Task ConfirmTradeProposalCompletionAsync(int connectionId, int proposalId, int userId)
+        {
+            _logger.LogInformation("Confirming trade proposal completion for proposal ID {ProposalId} in connection ID {ConnectionId} by user ID {UserId}.",
+                proposalId, connectionId, userId);
+
+            var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
+            if (connection == null)
+            {
+                _logger.LogWarning("Connection with ID {ConnectionId} not found.", connectionId);
+                throw new NotFoundException($"Connection with ID {connectionId} not found.");
+            }
+            EnsureUserIsParticipantOfConnection(connection, userId);
+
+            var proposal = await _tradeProposalRepository.GetByIdAsync(proposalId);
+            if (proposal == null || proposal.ConnectionId != connectionId)
+            {
+                _logger.LogWarning("Trade proposal with ID {ProposalId} not found in connection ID {ConnectionId}.", proposalId, connectionId);
+                throw new NotFoundException($"Trade proposal with ID {proposalId} not found in connection {connectionId}.");
+            }
+
+            if (proposal.TradeProposalStatus != Enums.TradeProposalStatus.Accepted)
+            {
+                _logger.LogWarning("Trade proposal with ID {ProposalId} is not in an Accepted state.", proposalId);
+                throw new BusinessException("Only accepted proposals can be confirmed for completion.");
+            }
+
+            bool isOwner = proposal.ProposalOwnerUserId == userId;
+
+            if (isOwner)
+            {
+                if (proposal.OwnerCompletionConfirmed)
+                    throw new BusinessException("Owner has already confirmed completion.");
+                proposal.OwnerCompletionConfirmed = true;
+            }
+            else
+            {
+                if (proposal.ResponderCompletionConfirmed)
+                    throw new BusinessException("You have already confirmed completion.");
+                proposal.ResponderCompletionConfirmed = true;
+            }
+
+
+            await _tradeProposalRepository.UpdateAsync(proposal);
+            _logger.LogInformation("Trade proposal ID {ProposalId} confirmation updated successfully.", proposalId);
+        }
+
+
 
         private void EnsureUserIsParticipantOfConnection(Connection connection, int userId)
         {

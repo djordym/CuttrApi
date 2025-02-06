@@ -192,7 +192,39 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        
+        [HttpPut("{connectionId}/proposals/{proposalId}/confirm-completion")]
+        public async Task<IActionResult> ConfirmTradeProposalCompletion(int connectionId, int proposalId)
+        {
+            try
+            {
+                int userId = User.GetUserId();
+                await _connectionManager.ConfirmTradeProposalCompletionAsync(connectionId, proposalId, userId);
+                return NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, $"Proposal with ID {proposalId} or Connection with ID {connectionId} not found.");
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt to confirm completion on trade proposal.");
+                return Forbid(ex.Message);
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, "Error confirming trade proposal completion.");
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while confirming the trade proposal completion.");
+                return StatusCode(500, "An unexpected error occurred.");
+            }
+        }
+
+
+
 
         // GET: api/matches/{matchId}/messages
         [HttpGet("{connectionId}/messages")]

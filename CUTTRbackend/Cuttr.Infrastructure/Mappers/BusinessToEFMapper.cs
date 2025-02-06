@@ -243,13 +243,14 @@ namespace Cuttr.Infrastructure.Mappers
             {
                 TradeProposalId = proposal.TradeProposalId,
                 ConnectionId = proposal.ConnectionId,
+                ProposalOwnerUserId = proposal.ProposalOwnerUserId,
                 TradeProposalStatus = proposal.TradeProposalStatus.ToString(),
                 CreatedAt = proposal.CreatedAt,
                 AcceptedAt = proposal.AcceptedAt,
                 DeclinedAt = proposal.DeclinedAt,
-                CompletedAt = proposal.CompletedAt
-
-                // No need to set Connection here unless you want to update it.
+                CompletedAt = proposal.CompletedAt,
+                OwnerCompletionConfirmed = proposal.OwnerCompletionConfirmed,
+                ResponderCompletionConfirmed = proposal.ResponderCompletionConfirmed
             };
 
             // Map the plants proposed by User1.

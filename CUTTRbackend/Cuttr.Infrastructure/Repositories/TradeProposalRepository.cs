@@ -1,4 +1,5 @@
 ﻿using Cuttr.Business.Entities;
+using Cuttr.Business.Exceptions;
 using Cuttr.Business.Managers;
 using Cuttr.Infrastructure.Mappers;
 using Microsoft.EntityFrameworkCore;
@@ -59,13 +60,26 @@ namespace Cuttr.Infrastructure.Repositories
 
         public async Task<TradeProposal> UpdateAsync(TradeProposal proposal)
         {
-            var ef = BusinessToEFMapper.MapToTradeProposalEF(proposal);
+            // Load the existing EF entity
+            var ef = await _dbContext.TradeProposals.FirstOrDefaultAsync(tp => tp.TradeProposalId == proposal.TradeProposalId);
+            if (ef == null)
+                throw new NotFoundException("Trade proposal not found.");
 
-            _dbContext.TradeProposals.Update(ef);
+            // Update only the fields that may change during a status or confirmation update.
+            ef.TradeProposalStatus = proposal.TradeProposalStatus.ToString();
+            ef.AcceptedAt = proposal.AcceptedAt;
+            ef.DeclinedAt = proposal.DeclinedAt;
+            ef.CompletedAt = proposal.CompletedAt;
+            ef.OwnerCompletionConfirmed = proposal.OwnerCompletionConfirmed;
+            ef.ResponderCompletionConfirmed = proposal.ResponderCompletionConfirmed;
+
+            // (Note: The associated plants and connection ID remain unchanged.)
+
             await _dbContext.SaveChangesAsync();
 
             return EFToBusinessMapper.MapToTradeProposal(ef);
         }
+
 
 
 
