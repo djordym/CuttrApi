@@ -53,7 +53,7 @@ namespace Cuttr.Infrastructure.Entities
         [MaxLength(50)]
         public string PetFriendly { get; set; }
 
-        public string Extras { get; set; } // Assuming serialized JSON string
+        public string Extras { get; set; } 
 
         public string ImageUrl { get; set; }
 

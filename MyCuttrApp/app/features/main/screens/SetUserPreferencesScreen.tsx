@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useUserPreferences } from '../hooks/usePreferences';
+import Slider from '@react-native-community/slider'; // <-- Import Slider
 
 import TagGroup from '../components/TagGroup';
 import { COLORS } from '../../../theme/colors';
@@ -39,6 +40,8 @@ const SetUserPreferencesScreen: React.FC = () => {
     isUpdating,
   } = useUserPreferences();
 
+  // Local states for each preference
+  const [searchRadius, setSearchRadius] = useState<number>(10);
   const [selectedStages, setSelectedStages] = useState<PlantStage[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<PlantCategory[]>([]);
   const [selectedWatering, setSelectedWatering] = useState<WateringNeed[]>([]);
@@ -50,8 +53,10 @@ const SetUserPreferencesScreen: React.FC = () => {
   const [selectedExtras, setSelectedExtras] = useState<Extras[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Load existing preferences on mount (or when preferences update)
   useEffect(() => {
     if (preferences) {
+      setSearchRadius(preferences.searchRadius ?? 10);
       setSelectedStages(preferences.preferedPlantStage || []);
       setSelectedCategories(preferences.preferedPlantCategory || []);
       setSelectedWatering(preferences.preferedWateringNeed || []);
@@ -64,6 +69,11 @@ const SetUserPreferencesScreen: React.FC = () => {
     }
   }, [preferences]);
 
+  const handleSetSearchRadius = (val: number) => { 
+    if (val === 500) setSearchRadius(40000);
+    else setSearchRadius(val);
+    }
+
   const handleCancel = () => {
     navigation.goBack();
   };
@@ -74,6 +84,7 @@ const SetUserPreferencesScreen: React.FC = () => {
 
     const updated: UserPreferencesRequest = {
       ...preferences,
+      searchRadius,
       preferedPlantStage: selectedStages,
       preferedPlantCategory: selectedCategories,
       preferedWateringNeed: selectedWatering,
@@ -136,6 +147,21 @@ const SetUserPreferencesScreen: React.FC = () => {
         >
           <View style={styles.formContainer}>
             {error && <Text style={styles.errorText}>{error}</Text>}
+
+            {/* Slider for Search Radius */}
+            <Text style={styles.label}>Search Radius: {searchRadius} km</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={1}
+              maximumValue={500}
+              step={1}
+              value={searchRadius}
+              onSlidingComplete={(val) => handleSetSearchRadius(val)}
+              minimumTrackTintColor={COLORS.accentGreen}
+              maximumTrackTintColor="#999"
+              trackStyle={{ borderRadius: 10 }}
+              thumbTintColor={COLORS.accentGreen}
+            />
 
             <Text style={styles.label}>Preferred Plant Stages:</Text>
             <TagGroup
@@ -313,6 +339,10 @@ const styles = StyleSheet.create({
     color: '#333',
     marginTop: 12,
     marginBottom: 6,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
   },
   errorText: {
     color: '#FF6F61',

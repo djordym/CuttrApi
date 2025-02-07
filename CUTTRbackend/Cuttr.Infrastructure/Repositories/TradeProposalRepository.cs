@@ -38,6 +38,9 @@ namespace Cuttr.Infrastructure.Repositories
         {
             var efList = await _dbContext.TradeProposals.AsNoTracking()
                 .Include(tp => tp.Connection)
+                .ThenInclude(c => c.User1)
+                .Include(tp => tp.Connection)
+                .ThenInclude(c => c.User2)
                 .Include(tp => tp.TradeProposalPlants)
                     .ThenInclude(tpp => tpp.Plant)
                 .Where(tp => tp.ConnectionId == connectionId)

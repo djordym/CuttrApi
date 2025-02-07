@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { MatchResponse } from '../../../types/apiTypes';
-import { PlantThumbnail } from './PlantThumbnail';
+import PlantThumbnail from './PlantThumbnail';
 
 interface MatchCardProps {
   match: MatchResponse;

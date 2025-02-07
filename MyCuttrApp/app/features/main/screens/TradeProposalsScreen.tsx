@@ -25,6 +25,7 @@ import { TradeProposalResponse } from "../../../types/apiTypes";
 import { TradeProposalStatus } from "../../../types/enums";
 import PlantThumbnail from "../components/PlantThumbnail";
 import { headerStyles } from "../styles/headerStyles";
+import { Ionicons } from "@expo/vector-icons";
 
 type RouteParams = {
   connectionId: number;
@@ -117,16 +118,16 @@ const CompletedTradeActions: React.FC<{
       {hasUndecidedPlants && (
         <View style={styles.allActionsRow}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.deleteAllButton]}
-            onPress={handleDeleteAll}
-          >
-            <Text style={styles.actionButtonText}>Delete All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={[styles.actionButton, styles.keepAllButton]}
             onPress={handleKeepAll}
           >
             <Text style={styles.actionButtonText}>Keep All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteAllButton]}
+            onPress={handleDeleteAll}
+          >
+            <Text style={styles.actionButtonText}>Delete All</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -159,13 +160,22 @@ const TradeProposalsScreen: React.FC = () => {
     updateStatus({ proposalId, newStatus });
   };
 
-  // Render each trade proposal card.
   const renderItem = ({ item }: { item: TradeProposalResponse }) => {
-    // Instead of comparing to proposalOwnerUserId, we now check against the connection.
+    // Determine which side of the connection is "mine" based on the connection.
     const isUser1 = myProfile!.userId === item.connection.user1.userId;
+    // Use isUser1 to choose the plant lists for display.
     const myPlants = isUser1 ? item.plantsProposedByUser1 : item.plantsProposedByUser2;
     const otherPlants = isUser1 ? item.plantsProposedByUser2 : item.plantsProposedByUser1;
-    const hasConfirmed = isUser1 ? item.ownerCompletionConfirmed : item.responderCompletionConfirmed;
+
+    // Use a separate check for "owner" to decide the confirmation flag.
+    const isOwner = myProfile!.userId === item.proposalOwnerUserId;
+    const hasConfirmed = isOwner
+      ? item.ownerCompletionConfirmed
+      : item.responderCompletionConfirmed;
+
+    // Column titles – always label the plant list that belongs to the logged in user as "Your Offer"
+    const userOfferTitle = "Your Offer";
+    const otherOfferTitle = "Their Offer";
   
     // Handlers for pending proposals.
     const handleAccept = () =>
@@ -218,7 +228,7 @@ const TradeProposalsScreen: React.FC = () => {
   
     let actions = null;
     if (item.tradeProposalStatus === TradeProposalStatus.Pending) {
-      actions = isUser1 ? (
+      actions = isOwner ? (
         <TouchableOpacity
           style={[styles.actionButton, styles.cancelButton]}
           onPress={handleCancel}
@@ -259,7 +269,7 @@ const TradeProposalsScreen: React.FC = () => {
         </View>
       );
     } else if (item.tradeProposalStatus === TradeProposalStatus.Completed) {
-      // In the completed state, always pass the logged in user's plant list.
+      // In the completed state, show the CompletedTradeActions for the logged in user's plants.
       actions = !hasConfirmed ? (
         <CompletedTradeActions
           plants={myPlants}
@@ -279,11 +289,11 @@ const TradeProposalsScreen: React.FC = () => {
         <Text style={styles.cardSubtitle}>
           Created: {new Date(item.createdAt).toLocaleString()}
         </Text>
+    
         <View style={styles.offersSection}>
+          {/* Left column: myPlants (labeled always as "Your Offer") */}
           <View style={styles.offerColumn}>
-            <Text style={styles.columnTitle}>
-              {isUser1 ? "Your Offer" : "Their Offer"}
-            </Text>
+            <Text style={styles.columnTitle}>{userOfferTitle}</Text>
             <ScrollView horizontal contentContainerStyle={styles.offerScroll}>
               {myPlants.map((plant) => (
                 <PlantThumbnail
@@ -295,10 +305,10 @@ const TradeProposalsScreen: React.FC = () => {
               ))}
             </ScrollView>
           </View>
+    
+          {/* Right column: otherPlants (labeled as "Their Offer") */}
           <View style={styles.offerColumn}>
-            <Text style={styles.columnTitle}>
-              {isUser1 ? "Their Offer" : "Your Offer"}
-            </Text>
+            <Text style={styles.columnTitle}>{otherOfferTitle}</Text>
             <ScrollView horizontal contentContainerStyle={styles.offerScroll}>
               {otherPlants.map((plant) => (
                 <PlantThumbnail
@@ -311,12 +321,13 @@ const TradeProposalsScreen: React.FC = () => {
             </ScrollView>
           </View>
         </View>
+    
         <Text style={styles.statusText}>Status: {item.tradeProposalStatus}</Text>
         {actions}
       </View>
     );
   };
-
+  
   if (isLoading || profileLoading) {
     return (
       <SafeAreaProvider style={styles.loadingContainer}>
@@ -343,12 +354,9 @@ const TradeProposalsScreen: React.FC = () => {
         colors={[COLORS.primary, COLORS.secondary]}
         style={headerStyles.headerGradient}
       >
-        <View style={headerStyles.headerRow}>
-          <TouchableOpacity
-            style={headerStyles.headerBackButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={headerStyles.headerTitle}>Back</Text>
+        <View style={headerStyles.headerColumn1}>
+        <TouchableOpacity style={headerStyles.headerBackButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
           </TouchableOpacity>
           <Text style={headerStyles.headerTitle}>Trade Proposals</Text>
           <View style={{ width: 50 }} />
@@ -485,7 +493,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accentGreen,
   },
   changedMyMindButton: {
-    backgroundColor: "#F39C12", // for example
+    backgroundColor: "#F39C12",
   },
   actionButtonText: {
     color: "#fff",

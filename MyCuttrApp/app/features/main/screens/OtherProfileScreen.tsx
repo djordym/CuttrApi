@@ -24,7 +24,7 @@ import { useMyPlants } from '../hooks/usePlantHooks'; // Assuming you want to sh
 import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse, UserResponse } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
-import { PlantThumbnail } from '../components/PlantThumbnail';
+import PlantThumbnail from '../components/PlantThumbnail';
 import { headerStyles } from '../styles/headerStyles';
 import { ProfileCard } from '../components/ProfileCard';
 

@@ -64,7 +64,7 @@ namespace Cuttr.Business.Managers
                 var defaultPreferences = new UserPreferences
                 {
                     UserId = createdUser.UserId,
-                    SearchRadius = 10000, // Default value requested
+                    SearchRadius = 40000, // Default value requested
                                           // The other preference lists can be empty or null, up to you:
                     PreferedPlantStage = new List<PlantStage>(),
                     PreferedPlantCategory = new List<PlantCategory>(),

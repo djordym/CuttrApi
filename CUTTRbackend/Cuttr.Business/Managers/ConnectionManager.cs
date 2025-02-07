@@ -241,6 +241,8 @@ namespace Cuttr.Business.Managers
                     throw new NotFoundException($"Connection with ID {connectionId} not found.");
                 }
 
+                bool IsUser1 = connection.UserId1 == userId;
+
                 EnsureUserIsParticipantOfConnection(connection, userId);
 
                 // 2) Validate or parse the request.
@@ -252,8 +254,8 @@ namespace Cuttr.Business.Managers
                     ConnectionId = connectionId,
                     TradeProposalStatus = Enums.TradeProposalStatus.Pending,
                     CreatedAt = DateTime.UtcNow,
-                    PlantIdsProposedByUser1 = request.UserPlantIds,
-                    PlantIdsProposedByUser2 = request.OtherPlantIds,
+                    PlantIdsProposedByUser1 = IsUser1 ? request.UserPlantIds : request.OtherPlantIds,
+                    PlantIdsProposedByUser2 = IsUser1 ? request.OtherPlantIds : request.UserPlantIds,
                     ProposalOwnerUserId = userId
                 };
 
