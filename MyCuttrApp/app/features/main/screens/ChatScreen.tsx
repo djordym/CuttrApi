@@ -95,33 +95,30 @@ const ChatScreen: React.FC = () => {
   const pendingCount = pendingProposals.length;
 
   // --- Animated values for the trade proposals button ---
-  // We'll animate the button's width (icon-only -> expands with text)
   const buttonWidth = useRef(new Animated.Value(56)).current;
-  // We'll pulse the opacity if there are pending proposals
   const glimmerAnim = useRef(new Animated.Value(1)).current;
 
-  // Handle the expansions (width + glimmer) when `pendingCount` changes
   useEffect(() => {
     if (pendingCount > 0) {
-      // Expand the button to show text
+      // Expand the background to reveal text
       Animated.timing(buttonWidth, {
-        toValue: 180, // Adjust as needed
+        toValue: 210, // or whatever max width you want
         duration: 300,
         useNativeDriver: false,
       }).start();
 
-      // Start pulsing (glimmer)
+      // Pulse
       Animated.loop(
         Animated.sequence([
           Animated.timing(glimmerAnim, {
             toValue: 0.8,
             duration: 500,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
           Animated.timing(glimmerAnim, {
             toValue: 1,
             duration: 500,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
         ]),
         { resetBeforeIteration: true }
@@ -134,10 +131,10 @@ const ChatScreen: React.FC = () => {
         useNativeDriver: false,
       }).start();
 
-      // Stop glimmer by resetting
+      // Stop pulsing by resetting
       glimmerAnim.setValue(1);
     }
-  }, [pendingCount, buttonWidth, glimmerAnim]);
+  }, [pendingCount]);
 
   // Animated style for the button
   const buttonAnimatedStyle = {
@@ -256,18 +253,7 @@ const ChatScreen: React.FC = () => {
         </Text>
       </TouchableOpacity>
 
-      {/* Pending Proposals Button (Bottom Left) */}
-      <Animated.View style={[styles.pendingButtonContainer, buttonAnimatedStyle]}>
-        <TouchableOpacity style={styles.pendingButton} onPress={handleOpenTradeProposals}>
-          {pendingCount === 0 ? (
-            // Icon-only if no pending proposals
-            <Ionicons name="document-text-outline" size={24} color="#fff" />
-          ) : (
-            // Slide-out text if there are pending proposals
-            <Text style={styles.pendingButtonText}>{pendingCount} pending proposals</Text>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
+
 
       {/* Chat messages */}
       {sortedMessages.length === 0 ? (
@@ -289,10 +275,41 @@ const ChatScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Floating Trade Proposals Button (right bottom) */}
-      <TouchableOpacity style={styles.tradeFab} onPress={handleOpenTradeProposal}>
-        <Ionicons name="swap-horizontal" size={26} color="#fff" />
-      </TouchableOpacity>
+      <View style={styles.floatingButtonsContainer}>
+        <Animated.View
+          style={[
+            styles.pendingButtonContainer,
+            { width: buttonWidth, opacity: glimmerAnim },
+          ]}
+        >
+          {/* Single Touchable: tapping text or circle calls the same onPress */}
+          <TouchableOpacity
+            style={styles.pendingButtonTouchable}
+            onPress={handleOpenTradeProposals}
+            activeOpacity={0.8}
+          >
+            {/* The “pill” background behind everything */}
+            <View style={styles.backgroundBar}>
+              {pendingCount > 0 && (
+                <Text style={styles.pendingButtonText}>
+                  {`${pendingCount} pending proposals`}
+                </Text>
+              )}
+            </View>
+
+            {/* The circle button (with icon + shadow) pinned on the left */}
+            <View style={styles.circleButton}>
+              <Ionicons name="document-text-outline" size={24} color="#fff" />
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Floating Trade Proposals Button (right bottom) */}
+        <TouchableOpacity style={styles.tradeFab} onPress={handleOpenTradeProposal}>
+          <Ionicons name="swap-horizontal" size={26} color="#fff" />
+        </TouchableOpacity>
+
+      </View>
 
       {/* Message Input */}
       <KeyboardAvoidingView
@@ -327,6 +344,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  // Header User Info
+  headerUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  headerUserImage: {
+    borderColor: COLORS.accentGreen,
+    borderWidth: 3,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 8,
+    backgroundColor: '#ccc',
   },
   centerContainer: {
     flex: 1,
@@ -369,7 +401,6 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   browseButtonText: {
@@ -423,10 +454,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
   },
+  // Floating Buttons
+  floatingButtonsContainer: {
+    position: 'relative',
+    flexDirection: 'row',
+  },
   // Floating Trade Proposals Button (right bottom)
   tradeFab: {
-    position: 'relative',
-    alignSelf: 'flex-end',
+    position: 'absolute',
     bottom: 20,
     right: 20,
     backgroundColor: COLORS.accentGreen,
@@ -438,51 +473,62 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  // Header User Info
-  headerUserInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  headerUserImage: {
-    borderColor: COLORS.accentGreen,
-    borderWidth: 3,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 8,
-    backgroundColor: '#ccc',
-  },
+
   // Pending Proposals Button (bottom-left)
+  // The container we animate in width (and keep a fixed height).
+  // We use overflow: 'hidden' so text slides out from under the circle.
   pendingButtonContainer: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 20,
     left: 20,
-    zIndex: 10,
-    // We animate width, so keep the height consistent with the final shape
     height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
   },
-  pendingButton: {
+
+  // Make the entire area clickable by wrapping in a single Touchable.
+  pendingButtonTouchable: {
     flex: 1,
+    borderRadius: 28,
+  },
+
+  // The pill behind the circle and text:
+  backgroundBar: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.accentGreen,
     borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    // Shadows, etc.
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 5,
+    paddingLeft: 56, // Leave room for the circle on the left
+    justifyContent: 'center', 
+    paddingRight: 16, 
   },
+
+  // The text that appears when expanded:
   pendingButtonText: {
-    color: COLORS.textLight,
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
+    alignSelf: 'flex-end',
+  },
+
+  // The circle with the icon on top, pinned on the left:
+  circleButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.accentGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    // Shadow (iOS + Android)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });

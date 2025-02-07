@@ -45,3 +45,15 @@ export const useUpdateTradeProposalStatus = (connectionId: number) => {
     }
   );
 };
+
+export const useConfirmTradeProposalCompletion = (connectionId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    (proposalId: number) => connectionService.confirmTradeProposalCompletion(connectionId, proposalId),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(["tradeProposals", connectionId]);
+      },
+    }
+  );
+}

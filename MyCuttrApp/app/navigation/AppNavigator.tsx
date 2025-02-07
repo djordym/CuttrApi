@@ -88,7 +88,7 @@ useEffect(() => {
     );
   }
 
-  if (userProfileError) {
+  if (userProfileError && !userProfileLoading) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>

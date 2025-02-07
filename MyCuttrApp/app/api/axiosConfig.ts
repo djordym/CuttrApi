@@ -31,6 +31,13 @@ api.interceptors.request.use(
       });
       return config;
     }
+    log.debug("API Request (refresh)", {
+      baseUrl: api.defaults.baseURL,
+      url: config.url,
+      method: config.method,
+      data: config.data,
+      headers: config.headers,
+    });
     const state: RootState = store.getState();
     const token = state.auth.accessToken;
     if (token && config.headers) {

@@ -228,7 +228,7 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task<TradeProposalResponse> CreateTradeProposalAsync(int connectionId, int userId, TradeProposalRequest request)
+        public async Task CreateTradeProposalAsync(int connectionId, int userId, TradeProposalRequest request)
         {
             _logger.LogInformation("Creating trade proposal in connection ID {ConnectionId} by user ID {UserId}.", connectionId, userId);
             try
@@ -257,13 +257,9 @@ namespace Cuttr.Business.Managers
                     ProposalOwnerUserId = userId
                 };
 
-                TradeProposal fulltradeprop = await _tradeProposalRepository.CreateAsync(newProposal);
-                _logger.LogInformation("Trade proposal created with ID {ProposalId} in connection ID {ConnectionId}.", newProposal.TradeProposalId, connectionId);
-
-                // 4) Return response
-                var response = BusinessToContractMapper.MapToTradeProposalResponse(newProposal);
+                await _tradeProposalRepository.CreateAsync(newProposal);
                 _logger.LogInformation("Successfully created trade proposal with ID {ProposalId}.", newProposal.TradeProposalId);
-                return response;
+                return;
             }
             catch (NotFoundException)
             {
@@ -372,10 +368,10 @@ namespace Cuttr.Business.Managers
                 throw new NotFoundException($"Trade proposal with ID {proposalId} not found in connection {connectionId}.");
             }
 
-            if (proposal.TradeProposalStatus != Enums.TradeProposalStatus.Accepted)
+            if (proposal.TradeProposalStatus != Enums.TradeProposalStatus.Completed)
             {
-                _logger.LogWarning("Trade proposal with ID {ProposalId} is not in an Accepted state.", proposalId);
-                throw new BusinessException("Only accepted proposals can be confirmed for completion.");
+                _logger.LogWarning("Trade proposal with ID {ProposalId} is not in an Completed state.", proposalId);
+                throw new BusinessException("Only Completed proposals can be confirmed for completion.");
             }
 
             bool isOwner = proposal.ProposalOwnerUserId == userId;

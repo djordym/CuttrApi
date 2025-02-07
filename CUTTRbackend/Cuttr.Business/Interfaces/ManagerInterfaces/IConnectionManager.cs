@@ -10,7 +10,7 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
 {
     public interface IConnectionManager
     {
-        Task<TradeProposalResponse> CreateTradeProposalAsync(int connectionId, int userId, TradeProposalRequest request);
+        Task CreateTradeProposalAsync(int connectionId, int userId, TradeProposalRequest request);
         Task<ConnectionResponse> GetConnectionByIdAsync(int connectionId, int userId);
         Task<IEnumerable<ConnectionResponse>> GetConnectionsForUserAsync(int userId);
         Task<IEnumerable<TradeProposalResponse>> GetTradeProposalsAsync(int connectionId, int userId);

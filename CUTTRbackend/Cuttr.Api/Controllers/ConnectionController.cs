@@ -127,8 +127,8 @@ namespace Cuttr.Api.Controllers
             try
             {
                 int userId = User.GetUserId();
-                var createdProposal = await _connectionManager.CreateTradeProposalAsync(connectionId, userId, request);
-                return Ok(createdProposal); // e.g. TradeProposalResponse
+                await _connectionManager.CreateTradeProposalAsync(connectionId, userId, request);
+                return Ok();
             }
             catch (NotFoundException ex)
             {

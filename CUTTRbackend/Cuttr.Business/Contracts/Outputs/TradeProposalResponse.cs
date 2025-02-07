@@ -30,7 +30,7 @@ namespace Cuttr.Business.Contracts.Outputs
         public DateTime? CompletedAt { get; set; }
 
         // Navigation
-        public ConnectionResponse Connection { get; set; }
+        public ConnectionResponse? Connection { get; set; }
 
         public int ProposalOwnerUserId { get; set; }
         public bool OwnerCompletionConfirmed { get; set; }

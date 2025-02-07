@@ -246,6 +246,13 @@ headers: config.headers,
 });
 return config;
 }
+log.debug("API Request (refresh)", {
+baseUrl: api.defaults.baseURL,
+url: config.url,
+method: config.method,
+data: config.data,
+headers: config.headers,
+});
 const state: RootState = store.getState();
 const token = state.auth.accessToken;
 if (token && config.headers) {
@@ -371,10 +378,13 @@ connectionId: number,
 proposalId: number,
 data: UpdateTradeProposalStatusRequest
 ): Promise<void> => {
-await api.put(
-`/connections/${connectionId}/proposals/${proposalId}/status`,
-data
-);
+await api.put(`/connections/${connectionId}/proposals/${proposalId}/status`, data);
+},
+confirmTradeProposalCompletion: async (
+connectionId: number,
+proposalId: number
+): Promise<void> => {
+await api.put(`/connections/${connectionId}/proposals/${proposalId}/confirm-completion`);
 },
 };
 // File: app\api\matchService.ts
@@ -1046,254 +1056,6 @@ textAlign: 'center',
 
 // File: app\features\main\index.ts
 
-// File: app\features\main\components\ChangeLocationModal.tsx
-Modal,
-View,
-Text,
-StyleSheet,
-TouchableOpacity,
-ActivityIndicator,
-TextInput,
-Alert,
-} from 'react-native';
-interface ChangeLocationModalProps {
-visible: boolean;
-initialLatitude?: number;
-initialLongitude?: number;
-onClose: () => void;
-onUpdated: () => void;
-}
-export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
-visible,
-initialLatitude,
-initialLongitude,
-onClose,
-onUpdated,
-}) => {
-const { t } = useTranslation();
-const [markerPosition, setMarkerPosition] = useState<{
-lat: number;
-lng: number;
-} | null>(null);
-const [region, setRegion] = useState<Region | null>(null);
-const [loading, setLoading] = useState(false);
-const [error, setError] = useState<string | null>(null);
-const [searchInput, setSearchInput] = useState('');
-const hasInitialCoords =
-typeof initialLatitude === 'number' &&
-!Number.isNaN(initialLatitude) &&
-typeof initialLongitude === 'number' &&
-!Number.isNaN(initialLongitude);
-useEffect(() => {
-if (visible) {
-if (hasInitialCoords) {
-log.debug('setting initial coords:', initialLatitude, initialLongitude);
-setRegion({
-latitude: initialLatitude,
-longitude: initialLongitude,
-latitudeDelta: 0.05,
-longitudeDelta: 0.05,
-});
-log.debug('region set:', region);
-setMarkerPosition({ lat: initialLatitude, lng: initialLongitude });
-log.debug('marker set:', markerPosition);
-} else {
-log.debug('no initial coords, setting default region');
-setRegion({
-latitude: 37.78825,
-longitude: -122.4324,
-latitudeDelta: 0.05,
-longitudeDelta: 0.05,
-});
-setMarkerPosition(null);
-}
-setSearchInput('');
-setError(null);
-}
-}, [visible, hasInitialCoords, initialLatitude, initialLongitude]);
-const handleMapPress = (e: MapPressEvent) => {
-const { coordinate } = e.nativeEvent;
-log.debug('map press:', coordinate);
-setMarkerPosition({ lat: coordinate.latitude, lng: coordinate.longitude });
-};
-const handleRegionChangeComplete = (newRegion: Region) => {
-setRegion(newRegion);
-};
-const handleConfirm = async () => {
-if (!markerPosition) {
-onClose();
-return;
-}
-setLoading(true);
-setError(null);
-const payload: UpdateLocationRequest = {
-latitude: markerPosition.lat,
-longitude: markerPosition.lng,
-};
-try {
-await userService.updateLocation(payload);
-onUpdated();
-onClose();
-} catch {
-setError(t('change_location_error_message'));
-} finally {
-setLoading(false);
-}
-};
-const handleCancel = () => {
-onClose();
-};
-const handleSearch = useCallback(async () => {
-if (!searchInput) return;
-setLoading(true);
-setError(null);
-try {
-const url = `https:
-searchInput
-)}&format=json&limit=1`;
-const response = await fetch(url);
-const data = await response.json();
-if (data && data.length > 0) {
-const { lat, lon } = data[0];
-const latNum = parseFloat(lat);
-const lonNum = parseFloat(lon);
-const newRegion: Region = {
-latitude: latNum,
-longitude: lonNum,
-latitudeDelta: 0.05,
-longitudeDelta: 0.05,
-};
-setRegion(newRegion);
-setMarkerPosition({ lat: latNum, lng: lonNum });
-} else {
-setError(t('No results found for that location.'));
-}
-} catch (err) {
-console.error('Geocoding error:', err);
-setError(t('change_location_error_message'));
-} finally {
-setLoading(false);
-}
-}, [searchInput, t]);
-if (!visible) {
-return null;
-}
-return (
-<Modal visible={visible} animationType="slide" transparent>
-<View style={styles.overlay}>
-<View style={styles.modalContainer}>
-<Text style={styles.title}>{t('change_location_title')}</Text>
-<Text style={styles.subtitle}>{t('change_location_instructions')}</Text>
-{}
-<View style={styles.searchRow}>
-<TextInput
-style={styles.searchInput}
-placeholder={t('Enter a city or country...')}
-value={searchInput}
-onChangeText={setSearchInput}
-returnKeyType="search"
-onSubmitEditing={handleSearch}
-/>
-<TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-<Ionicons name="search" size={20} color="#fff" />
-</TouchableOpacity>
-</View>
-{error && <Text style={styles.errorText}>{error}</Text>}
-<View style={styles.mapContainer}>
-{region && (
-<MapView
-style={{ flex: 1 }}
-region={region}
-onRegionChangeComplete={handleRegionChangeComplete}
-onPress={handleMapPress}
->
-{markerPosition && (
-<Marker
-coordinate={{
-latitude: markerPosition.lat,
-longitude: markerPosition.lng,
-}}
-/>
-)}
-</MapView>
-)}
-</View>
-{loading && (
-<ActivityIndicator size="small" color="#1EAE98" style={{ marginVertical: 10 }} />
-)}
-<ConfirmCancelButtons
-onCancel={handleCancel}
-onConfirm={handleConfirm}
-confirmButtonText={t('Confirm')}
-cancelButtonText={t('Cancel')}
-/>
-</View>
-</View>
-</Modal>
-);
-};
-const styles = StyleSheet.create({
-overlay: {
-flex: 1,
-backgroundColor: 'rgba(0,0,0,0.5)',
-justifyContent: 'center',
-alignItems: 'center',
-},
-modalContainer: {
-width: '90%',
-height: '80%',
-backgroundColor: '#fff',
-borderRadius: 16,
-padding: 20,
-},
-title: {
-fontSize: 18,
-fontWeight: '700',
-color: '#333',
-marginBottom: 10,
-textAlign: 'center',
-},
-subtitle: {
-fontSize: 14,
-color: '#555',
-marginBottom: 10,
-textAlign: 'center',
-},
-searchRow: {
-flexDirection: 'row',
-alignItems: 'center',
-marginBottom: 10,
-},
-searchInput: {
-flex: 1,
-borderWidth: 1,
-borderColor: '#ccc',
-borderRadius: 8,
-paddingHorizontal: 10,
-paddingVertical: 6,
-marginRight: 8,
-},
-searchButton: {
-backgroundColor: COLORS.accentGreen,
-padding: 7,
-borderRadius: 8,
-},
-searchButtonText: {
-color: '#fff',
-fontWeight: '600',
-},
-errorText: {
-color: '#FF6B6B',
-marginBottom: 10,
-},
-mapContainer: {
-flex: 1,
-borderRadius: 8,
-overflow: 'hidden',
-marginBottom: 10,
-backgroundColor: '#eee',
-},
-});
 // File: app\features\main\components\ChatShelf.tsx
 useState,
 useRef,
@@ -1502,351 +1264,6 @@ fontSize: 14,
 color: COLORS.accentGreen,
 fontWeight: '600',
 textAlign: 'center',
-},
-});
-// File: app\features\main\components\EditProfileModal.tsx
-Modal,
-View,
-Text,
-Image,
-TextInput,
-StyleSheet,
-TouchableOpacity,
-ActivityIndicator,
-Alert,
-Dimensions,
-ImageBackground,
-} from 'react-native';
-useMyProfile,
-useUpdateProfile,
-useUpdateProfilePicture,
-} from '../hooks/useMyProfileHooks';
-interface EditProfileModalProps {
-visible: boolean;
-userProfile: UserResponse;
-onClose: () => void;
-onUpdated: () => void;
-cardLayout: { x: number; y: number; width: number; height: number };
-}
-export const EditProfileModal: React.FC<EditProfileModalProps> = ({
-visible,
-userProfile,
-onClose,
-onUpdated,
-cardLayout,
-}) => {
-const { t } = useTranslation();
-const screenWidth = Dimensions.get('window').width;
-const [name, setName] = useState(userProfile.name);
-const [bio, setBio] = useState(userProfile.bio || '');
-const [cityCountry, setCityCountry] = useState<string>('');
-const [error, setError] = useState<string | null>(null);
-const [locationModalVisible, setLocationModalVisible] = useState(false);
-const userHasLocation =
-userProfile.locationLatitude !== undefined &&
-userProfile.locationLongitude !== undefined;
-useEffect(() => {
-(async () => {
-if (userHasLocation) {
-try {
-const [geo] = await Location.reverseGeocodeAsync({
-latitude: userProfile.locationLatitude!,
-longitude: userProfile.locationLongitude!,
-});
-if (geo) {
-const city = geo.city || geo.subregion || '';
-const country = geo.country || '';
-setCityCountry(
-city && country ? `${city}, ${country}` : city || country
-);
-}
-} catch (err) {
-console.log('Reverse geocoding error:', err);
-setCityCountry('');
-}
-} else {
-setCityCountry('');
-}
-})();
-}, [userHasLocation, userProfile]);
-const {
-mutate: updateProfile,
-isLoading: isUpdatingProfile,
-isError: isUpdateProfileError,
-error: updateProfileError,
-} = useUpdateProfile();
-const {
-mutate: updateProfilePicture,
-isLoading: isUpdatingPicture,
-isError: isUpdatePictureError,
-error: updatePictureError,
-} = useUpdateProfilePicture();
-const isUpdating = isUpdatingProfile || isUpdatingPicture;
-const handleChangeProfilePicture = useCallback(() => {
-Alert.alert(
-t('profile_change_picture_title'),
-t('profile_change_picture_msg'),
-[
-{
-text: t('profile_picture_select_library'),
-onPress: pickImageFromLibrary,
-},
-{
-text: t('profile_picture_take_photo'),
-onPress: takePictureWithCamera,
-},
-{ text: t('profile_picture_cancel'), style: 'cancel' },
-]
-);
-}, [t]);
-const pickImageFromLibrary = async () => {
-try {
-const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-if (!permissionResult.granted) {
-Alert.alert(t('error_title'), t('error_media_library_permission_denied'));
-return;
-}
-const result = await ImagePicker.launchImageLibraryAsync({
-mediaTypes: ImagePicker.MediaTypeOptions.Images,
-allowsEditing: true,
-aspect: [1, 1],
-quality: 0.7,
-});
-if (!result.canceled && result.assets[0].uri) {
-const resized = await resizeImage(result.assets[0].uri);
-handleUploadProfilePicture(resized.uri);
-}
-} catch (err) {
-console.error('pickImageFromLibrary error:', err);
-Alert.alert(t('error_title'), t('error_could_not_open_image_library'));
-}
-};
-const takePictureWithCamera = async () => {
-try {
-const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-if (!cameraPermission.granted) {
-Alert.alert(t('error_title'), t('error_camera_permission_denied'));
-return;
-}
-const result = await ImagePicker.launchCameraAsync({
-allowsEditing: true,
-aspect: [1, 1],
-quality: 0.7,
-});
-if (!result.canceled && result.assets[0].uri) {
-const resized = await resizeImage(result.assets[0].uri);
-handleUploadProfilePicture(resized.uri);
-}
-} catch (err) {
-console.error('takePictureWithCamera error:', err);
-Alert.alert(t('error_title'), t('error_could_not_open_camera'));
-}
-};
-const resizeImage = async (uri: string) => {
-return await ImageManipulator.manipulateAsync(
-uri,
-[{ resize: { width: 800 } }],
-{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-);
-};
-const handleUploadProfilePicture = async (uri: string) => {
-try {
-const img = await resizeImage(uri);
-const photo = {
-uri: img.uri,
-name: 'profile.jpg',
-type: 'image/jpeg',
-} as any;
-updateProfilePicture({image: photo});
-} catch (err) {
-console.error('Error preparing profile picture:', err);
-Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));
-}
-};
-const handleSave = async () => {
-setError(null);
-const payload: UserUpdateRequest = {
-name: name.trim(),
-bio: bio.trim(),
-};
-if (!payload.name) {
-setError(t('edit_profile_error_name_required'));
-return;
-}
-updateProfile(payload, {
-onError: (error: any) => {
-setError(error?.message || t('edit_profile_error_message'));
-},
-onSuccess: () => {
-onUpdated();
-onClose();
-},
-});
-};
-const handleOpenSetLocationModal = () => {
-log.debug('Opening location modal');
-log.debug('userProfile.locationLatitude', userProfile.locationLatitude);
-log.debug('userProfile.locationLongitude', userProfile.locationLongitude);
-setLocationModalVisible(true);
-};
-useEffect(() => {
-if (isUpdateProfileError && updateProfileError) {
-Alert.alert(t('error_title'), updateProfileError.message || t('error_update_profile_failed'));
-}
-if (isUpdatePictureError && updatePictureError) {
-Alert.alert(t('error_title'), updatePictureError.message || t('error_update_profile_picture_failed'));
-}
-}, [isUpdateProfileError, updateProfileError, isUpdatePictureError, updatePictureError, t]);
-return (
-<Modal visible={visible} animationType="fade" transparent>
-<View style={styles.modalOverlay}>
-{}
-<View
-style={[
-profileCardStyles.profileCardContainer,
-{
-position: 'absolute',
-top: cardLayout.y,
-left: cardLayout.x,
-width: cardLayout.width,
-},
-]}
->
-<LinearGradient
-colors={[COLORS.cardBg1, COLORS.cardBg2]}
-style={profileCardStyles.profileCardInner}
->
-{}
-<View style={profileCardStyles.profileTopContainer}>
-<ImageBackground
-source={require('../../../../assets/images/profileBackground.png')}
-style={profileCardStyles.profileBackgroundImage}
-/>
-<View style={profileCardStyles.profilePictureContainer}>
-{userProfile.profilePictureUrl ? (
-<Image
-source={{ uri: userProfile.profilePictureUrl }}
-style={profileCardStyles.profilePicture}
-/>
-) : (
-<View style={profileCardStyles.profilePlaceholder}>
-<Ionicons name="person-circle-outline" size={90} color="#ccc" />
-</View>
-)}
-{}
-<TouchableOpacity
-style={profileCardStyles.cameraIconWrapper}
-onPress={handleChangeProfilePicture}
-disabled={isUpdating}
->
-<Ionicons name="camera" size={18} color="#fff" />
-</TouchableOpacity>
-</View>
-{}
-<TouchableOpacity
-onPress={handleSave}
-style={profileCardStyles.profileEditButton}
-disabled={isUpdating}
->
-{isUpdating ? (
-<ActivityIndicator size="small" color={COLORS.textLight} />
-) : (
-<MaterialIcons name="check" size={20} color={COLORS.textLight} />
-)}
-</TouchableOpacity>
-</View>
-{}
-<View style={profileCardStyles.profileInfoContainer}>
-<View
-style={[
-profileCardStyles.nameContainer,
-profileCardStyles.editNameContainer,
-{ maxWidth: screenWidth * 0.9 - 215 },
-]}
->
-<TextInput
-style={[
-profileCardStyles.profileNameText,
-profileCardStyles.editableTextName,
-]}
-value={name}
-maxLength={16}
-onChangeText={setName}
-placeholder={t('edit_profile_name_label')}
-placeholderTextColor="#999"
-/>
-</View>
-<View style={profileCardStyles.profileLocationRow}>
-{}
-<Ionicons
-name="location-sharp"
-size={16}
-color={COLORS.accentLightRed}
-style={profileCardStyles.locationIcon}
-/>
-<TouchableOpacity onPress={handleOpenSetLocationModal} style={{ flex: 1 }}>
-<Text
-style={[
-profileCardStyles.profileLocationText,
-{ textDecorationLine: 'underline', color: COLORS.accentRed },
-]}
-numberOfLines={1}
->
-{cityCountry || t('profile_no_location')}
-</Text>
-</TouchableOpacity>
-</View>
-</View>
-{}
-<View
-style={[
-profileCardStyles.bioContainer,
-profileCardStyles.bioContainerEdit,
-]}
->
-<TextInput
-style={[
-profileCardStyles.bioText,
-profileCardStyles.editableTextBio,
-!bio && profileCardStyles.bioPlaceholder,
-]}
-multiline
-maxLength={1000}
-value={bio}
-onChangeText={setBio}
-placeholder={t('profile_no_bio_placeholder')}
-placeholderTextColor="#999"
-/>
-</View>
-{}
-{error && <Text style={profileCardStyles.errorText}>{error}</Text>}
-</LinearGradient>
-</View>
-</View>
-{}
-{isUpdating && (
-<View style={styles.loadingOverlay}>
-<ActivityIndicator size="large" color={COLORS.accentRed} />
-</View>
-)}
-{}
-<ChangeLocationModal
-visible={locationModalVisible}
-initialLatitude={userProfile.locationLatitude}
-initialLongitude={userProfile.locationLongitude}
-onClose={() => setLocationModalVisible(false)}
-onUpdated={() => {
-setLocationModalVisible(false);
-onUpdated();
-}}
-/>
-</Modal>
-);
-};
-const styles = StyleSheet.create({
-modalOverlay: {
-flex: 1,
-backgroundColor: 'rgba(0,0,0,0.45)',
 },
 });
 // File: app\features\main\components\MatchCard.tsx
@@ -2243,17 +1660,8 @@ fontWeight: '400',
 },
 });
 // File: app\features\main\components\PlantThumbnail.tsx
-TouchableOpacity,
-View,
-Image,
-Text,
-StyleSheet,
-Platform,
-StyleProp,
-ViewStyle,
-Dimensions,
-} from 'react-native';
-interface PlantThumbnailProps {
+const screenWidth = Dimensions.get('window').width;
+export interface PlantThumbnailProps {
 plant: PlantResponse;
 onPress?: () => void;
 isSelected?: boolean;
@@ -2261,10 +1669,9 @@ containerStyle?: StyleProp<ViewStyle>;
 selectable?: boolean;
 deletable?: boolean;
 OnDelete?: () => void;
-OnEdit?: () => void;
+onInfoPress?: () => void;
 }
-const screenWidth = Dimensions.get('window').width;
-export const PlantThumbnail: React.FC<PlantThumbnailProps> = ({
+const PlantThumbnail: React.FC<PlantThumbnailProps> = ({
 plant,
 onPress,
 isSelected = false,
@@ -2272,6 +1679,7 @@ containerStyle,
 selectable = false,
 deletable = false,
 OnDelete,
+onInfoPress,
 }) => {
 return (
 <View style={[styles.outerContainer, isSelected && styles.selected]}>
@@ -2291,23 +1699,24 @@ resizeMode="contain"
 <Ionicons name="leaf" size={40} color={COLORS.accentGreen} />
 </View>
 )}
+{}
+{onInfoPress && (
+<TouchableOpacity style={styles.infoIconContainer} onPress={onInfoPress}>
+<Ionicons name="information-circle-outline" size={20} color={COLORS.textLight} />
+</TouchableOpacity>
+)}
 <View style={styles.thumbTextWrapper}>
-<Text style={styles.thumbPlantName}>
-{plant.speciesName}
-</Text>
+<Text style={styles.thumbPlantName}>{plant.speciesName}</Text>
 </View>
 </TouchableOpacity>
 {deletable && (
 <TouchableOpacity style={styles.deleteButton} onPress={OnDelete}>
-<Ionicons
-name="close-circle"
-size={24}
-color={COLORS.accentRed}/>
+<Ionicons name="close-circle" size={24} color={COLORS.accentRed} />
 </TouchableOpacity>
 )}
 </View>
 );
-}
+};
 export default PlantThumbnail;
 const styles = StyleSheet.create({
 outerContainer: {
@@ -2373,13 +1782,14 @@ right: -8,
 borderRadius: 50,
 backgroundColor: 'white',
 },
-editButton: {
+infoIconContainer: {
 position: 'absolute',
-bottom: 20,
-right: -8,
-borderRadius: 50,
-padding: 5,
-backgroundColor: COLORS.accentGreen,
+top: 5,
+right: 5,
+backgroundColor: 'rgba(0,0,0,0.5)',
+borderRadius: 12,
+padding: 2,
+zIndex: 2,
 },
 });
 // File: app\features\main\components\ProfileCard.tsx
@@ -2591,209 +2001,6 @@ backgroundColor: COLORS.accentGreen,
 flexDirection: 'row',
 alignItems: 'center',
 justifyContent: 'center',
-},
-});
-// File: app\features\main\components\SelectPlantsModal.tsx
-Modal,
-View,
-Text,
-StyleSheet,
-TouchableOpacity,
-ScrollView,
-Image,
-ActivityIndicator,
-Platform,
-Dimensions,
-} from 'react-native';
-interface SelectPlantsModalProps {
-visible: boolean;
-onConfirm: (selectedPlantIds: number[]) => void;
-onClose: () => void;
-}
-const { width } = Dimensions.get('window');
-export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
-visible,
-onConfirm,
-onClose,
-}) => {
-const {
-data: myPlants,
-isLoading,
-isError,
-refetch,
-} = useMyPlants();
-const [selectedPlantIds, setSelectedPlantIds] = useState<number[]>([]);
-useEffect(() => {
-if (visible) {
-setSelectedPlantIds([]);
-refetch();
-}
-}, [visible, refetch]);
-const handleToggleSelect = (plantId: number) => {
-setSelectedPlantIds((prev) => {
-if (prev.includes(plantId)) {
-return prev.filter((id) => id !== plantId);
-} else {
-return [...prev, plantId];
-}
-});
-};
-const handleConfirm = () => {
-onConfirm(selectedPlantIds);
-};
-if (!visible) {
-return null;
-}
-return (
-<Modal visible={visible} transparent animationType="slide">
-<View style={styles.modalContainer}>
-<View style={styles.modalContent}>
-{isLoading && (
-<View style={styles.loadingContainer}>
-<ActivityIndicator size="large" color={COLORS.primary} />
-<Text style={styles.loadingText}>Loading your plants...</Text>
-</View>
-)}
-{isError && (
-<View style={styles.errorContainer}>
-<Text style={styles.errorText}>
-Could not load your plants. Please try again.
-</Text>
-<TouchableOpacity style={styles.retryButton} onPress={refetch}>
-<Text style={styles.retryButtonText}>Retry</Text>
-</TouchableOpacity>
-</View>
-)}
-{!isLoading && !isError && myPlants && (
-<>
-{myPlants.length === 0 ? (
-<View style={styles.emptyStateContainer}>
-<Text style={styles.emptyStateText}>
-You have no plants in your collection yet.
-</Text>
-</View>
-) : (
-<ScrollView style={styles.scrollArea}>
-<Text style={styles.modalTitle}>Select Plants</Text>
-<Text style={styles.titleText}>
-Select the plants you want to trade for. Tap on a plant to select it.
-</Text>
-<View style={styles.gridContainer}>
-{myPlants.map((plant: PlantResponse) => {
-const isSelected = selectedPlantIds.includes(plant.plantId);
-return (
-<PlantThumbnail
-key={plant.plantId}
-plant={plant}
-isSelected={isSelected}
-selectable={true}
-onPress={() => handleToggleSelect(plant.plantId)}
-/>
-);
-})}
-</View>
-<View style={styles.actionbuttons}>
-<ConfirmCancelButtons
-onConfirm={handleConfirm}
-onCancel={onClose}
-confirmButtonText="Confirm"
-cancelButtonText="Cancel"
-/>
-</View>
-</ScrollView>
-)}
-</>
-)}
-</View>
-</View>
-</Modal>
-);
-};
-const styles = StyleSheet.create({
-modalContainer: {
-flex: 1,
-backgroundColor: 'rgba(0,0,0,0.5)',
-justifyContent: 'flex-end',
-},
-modalContent: {
-backgroundColor: COLORS.textLight,
-borderTopLeftRadius: 16,
-borderTopRightRadius: 16,
-maxHeight: '85%',
-...Platform.select({
-ios: {
-shadowColor: '#000',
-shadowOpacity: 0.15,
-shadowRadius: 10,
-shadowOffset: { width: 0, height: -4 },
-},
-android: {
-elevation: 10,
-},
-}),
-},
-modalTitle: {
-fontSize: 18,
-fontWeight: '700',
-color: COLORS.textDark,
-textAlign: 'center',
-marginTop: 15,
-},
-titleText: {
-fontSize: 14,
-color: COLORS.textDark,
-margin: 10,
-textAlign: 'center',
-},
-loadingContainer: {
-alignItems: 'center',
-marginVertical: 20,
-},
-loadingText: {
-marginTop: 10,
-fontSize: 14,
-color: COLORS.textDark,
-},
-errorContainer: {
-alignItems: 'center',
-marginVertical: 20,
-},
-errorText: {
-fontSize: 14,
-color: COLORS.textDark,
-marginBottom: 10,
-textAlign: 'center',
-},
-retryButton: {
-backgroundColor: COLORS.primary,
-borderRadius: 6,
-paddingHorizontal: 16,
-paddingVertical: 8,
-},
-retryButtonText: {
-color: '#fff',
-fontWeight: '600',
-},
-emptyStateContainer: {
-alignItems: 'center',
-marginVertical: 20,
-},
-emptyStateText: {
-fontSize: 14,
-color: COLORS.textDark,
-textAlign: 'center',
-},
-scrollArea: {
-},
-gridContainer: {
-flexDirection: 'row',
-flexWrap: 'wrap',
-justifyContent: 'center',
-},
-actionbuttons: {
-marginHorizontal: 17,
-marginBottom: 17,
-marginTop: 5,
 },
 });
 // File: app\features\main\components\SwipeableCard.tsx
@@ -3675,6 +2882,645 @@ refetchOnWindowFocus: true,
 }
 );
 };
+// File: app\features\main\modals\ChangeLocationModal.tsx
+Modal,
+View,
+Text,
+StyleSheet,
+TouchableOpacity,
+ActivityIndicator,
+TextInput,
+Alert,
+} from 'react-native';
+interface ChangeLocationModalProps {
+visible: boolean;
+initialLatitude?: number;
+initialLongitude?: number;
+onClose: () => void;
+onUpdated: () => void;
+}
+export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
+visible,
+initialLatitude,
+initialLongitude,
+onClose,
+onUpdated,
+}) => {
+const { t } = useTranslation();
+const [markerPosition, setMarkerPosition] = useState<{
+lat: number;
+lng: number;
+} | null>(null);
+const [region, setRegion] = useState<Region | null>(null);
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState<string | null>(null);
+const [searchInput, setSearchInput] = useState('');
+const hasInitialCoords =
+typeof initialLatitude === 'number' &&
+!Number.isNaN(initialLatitude) &&
+typeof initialLongitude === 'number' &&
+!Number.isNaN(initialLongitude);
+useEffect(() => {
+if (visible) {
+if (hasInitialCoords) {
+log.debug('setting initial coords:', initialLatitude, initialLongitude);
+setRegion({
+latitude: initialLatitude,
+longitude: initialLongitude,
+latitudeDelta: 0.05,
+longitudeDelta: 0.05,
+});
+log.debug('region set:', region);
+setMarkerPosition({ lat: initialLatitude, lng: initialLongitude });
+log.debug('marker set:', markerPosition);
+} else {
+log.debug('no initial coords, setting default region');
+setRegion({
+latitude: 37.78825,
+longitude: -122.4324,
+latitudeDelta: 0.05,
+longitudeDelta: 0.05,
+});
+setMarkerPosition(null);
+}
+setSearchInput('');
+setError(null);
+}
+}, [visible, hasInitialCoords, initialLatitude, initialLongitude]);
+const handleMapPress = (e: MapPressEvent) => {
+const { coordinate } = e.nativeEvent;
+log.debug('map press:', coordinate);
+setMarkerPosition({ lat: coordinate.latitude, lng: coordinate.longitude });
+};
+const handleRegionChangeComplete = (newRegion: Region) => {
+setRegion(newRegion);
+};
+const handleConfirm = async () => {
+if (!markerPosition) {
+onClose();
+return;
+}
+setLoading(true);
+setError(null);
+const payload: UpdateLocationRequest = {
+latitude: markerPosition.lat,
+longitude: markerPosition.lng,
+};
+try {
+await userService.updateLocation(payload);
+onUpdated();
+onClose();
+} catch {
+setError(t('change_location_error_message'));
+} finally {
+setLoading(false);
+}
+};
+const handleCancel = () => {
+onClose();
+};
+const handleSearch = useCallback(async () => {
+if (!searchInput) return;
+setLoading(true);
+setError(null);
+try {
+const url = `https:
+searchInput
+)}&format=json&limit=1`;
+const response = await fetch(url);
+const data = await response.json();
+if (data && data.length > 0) {
+const { lat, lon } = data[0];
+const latNum = parseFloat(lat);
+const lonNum = parseFloat(lon);
+const newRegion: Region = {
+latitude: latNum,
+longitude: lonNum,
+latitudeDelta: 0.05,
+longitudeDelta: 0.05,
+};
+setRegion(newRegion);
+setMarkerPosition({ lat: latNum, lng: lonNum });
+} else {
+setError(t('No results found for that location.'));
+}
+} catch (err) {
+console.error('Geocoding error:', err);
+setError(t('change_location_error_message'));
+} finally {
+setLoading(false);
+}
+}, [searchInput, t]);
+if (!visible) {
+return null;
+}
+return (
+<Modal visible={visible} animationType="slide" transparent>
+<View style={styles.overlay}>
+<View style={styles.modalContainer}>
+<Text style={styles.title}>{t('change_location_title')}</Text>
+<Text style={styles.subtitle}>{t('change_location_instructions')}</Text>
+{}
+<View style={styles.searchRow}>
+<TextInput
+style={styles.searchInput}
+placeholder={t('Enter a city or country...')}
+value={searchInput}
+onChangeText={setSearchInput}
+returnKeyType="search"
+onSubmitEditing={handleSearch}
+/>
+<TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+<Ionicons name="search" size={20} color="#fff" />
+</TouchableOpacity>
+</View>
+{error && <Text style={styles.errorText}>{error}</Text>}
+<View style={styles.mapContainer}>
+{region && (
+<MapView
+style={{ flex: 1 }}
+region={region}
+onRegionChangeComplete={handleRegionChangeComplete}
+onPress={handleMapPress}
+>
+{markerPosition && (
+<Marker
+coordinate={{
+latitude: markerPosition.lat,
+longitude: markerPosition.lng,
+}}
+/>
+)}
+</MapView>
+)}
+</View>
+{loading && (
+<ActivityIndicator size="small" color="#1EAE98" style={{ marginVertical: 10 }} />
+)}
+<ConfirmCancelButtons
+onCancel={handleCancel}
+onConfirm={handleConfirm}
+confirmButtonText={t('Confirm')}
+cancelButtonText={t('Cancel')}
+/>
+</View>
+</View>
+</Modal>
+);
+};
+const styles = StyleSheet.create({
+overlay: {
+flex: 1,
+backgroundColor: 'rgba(0,0,0,0.5)',
+justifyContent: 'center',
+alignItems: 'center',
+},
+modalContainer: {
+width: '90%',
+height: '80%',
+backgroundColor: '#fff',
+borderRadius: 16,
+padding: 20,
+},
+title: {
+fontSize: 18,
+fontWeight: '700',
+color: '#333',
+marginBottom: 10,
+textAlign: 'center',
+},
+subtitle: {
+fontSize: 14,
+color: '#555',
+marginBottom: 10,
+textAlign: 'center',
+},
+searchRow: {
+flexDirection: 'row',
+alignItems: 'center',
+marginBottom: 10,
+},
+searchInput: {
+flex: 1,
+borderWidth: 1,
+borderColor: '#ccc',
+borderRadius: 8,
+paddingHorizontal: 10,
+paddingVertical: 6,
+marginRight: 8,
+},
+searchButton: {
+backgroundColor: COLORS.accentGreen,
+padding: 7,
+borderRadius: 8,
+},
+searchButtonText: {
+color: '#fff',
+fontWeight: '600',
+},
+errorText: {
+color: '#FF6B6B',
+marginBottom: 10,
+},
+mapContainer: {
+flex: 1,
+borderRadius: 8,
+overflow: 'hidden',
+marginBottom: 10,
+backgroundColor: '#eee',
+},
+});
+// File: app\features\main\modals\EditProfileModal.tsx
+Modal,
+View,
+Text,
+Image,
+TextInput,
+StyleSheet,
+TouchableOpacity,
+ActivityIndicator,
+Alert,
+Dimensions,
+ImageBackground,
+} from 'react-native';
+useMyProfile,
+useUpdateProfile,
+useUpdateProfilePicture,
+} from '../hooks/useMyProfileHooks';
+interface EditProfileModalProps {
+visible: boolean;
+userProfile: UserResponse;
+onClose: () => void;
+onUpdated: () => void;
+cardLayout: { x: number; y: number; width: number; height: number };
+}
+export const EditProfileModal: React.FC<EditProfileModalProps> = ({
+visible,
+userProfile,
+onClose,
+onUpdated,
+cardLayout,
+}) => {
+const { t } = useTranslation();
+const screenWidth = Dimensions.get('window').width;
+const [name, setName] = useState(userProfile.name);
+const [bio, setBio] = useState(userProfile.bio || '');
+const [cityCountry, setCityCountry] = useState<string>('');
+const [error, setError] = useState<string | null>(null);
+const [locationModalVisible, setLocationModalVisible] = useState(false);
+const userHasLocation =
+userProfile.locationLatitude !== undefined &&
+userProfile.locationLongitude !== undefined;
+useEffect(() => {
+(async () => {
+if (userHasLocation) {
+try {
+const [geo] = await Location.reverseGeocodeAsync({
+latitude: userProfile.locationLatitude!,
+longitude: userProfile.locationLongitude!,
+});
+if (geo) {
+const city = geo.city || geo.subregion || '';
+const country = geo.country || '';
+setCityCountry(
+city && country ? `${city}, ${country}` : city || country
+);
+}
+} catch (err) {
+console.log('Reverse geocoding error:', err);
+setCityCountry('');
+}
+} else {
+setCityCountry('');
+}
+})();
+}, [userHasLocation, userProfile]);
+const {
+mutate: updateProfile,
+isLoading: isUpdatingProfile,
+isError: isUpdateProfileError,
+error: updateProfileError,
+} = useUpdateProfile();
+const {
+mutate: updateProfilePicture,
+isLoading: isUpdatingPicture,
+isError: isUpdatePictureError,
+error: updatePictureError,
+} = useUpdateProfilePicture();
+const isUpdating = isUpdatingProfile || isUpdatingPicture;
+const handleChangeProfilePicture = useCallback(() => {
+Alert.alert(
+t('profile_change_picture_title'),
+t('profile_change_picture_msg'),
+[
+{
+text: t('profile_picture_select_library'),
+onPress: pickImageFromLibrary,
+},
+{
+text: t('profile_picture_take_photo'),
+onPress: takePictureWithCamera,
+},
+{ text: t('profile_picture_cancel'), style: 'cancel' },
+]
+);
+}, [t]);
+const pickImageFromLibrary = async () => {
+try {
+const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+if (!permissionResult.granted) {
+Alert.alert(t('error_title'), t('error_media_library_permission_denied'));
+return;
+}
+const result = await ImagePicker.launchImageLibraryAsync({
+mediaTypes: ImagePicker.MediaTypeOptions.Images,
+allowsEditing: true,
+aspect: [1, 1],
+quality: 0.7,
+});
+if (!result.canceled && result.assets[0].uri) {
+const resized = await resizeImage(result.assets[0].uri);
+handleUploadProfilePicture(resized.uri);
+}
+} catch (err) {
+console.error('pickImageFromLibrary error:', err);
+Alert.alert(t('error_title'), t('error_could_not_open_image_library'));
+}
+};
+const takePictureWithCamera = async () => {
+try {
+const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+if (!cameraPermission.granted) {
+Alert.alert(t('error_title'), t('error_camera_permission_denied'));
+return;
+}
+const result = await ImagePicker.launchCameraAsync({
+allowsEditing: true,
+aspect: [1, 1],
+quality: 0.7,
+});
+if (!result.canceled && result.assets[0].uri) {
+const resized = await resizeImage(result.assets[0].uri);
+handleUploadProfilePicture(resized.uri);
+}
+} catch (err) {
+console.error('takePictureWithCamera error:', err);
+Alert.alert(t('error_title'), t('error_could_not_open_camera'));
+}
+};
+const resizeImage = async (uri: string) => {
+return await ImageManipulator.manipulateAsync(
+uri,
+[{ resize: { width: 800 } }],
+{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+);
+};
+const handleUploadProfilePicture = async (uri: string) => {
+try {
+const img = await resizeImage(uri);
+const photo = {
+uri: img.uri,
+name: 'profile.jpg',
+type: 'image/jpeg',
+} as any;
+updateProfilePicture({image: photo});
+} catch (err) {
+console.error('Error preparing profile picture:', err);
+Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));
+}
+};
+const handleSave = async () => {
+setError(null);
+const payload: UserUpdateRequest = {
+name: name.trim(),
+bio: bio.trim(),
+};
+if (!payload.name) {
+setError(t('edit_profile_error_name_required'));
+return;
+}
+updateProfile(payload, {
+onError: (error: any) => {
+setError(error?.message || t('edit_profile_error_message'));
+},
+onSuccess: () => {
+onUpdated();
+onClose();
+},
+});
+};
+const handleOpenSetLocationModal = () => {
+log.debug('Opening location modal');
+log.debug('userProfile.locationLatitude', userProfile.locationLatitude);
+log.debug('userProfile.locationLongitude', userProfile.locationLongitude);
+setLocationModalVisible(true);
+};
+useEffect(() => {
+if (isUpdateProfileError && updateProfileError) {
+Alert.alert(t('error_title'), updateProfileError.message || t('error_update_profile_failed'));
+}
+if (isUpdatePictureError && updatePictureError) {
+Alert.alert(t('error_title'), updatePictureError.message || t('error_update_profile_picture_failed'));
+}
+}, [isUpdateProfileError, updateProfileError, isUpdatePictureError, updatePictureError, t]);
+return (
+<Modal visible={visible} animationType="fade" transparent>
+<View style={styles.modalOverlay}>
+{}
+<View
+style={[
+profileCardStyles.profileCardContainer,
+{
+position: 'absolute',
+top: cardLayout.y,
+left: cardLayout.x,
+width: cardLayout.width,
+},
+]}
+>
+<LinearGradient
+colors={[COLORS.cardBg1, COLORS.cardBg2]}
+style={profileCardStyles.profileCardInner}
+>
+{}
+<View style={profileCardStyles.profileTopContainer}>
+<ImageBackground
+source={require('../../../../assets/images/profileBackground.png')}
+style={profileCardStyles.profileBackgroundImage}
+/>
+<View style={profileCardStyles.profilePictureContainer}>
+{userProfile.profilePictureUrl ? (
+<Image
+source={{ uri: userProfile.profilePictureUrl }}
+style={profileCardStyles.profilePicture}
+/>
+) : (
+<View style={profileCardStyles.profilePlaceholder}>
+<Ionicons name="person-circle-outline" size={90} color="#ccc" />
+</View>
+)}
+{}
+<TouchableOpacity
+style={profileCardStyles.cameraIconWrapper}
+onPress={handleChangeProfilePicture}
+disabled={isUpdating}
+>
+<Ionicons name="camera" size={18} color="#fff" />
+</TouchableOpacity>
+</View>
+{}
+<TouchableOpacity
+onPress={handleSave}
+style={profileCardStyles.profileEditButton}
+disabled={isUpdating}
+>
+{isUpdating ? (
+<ActivityIndicator size="small" color={COLORS.textLight} />
+) : (
+<MaterialIcons name="check" size={20} color={COLORS.textLight} />
+)}
+</TouchableOpacity>
+</View>
+{}
+<View style={profileCardStyles.profileInfoContainer}>
+<View
+style={[
+profileCardStyles.nameContainer,
+profileCardStyles.editNameContainer,
+{ maxWidth: screenWidth * 0.9 - 215 },
+]}
+>
+<TextInput
+style={[
+profileCardStyles.profileNameText,
+profileCardStyles.editableTextName,
+]}
+value={name}
+maxLength={16}
+onChangeText={setName}
+placeholder={t('edit_profile_name_label')}
+placeholderTextColor="#999"
+/>
+</View>
+<View style={profileCardStyles.profileLocationRow}>
+{}
+<Ionicons
+name="location-sharp"
+size={16}
+color={COLORS.accentLightRed}
+style={profileCardStyles.locationIcon}
+/>
+<TouchableOpacity onPress={handleOpenSetLocationModal} style={{ flex: 1 }}>
+<Text
+style={[
+profileCardStyles.profileLocationText,
+{ textDecorationLine: 'underline', color: COLORS.accentRed },
+]}
+numberOfLines={1}
+>
+{cityCountry || t('profile_no_location')}
+</Text>
+</TouchableOpacity>
+</View>
+</View>
+{}
+<View
+style={[
+profileCardStyles.bioContainer,
+profileCardStyles.bioContainerEdit,
+]}
+>
+<TextInput
+style={[
+profileCardStyles.bioText,
+profileCardStyles.editableTextBio,
+!bio && profileCardStyles.bioPlaceholder,
+]}
+multiline
+maxLength={1000}
+value={bio}
+onChangeText={setBio}
+placeholder={t('profile_no_bio_placeholder')}
+placeholderTextColor="#999"
+/>
+</View>
+{}
+{error && <Text style={profileCardStyles.errorText}>{error}</Text>}
+</LinearGradient>
+</View>
+</View>
+{}
+{isUpdating && (
+<View style={styles.loadingOverlay}>
+<ActivityIndicator size="large" color={COLORS.accentRed} />
+</View>
+)}
+{}
+<ChangeLocationModal
+visible={locationModalVisible}
+initialLatitude={userProfile.locationLatitude}
+initialLongitude={userProfile.locationLongitude}
+onClose={() => setLocationModalVisible(false)}
+onUpdated={() => {
+setLocationModalVisible(false);
+onUpdated();
+}}
+/>
+</Modal>
+);
+};
+const styles = StyleSheet.create({
+modalOverlay: {
+flex: 1,
+backgroundColor: 'rgba(0,0,0,0.45)',
+},
+});
+// File: app\features\main\modals\InfoModal.tsx
+const { width } = Dimensions.get('window');
+export interface InfoModalProps {
+visible: boolean;
+onClose: () => void;
+children: React.ReactNode;
+}
+const InfoModal: React.FC<InfoModalProps> = ({ visible, onClose, children }) => {
+return (
+<Modal visible={visible} transparent animationType="fade">
+<View style={styles.infoOverlayContainer}>
+<LinearGradient style={styles.infoModalContainer} colors={[COLORS.primary, COLORS.secondary]}>
+<TouchableOpacity style={styles.closeButton} onPress={onClose}>
+<Ionicons name="close" size={24} color="#fff" />
+</TouchableOpacity>
+{children}
+</LinearGradient>
+</View>
+</Modal>
+);
+};
+export default InfoModal;
+const styles = StyleSheet.create({
+infoOverlayContainer: {
+flex: 1,
+backgroundColor: 'rgba(0,0,0,0.6)',
+justifyContent: 'center',
+alignItems: 'center',
+},
+infoModalContainer: {
+width: width * 0.9,
+borderRadius: 12,
+overflow: 'hidden',
+padding: 10,
+position: 'relative',
+},
+closeButton: {
+position: 'absolute',
+top: 15,
+right: 15,
+backgroundColor: 'rgba(0,0,0,0.5)',
+borderRadius: 20,
+padding: 4,
+zIndex: 10,
+},
+});
 // File: app\features\main\modals\ItsAMatchModal.tsx
 Modal,
 View,
@@ -3798,6 +3644,209 @@ closeButtonText: {
 color: COLORS.textLight,
 fontSize: 16,
 fontWeight: '600',
+},
+});
+// File: app\features\main\modals\SelectPlantsModal.tsx
+Modal,
+View,
+Text,
+StyleSheet,
+TouchableOpacity,
+ScrollView,
+Image,
+ActivityIndicator,
+Platform,
+Dimensions,
+} from 'react-native';
+interface SelectPlantsModalProps {
+visible: boolean;
+onConfirm: (selectedPlantIds: number[]) => void;
+onClose: () => void;
+}
+const { width } = Dimensions.get('window');
+export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
+visible,
+onConfirm,
+onClose,
+}) => {
+const {
+data: myPlants,
+isLoading,
+isError,
+refetch,
+} = useMyPlants();
+const [selectedPlantIds, setSelectedPlantIds] = useState<number[]>([]);
+useEffect(() => {
+if (visible) {
+setSelectedPlantIds([]);
+refetch();
+}
+}, [visible, refetch]);
+const handleToggleSelect = (plantId: number) => {
+setSelectedPlantIds((prev) => {
+if (prev.includes(plantId)) {
+return prev.filter((id) => id !== plantId);
+} else {
+return [...prev, plantId];
+}
+});
+};
+const handleConfirm = () => {
+onConfirm(selectedPlantIds);
+};
+if (!visible) {
+return null;
+}
+return (
+<Modal visible={visible} transparent animationType="slide">
+<View style={styles.modalContainer}>
+<View style={styles.modalContent}>
+{isLoading && (
+<View style={styles.loadingContainer}>
+<ActivityIndicator size="large" color={COLORS.primary} />
+<Text style={styles.loadingText}>Loading your plants...</Text>
+</View>
+)}
+{isError && (
+<View style={styles.errorContainer}>
+<Text style={styles.errorText}>
+Could not load your plants. Please try again.
+</Text>
+<TouchableOpacity style={styles.retryButton} onPress={refetch}>
+<Text style={styles.retryButtonText}>Retry</Text>
+</TouchableOpacity>
+</View>
+)}
+{!isLoading && !isError && myPlants && (
+<>
+{myPlants.length === 0 ? (
+<View style={styles.emptyStateContainer}>
+<Text style={styles.emptyStateText}>
+You have no plants in your collection yet.
+</Text>
+</View>
+) : (
+<ScrollView style={styles.scrollArea}>
+<Text style={styles.modalTitle}>Select Plants</Text>
+<Text style={styles.titleText}>
+Select the plants you want to trade for. Tap on a plant to select it.
+</Text>
+<View style={styles.gridContainer}>
+{myPlants.map((plant: PlantResponse) => {
+const isSelected = selectedPlantIds.includes(plant.plantId);
+return (
+<PlantThumbnail
+key={plant.plantId}
+plant={plant}
+isSelected={isSelected}
+selectable={true}
+onPress={() => handleToggleSelect(plant.plantId)}
+/>
+);
+})}
+</View>
+<View style={styles.actionbuttons}>
+<ConfirmCancelButtons
+onConfirm={handleConfirm}
+onCancel={onClose}
+confirmButtonText="Confirm"
+cancelButtonText="Cancel"
+/>
+</View>
+</ScrollView>
+)}
+</>
+)}
+</View>
+</View>
+</Modal>
+);
+};
+const styles = StyleSheet.create({
+modalContainer: {
+flex: 1,
+backgroundColor: 'rgba(0,0,0,0.5)',
+justifyContent: 'flex-end',
+},
+modalContent: {
+backgroundColor: COLORS.textLight,
+borderTopLeftRadius: 16,
+borderTopRightRadius: 16,
+maxHeight: '85%',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOpacity: 0.15,
+shadowRadius: 10,
+shadowOffset: { width: 0, height: -4 },
+},
+android: {
+elevation: 10,
+},
+}),
+},
+modalTitle: {
+fontSize: 18,
+fontWeight: '700',
+color: COLORS.textDark,
+textAlign: 'center',
+marginTop: 15,
+},
+titleText: {
+fontSize: 14,
+color: COLORS.textDark,
+margin: 10,
+textAlign: 'center',
+},
+loadingContainer: {
+alignItems: 'center',
+marginVertical: 20,
+},
+loadingText: {
+marginTop: 10,
+fontSize: 14,
+color: COLORS.textDark,
+},
+errorContainer: {
+alignItems: 'center',
+marginVertical: 20,
+},
+errorText: {
+fontSize: 14,
+color: COLORS.textDark,
+marginBottom: 10,
+textAlign: 'center',
+},
+retryButton: {
+backgroundColor: COLORS.primary,
+borderRadius: 6,
+paddingHorizontal: 16,
+paddingVertical: 8,
+},
+retryButtonText: {
+color: '#fff',
+fontWeight: '600',
+},
+emptyStateContainer: {
+alignItems: 'center',
+marginVertical: 20,
+},
+emptyStateText: {
+fontSize: 14,
+color: COLORS.textDark,
+textAlign: 'center',
+},
+scrollArea: {
+},
+gridContainer: {
+flexDirection: 'row',
+flexWrap: 'wrap',
+justifyContent: 'center',
+},
+actionbuttons: {
+marginHorizontal: 17,
+marginBottom: 17,
+marginTop: 5,
 },
 });
 // File: app\features\main\screens\AddPlantScreen.tsx
@@ -4338,7 +4387,7 @@ const glimmerAnim = useRef(new Animated.Value(1)).current;
 useEffect(() => {
 if (pendingCount > 0) {
 Animated.timing(buttonWidth, {
-toValue: 180,
+toValue: 210,
 duration: 300,
 useNativeDriver: false,
 }).start();
@@ -4347,12 +4396,12 @@ Animated.sequence([
 Animated.timing(glimmerAnim, {
 toValue: 0.8,
 duration: 500,
-useNativeDriver: true,
+useNativeDriver: false,
 }),
 Animated.timing(glimmerAnim, {
 toValue: 1,
 duration: 500,
-useNativeDriver: true,
+useNativeDriver: false,
 }),
 ]),
 { resetBeforeIteration: true }
@@ -4365,7 +4414,7 @@ useNativeDriver: false,
 }).start();
 glimmerAnim.setValue(1);
 }
-}, [pendingCount, buttonWidth, glimmerAnim]);
+}, [pendingCount]);
 const buttonAnimatedStyle = {
 width: buttonWidth,
 opacity: glimmerAnim,
@@ -4460,16 +4509,6 @@ style={styles.headerUserImage}
 </Text>
 </TouchableOpacity>
 {}
-<Animated.View style={[styles.pendingButtonContainer, buttonAnimatedStyle]}>
-<TouchableOpacity style={styles.pendingButton} onPress={handleOpenTradeProposals}>
-{pendingCount === 0 ? (
-<Ionicons name="document-text-outline" size={24} color="#fff" />
-) : (
-<Text style={styles.pendingButtonText}>{pendingCount} pending proposals</Text>
-)}
-</TouchableOpacity>
-</Animated.View>
-{}
 {sortedMessages.length === 0 ? (
 <View style={styles.emptyChatContainer}>
 <Text style={styles.noMessagesText}>{t('chat_no_messages_yet')}</Text>
@@ -4488,10 +4527,38 @@ return <MessageBubble message={item} isMine={isMine} />;
 />
 </View>
 )}
+<View style={styles.floatingButtonsContainer}>
+<Animated.View
+style={[
+styles.pendingButtonContainer,
+{ width: buttonWidth, opacity: glimmerAnim },
+]}
+>
+{}
+<TouchableOpacity
+style={styles.pendingButtonTouchable}
+onPress={handleOpenTradeProposals}
+activeOpacity={0.8}
+>
+{}
+<View style={styles.backgroundBar}>
+{pendingCount > 0 && (
+<Text style={styles.pendingButtonText}>
+{`${pendingCount} pending proposals`}
+</Text>
+)}
+</View>
+{}
+<View style={styles.circleButton}>
+<Ionicons name="document-text-outline" size={24} color="#fff" />
+</View>
+</TouchableOpacity>
+</Animated.View>
 {}
 <TouchableOpacity style={styles.tradeFab} onPress={handleOpenTradeProposal}>
 <Ionicons name="swap-horizontal" size={26} color="#fff" />
 </TouchableOpacity>
+</View>
 {}
 <KeyboardAvoidingView
 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -4523,6 +4590,20 @@ const styles = StyleSheet.create({
 container: {
 flex: 1,
 backgroundColor: COLORS.background,
+},
+headerUserInfo: {
+flexDirection: 'row',
+alignItems: 'center',
+marginLeft: 10,
+},
+headerUserImage: {
+borderColor: COLORS.accentGreen,
+borderWidth: 3,
+width: 60,
+height: 60,
+borderRadius: 30,
+marginRight: 8,
+backgroundColor: '#ccc',
 },
 centerContainer: {
 flex: 1,
@@ -4564,7 +4645,6 @@ alignItems: 'center',
 shadowColor: '#000',
 shadowOpacity: 0.1,
 shadowRadius: 5,
-shadowOffset: { width: 0, height: 2 },
 elevation: 2,
 },
 browseButtonText: {
@@ -4615,9 +4695,12 @@ backgroundColor: COLORS.accentGreen,
 borderRadius: 20,
 padding: 10,
 },
-tradeFab: {
+floatingButtonsContainer: {
 position: 'relative',
-alignSelf: 'flex-end',
+flexDirection: 'row',
+},
+tradeFab: {
+position: 'absolute',
 bottom: 20,
 right: 20,
 backgroundColor: COLORS.accentGreen,
@@ -4629,48 +4712,49 @@ justifyContent: 'center',
 shadowColor: '#000',
 shadowOpacity: 0.1,
 shadowRadius: 4,
-shadowOffset: { width: 0, height: 2 },
 elevation: 4,
-},
-headerUserInfo: {
-flexDirection: 'row',
-alignItems: 'center',
-marginLeft: 10,
-},
-headerUserImage: {
-borderColor: COLORS.accentGreen,
-borderWidth: 3,
-width: 60,
-height: 60,
-borderRadius: 30,
-marginRight: 8,
-backgroundColor: '#ccc',
 },
 pendingButtonContainer: {
 position: 'absolute',
-bottom: 100,
+bottom: 20,
 left: 20,
-zIndex: 10,
 height: 56,
+borderRadius: 28,
+overflow: 'hidden',
 },
-pendingButton: {
+pendingButtonTouchable: {
 flex: 1,
+borderRadius: 28,
+},
+backgroundBar: {
+...StyleSheet.absoluteFillObject,
 backgroundColor: COLORS.accentGreen,
 borderRadius: 28,
-alignItems: 'center',
+paddingLeft: 56,
 justifyContent: 'center',
-flexDirection: 'row',
-paddingHorizontal: 12,
-shadowColor: '#000',
-shadowOpacity: 0.3,
-shadowRadius: 4,
-shadowOffset: { width: 0, height: 2 },
-elevation: 5,
+paddingRight: 16,
 },
 pendingButtonText: {
-color: COLORS.textLight,
+color: '#fff',
 fontWeight: '600',
 fontSize: 14,
+alignSelf: 'flex-end',
+},
+circleButton: {
+position: 'absolute',
+left: 0,
+top: 0,
+width: 56,
+height: 56,
+borderRadius: 28,
+backgroundColor: COLORS.accentGreen,
+alignItems: 'center',
+justifyContent: 'center',
+shadowColor: '#000',
+shadowOffset: { width: 0, height: 2 },
+shadowOpacity: 0.3,
+shadowRadius: 4,
+elevation: 5,
 },
 });
 // File: app\features\main\screens\ConnectionsScreen.tsx
@@ -4932,8 +5016,6 @@ TouchableOpacity,
 Alert,
 Dimensions,
 ScrollView,
-Modal,
-Pressable,
 } from 'react-native';
 usePlantsLikedByMeFromUser,
 usePlantsLikedByUserFromMe,
@@ -5012,10 +5094,12 @@ contentContainerStyle={styles.horizontalScrollContent}
 const isSelected = selectedIds.includes(plant.plantId);
 return (
 <PlantThumbnail
+key={plant.plantId}
 plant={plant}
 isSelected={isSelected}
 selectable
 onPress={() => onToggle(plant.plantId)}
+onInfoPress={() => setPlantInfo(plant)}
 />
 );
 })}
@@ -5035,10 +5119,7 @@ if (errorOtherPlants || errorMyPlants) {
 return (
 <View style={styles.errorContainer}>
 <Text style={styles.errorText}>Couldn’t load plants. Please retry.</Text>
-<TouchableOpacity
-style={styles.closeButton}
-onPress={() => navigation.goBack()}
->
+<TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
 <Ionicons name="close" size={24} color="#fff" />
 </TouchableOpacity>
 </View>
@@ -5046,54 +5127,34 @@ onPress={() => navigation.goBack()}
 }
 return (
 <View style={styles.modalBackground}>
-{}
-<LinearGradient
-style={styles.modalContainer}
-colors={[COLORS.primary, COLORS.secondary]}
->
-{}
-<TouchableOpacity
-style={styles.closeButton}
-onPress={() => navigation.goBack()}
->
+<LinearGradient style={styles.modalContainer} colors={[COLORS.primary, COLORS.secondary]}>
+<TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
 <Ionicons name="close" size={24} color="#fff" />
 </TouchableOpacity>
-{}
-{renderHorizontalSection(
-"They’re Offering?",
-othersPlantsILiked,
-selectedOtherPlantIds,
-toggleOtherPlantSelection
-)}
+{renderHorizontalSection("They’re Offering?", othersPlantsILiked, selectedOtherPlantIds, toggleOtherPlantSelection)}
 {}
 <View style={styles.tradeDividerContainer}>
 <View style={styles.dividerLine} />
-<TouchableOpacity style={styles.tradeButton} onPress={handleTrade}>
+<TouchableOpacity style={styles.tradeButtonWrapper} onPress={handleTrade}>
+<LinearGradient colors={['#ff8c00', '#ff4500']} style={styles.tradeButton}>
 {creatingProposal ? (
 <ActivityIndicator size="small" color="#fff" />
 ) : (
-<Text style={styles.tradeButtonText}>TRADE</Text>
-)}
-</TouchableOpacity>
+<View style={styles.tradeButtonContent}>
+<Ionicons name="swap-horizontal" size={20} color="#fff" />
+<Text style={styles.tradeButtonText}> TRADE</Text>
 </View>
-{}
-{renderHorizontalSection(
-"You’re Offering?",
-myPlantsTheyLiked,
-selectedMyPlantIds,
-toggleMyPlantSelection
 )}
 </LinearGradient>
+</TouchableOpacity>
+<View style={styles.dividerLine} />
+</View>
+{renderHorizontalSection("You’re Offering?", myPlantsTheyLiked, selectedMyPlantIds, toggleMyPlantSelection)}
+</LinearGradient>
 {}
-<Modal visible={!!plantInfo} transparent animationType="fade">
-<View style={styles.previewOverlayContainer}>
-<View style={styles.previewCardWrapper}>
-{plantInfo && (
-<PlantCardWithInfo plant={plantInfo} compact={false} />
-)}
-</View>
-</View>
-</Modal>
+<InfoModal visible={!!plantInfo} onClose={() => setPlantInfo(null)}>
+{plantInfo && <PlantCardWithInfo plant={plantInfo} compact={false} />}
+</InfoModal>
 </View>
 );
 };
@@ -5106,8 +5167,7 @@ justifyContent: 'center',
 alignItems: 'center',
 },
 modalContainer: {
-width: width * 0.95,
-height: height * 0.97,
+margin: 20,
 borderRadius: 20,
 padding: 20,
 alignItems: 'center',
@@ -5142,40 +5202,39 @@ horizontalScrollContent: {
 paddingHorizontal: 10,
 },
 tradeDividerContainer: {
-width: '100%',
-height: 70,
+flexDirection: 'row',
 alignItems: 'center',
-justifyContent: 'center',
-marginVertical: 10,
-position: 'relative',
+marginVertical: 20,
+width: '100%',
 },
 dividerLine: {
-position: 'absolute',
-top: '50%',
-left: 10,
-right: 10,
-height: 2,
+flex: 1,
+height: 1,
 backgroundColor: '#fff',
 opacity: 0.7,
 },
+tradeButtonWrapper: {
+marginHorizontal: 10,
+},
 tradeButton: {
-width: 100,
-height: 40,
-borderRadius: 20,
-backgroundColor: COLORS.primary,
-alignItems: 'center',
-justifyContent: 'center',
-zIndex: 2,
+paddingVertical: 10,
+paddingHorizontal: 20,
+borderRadius: 25,
 shadowColor: '#000',
 shadowOpacity: 0.3,
 shadowRadius: 4,
 shadowOffset: { width: 0, height: 2 },
 elevation: 5,
 },
+tradeButtonContent: {
+flexDirection: 'row',
+alignItems: 'center',
+},
 tradeButtonText: {
 color: '#fff',
 fontWeight: '700',
 fontSize: 16,
+marginLeft: 5,
 },
 loadingContainer: {
 flex: 1,
@@ -5198,19 +5257,6 @@ fontSize: 16,
 color: '#fff',
 textAlign: 'center',
 marginBottom: 10,
-},
-previewOverlayContainer: {
-flex: 1,
-backgroundColor: 'rgba(0,0,0,0.6)',
-justifyContent: 'center',
-alignItems: 'center',
-zIndex: 10,
-},
-previewCardWrapper: {
-width: width * 0.9,
-borderRadius: 12,
-overflow: 'hidden',
-zIndex: 10,
 },
 });
 // File: app\features\main\screens\MyProfileScreen.tsx
@@ -7197,6 +7243,19 @@ const { mutate: updateStatus } = useUpdateTradeProposalStatus(connectionId);
 const handleUpdateStatus = (proposalId: number, newStatus: TradeProposalStatus) => {
 updateStatus({ proposalId, newStatus });
 };
+const handleConfirmCompletion = (proposal: TradeProposalResponse) => {
+handleUpdateStatus(proposal.tradeProposalId, TradeProposalStatus.Completed);
+};
+const handleDeletePlant = (plantId: number) => {
+Alert.alert(
+"Delete Plant",
+"Are you sure you want to remove this plant from your inventory?",
+[
+{ text: "Cancel", style: "cancel" },
+{ text: "Delete", onPress: () => console.log(`Deleting plant ${plantId}`) },
+]
+);
+};
 if (isLoading || profileLoading) {
 return (
 <SafeAreaProvider style={styles.loadingContainer}>
@@ -7215,12 +7274,39 @@ return (
 );
 }
 const renderItem = ({ item }: { item: TradeProposalResponse }) => {
+const isOwner = myProfile!.userId === item.proposalOwnerUserId;
+const hasConfirmed = isOwner ? item.ownerCompletionConfirmed : item.responderCompletionConfirmed;
 return (
-<TradeProposalCard
-proposal={item}
-currentUserId={myProfile!.userId}
-onUpdateStatus={handleUpdateStatus}
-/>
+<View style={styles.proposalCard}>
+{}
+<Text style={styles.proposalTitle}>Trade Proposal #{item.tradeProposalId}</Text>
+<Text>Status: {item.tradeProposalStatus}</Text>
+<Text>Created: {new Date(item.createdAt).toLocaleString()}</Text>
+{}
+{item.tradeProposalStatus === TradeProposalStatus.Accepted && !hasConfirmed && (
+<TouchableOpacity
+style={styles.confirmButton}
+onPress={() => handleConfirmCompletion(item)}
+>
+<Text style={styles.buttonText}>Confirm Completion</Text>
+</TouchableOpacity>
+)}
+{}
+{item.tradeProposalStatus === TradeProposalStatus.Completed && (
+<View style={styles.deleteSection}>
+<Text style={styles.deletePrompt}>Trade complete – remove your traded plants:</Text>
+{(isOwner ? item.plantsProposedByUser1 : item.plantsProposedByUser2).map((plant) => (
+<TouchableOpacity
+key={plant.plantId}
+style={styles.deleteButton}
+onPress={() => handleDeletePlant(plant.plantId)}
+>
+<Text style={styles.deleteButtonText}>Delete {plant.speciesName}</Text>
+</TouchableOpacity>
+))}
+</View>
+)}
+</View>
 );
 };
 return (
@@ -7298,6 +7384,52 @@ paddingHorizontal: 20,
 emptyText: {
 fontSize: 16,
 color: COLORS.textDark,
+},
+proposalCard: {
+backgroundColor: "#fff",
+borderRadius: 10,
+padding: 16,
+marginBottom: 12,
+shadowColor: "#000",
+shadowOpacity: 0.1,
+shadowRadius: 4,
+elevation: 3,
+},
+proposalTitle: {
+fontSize: 18,
+fontWeight: "bold",
+marginBottom: 8,
+},
+confirmButton: {
+backgroundColor: COLORS.primary,
+paddingVertical: 10,
+paddingHorizontal: 16,
+borderRadius: 8,
+marginTop: 10,
+},
+buttonText: {
+color: "#fff",
+fontSize: 16,
+textAlign: "center",
+},
+deleteSection: {
+marginTop: 10,
+},
+deletePrompt: {
+fontSize: 14,
+marginBottom: 6,
+color: COLORS.textDark,
+},
+deleteButton: {
+backgroundColor: "#d9534f",
+paddingVertical: 8,
+paddingHorizontal: 12,
+borderRadius: 6,
+marginBottom: 6,
+},
+deleteButtonText: {
+color: "#fff",
+fontSize: 14,
 },
 });
 // File: app\features\main\styles\headerStyles.ts
@@ -7995,7 +8127,13 @@ const dispatch = useDispatch();
 const { accessToken } = useSelector((state: RootState) => state.auth);
 const { refreshToken } = useSelector((state: RootState) => state.auth);
 const [initializing, setInitializing] = useState(true);
-const { data: userProfile, isLoading: userProfileLoading, refetch: refetchUserProfile} = useMyProfile();
+const {
+data: userProfile,
+isLoading: userProfileLoading,
+isError: userProfileError,
+error: userProfileErrorDetails,
+refetch: refetchUserProfile,
+} = useMyProfile();
 useEffect(() => {
 const initializeAuth = async () => {
 const storedAccessToken = await storage.getAccessToken();
@@ -8006,6 +8144,7 @@ accessToken: storedAccessToken,
 refreshToken: storedRefreshToken,
 }));
 try {
+log.debug('Fetching /me to get user profile');
 refetchUserProfile();
 dispatch(setInitialTokens({
 accessToken: store.getState().auth.accessToken,
@@ -8036,6 +8175,16 @@ return (
 </View>
 );
 }
+if (userProfileError && !userProfileLoading) {
+return (
+<View style={styles.errorContainer}>
+<Text style={styles.errorText}>
+Error retrieving profile: {userProfileErrorDetails?.message || "Unknown error"}
+</Text>
+<Button title="Retry" onPress={refetchUserProfile} />
+</View>
+);
+}
 if (!userProfile?.locationLatitude || !userProfile?.locationLongitude) {
 return <OnboardingNavigator />;
 }
@@ -8047,6 +8196,18 @@ loadingContainer: {
 flex: 1,
 alignItems: 'center',
 justifyContent: 'center',
+},
+errorContainer: {
+flex: 1,
+alignItems: 'center',
+justifyContent: 'center',
+padding: 20,
+},
+errorText: {
+fontSize: 16,
+color: 'red',
+marginBottom: 10,
+textAlign: 'center',
 },
 });
 // File: app\navigation\AuthNavigator.tsx
@@ -8426,6 +8587,9 @@ acceptedAt: Date;
 declinedAt: Date;
 completedAt: Date;
 connection: ConnectionResponse;
+proposalOwnerUserId: number;
+ownerCompletionConfirmed: boolean;
+responderCompletionConfirmed: boolean;
 }
 // File: app\types\enums.ts
 export enum PlantStage {

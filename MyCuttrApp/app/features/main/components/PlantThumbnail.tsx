@@ -140,5 +140,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 2,
     zIndex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

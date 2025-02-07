@@ -309,8 +309,12 @@ namespace Cuttr.Infrastructure.Mappers
                 PlantsProposedByUser2 = ef.TradeProposalPlants
                     .Where(tpp => !tpp.IsProposedByUser1 && tpp.Plant != null)
                     .Select(tpp => MapToPlant(tpp.Plant))
-                    .ToList()
+                    .ToList(),
+                ProposalOwnerUserId = ef.ProposalOwnerUserId,
+                OwnerCompletionConfirmed = ef.OwnerCompletionConfirmed,
+                ResponderCompletionConfirmed = ef.ResponderCompletionConfirmed
             };
+
 
             return tradeProposal;
 
