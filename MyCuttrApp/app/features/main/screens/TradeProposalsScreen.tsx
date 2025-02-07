@@ -24,7 +24,6 @@ import {
 import { TradeProposalResponse } from "../../../types/apiTypes";
 import { TradeProposalStatus } from "../../../types/enums";
 import PlantThumbnail from "../components/PlantThumbnail";
-import InfoModal from "../modals/InfoModal";
 import { headerStyles } from "../styles/headerStyles";
 
 type RouteParams = {
@@ -34,7 +33,7 @@ type RouteParams = {
 // ----- NEW COMPONENT: CompletedTradeActions -----
 // This component renders the plant thumbnails for a completed trade
 // and allows the user to individually mark each plant as "deleted" or "kept."
-// Once all plants have a decision, the provided confirmCompletion function is called.
+// Once all plants have a decision, the confirmCompletion function is automatically called.
 const CompletedTradeActions: React.FC<{
   plants: any[];
   proposalId: number;
@@ -48,7 +47,7 @@ const CompletedTradeActions: React.FC<{
 
   // If all plants have been marked, automatically confirm completion.
   React.useEffect(() => {
-    if (plants.length > 0 && plants.every((plant) => decisions[plant.plantId] !== undefined)) {
+    if (plants.length > 0 && plants.every((p) => decisions[p.plantId] !== undefined)) {
       confirmCompletion(proposalId);
     }
   }, [decisions, plants, proposalId, confirmCompletion]);
@@ -61,6 +60,18 @@ const CompletedTradeActions: React.FC<{
     });
     setDecisions(newDecisions);
   };
+
+  // "Keep All" marks all plants as kept.
+  const handleKeepAll = () => {
+    const newDecisions: { [plantId: number]: "deleted" | "kept" } = {};
+    plants.forEach((plant) => {
+      newDecisions[plant.plantId] = "kept";
+    });
+    setDecisions(newDecisions);
+  };
+
+  // Check if at least one plant remains undecided
+  const hasUndecidedPlants = plants.some((plant) => decisions[plant.plantId] === undefined);
 
   return (
     <View style={styles.completedSection}>
@@ -103,14 +114,19 @@ const CompletedTradeActions: React.FC<{
           );
         })}
       </ScrollView>
-      {/* Show the "Delete All" button only if at least one plant is not yet decided */}
-      {plants.some((plant) => decisions[plant.plantId] === undefined) && (
+      {hasUndecidedPlants && (
         <View style={styles.allActionsRow}>
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteAllButton]}
             onPress={handleDeleteAll}
           >
             <Text style={styles.actionButtonText}>Delete All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.keepAllButton]}
+            onPress={handleKeepAll}
+          >
+            <Text style={styles.actionButtonText}>Keep All</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -145,13 +161,12 @@ const TradeProposalsScreen: React.FC = () => {
 
   // Render each trade proposal card.
   const renderItem = ({ item }: { item: TradeProposalResponse }) => {
-    const isOwner = myProfile!.userId === item.proposalOwnerUserId;
-    const myPlants = isOwner ? item.plantsProposedByUser1 : item.plantsProposedByUser2;
-    const otherPlants = isOwner ? item.plantsProposedByUser2 : item.plantsProposedByUser1;
-    const hasConfirmed = isOwner
-      ? item.ownerCompletionConfirmed
-      : item.responderCompletionConfirmed;
-
+    // Instead of comparing to proposalOwnerUserId, we now check against the connection.
+    const isUser1 = myProfile!.userId === item.connection.user1.userId;
+    const myPlants = isUser1 ? item.plantsProposedByUser1 : item.plantsProposedByUser2;
+    const otherPlants = isUser1 ? item.plantsProposedByUser2 : item.plantsProposedByUser1;
+    const hasConfirmed = isUser1 ? item.ownerCompletionConfirmed : item.responderCompletionConfirmed;
+  
     // Handlers for pending proposals.
     const handleAccept = () =>
       Alert.alert("Accept Proposal", "Do you want to accept this proposal?", [
@@ -180,7 +195,8 @@ const TradeProposalsScreen: React.FC = () => {
             handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
         },
       ]);
-    // For accepted proposals.
+  
+    // For accepted proposals: show both "Mark as Completed" and "Changed My Mind" buttons.
     const handleMarkCompleted = () =>
       Alert.alert("Complete Trade", "Mark this trade as completed?", [
         { text: "No" },
@@ -190,10 +206,19 @@ const TradeProposalsScreen: React.FC = () => {
             handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Completed),
         },
       ]);
-
+    const handleChangedMyMind = () =>
+      Alert.alert("Changed Your Mind?", "Do you want to cancel this proposal?", [
+        { text: "No" },
+        {
+          text: "Yes",
+          onPress: () =>
+            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+        },
+      ]);
+  
     let actions = null;
     if (item.tradeProposalStatus === TradeProposalStatus.Pending) {
-      actions = isOwner ? (
+      actions = isUser1 ? (
         <TouchableOpacity
           style={[styles.actionButton, styles.cancelButton]}
           onPress={handleCancel}
@@ -218,19 +243,26 @@ const TradeProposalsScreen: React.FC = () => {
       );
     } else if (item.tradeProposalStatus === TradeProposalStatus.Accepted) {
       actions = (
-        <TouchableOpacity
-          style={[styles.actionButton, styles.completeButton]}
-          onPress={handleMarkCompleted}
-        >
-          <Text style={styles.actionButtonText}>Mark as Completed</Text>
-        </TouchableOpacity>
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.completeButton]}
+            onPress={handleMarkCompleted}
+          >
+            <Text style={styles.actionButtonText}>Mark as Completed</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.changedMyMindButton]}
+            onPress={handleChangedMyMind}
+          >
+            <Text style={styles.actionButtonText}>Changed My Mind</Text>
+          </TouchableOpacity>
+        </View>
       );
     } else if (item.tradeProposalStatus === TradeProposalStatus.Completed) {
-      // When completed: if the user has not yet confirmed their decision,
-      // render the CompletedTradeActions component; otherwise, show a simple label.
+      // In the completed state, always pass the logged in user's plant list.
       actions = !hasConfirmed ? (
         <CompletedTradeActions
-          plants={isOwner ? myPlants : otherPlants}
+          plants={myPlants}
           proposalId={item.tradeProposalId}
           confirmCompletion={confirmCompletion}
         />
@@ -240,7 +272,7 @@ const TradeProposalsScreen: React.FC = () => {
         </View>
       );
     }
-
+  
     return (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Proposal #{item.tradeProposalId}</Text>
@@ -250,7 +282,7 @@ const TradeProposalsScreen: React.FC = () => {
         <View style={styles.offersSection}>
           <View style={styles.offerColumn}>
             <Text style={styles.columnTitle}>
-              {isOwner ? "Your Offer" : "Their Offer"}
+              {isUser1 ? "Your Offer" : "Their Offer"}
             </Text>
             <ScrollView horizontal contentContainerStyle={styles.offerScroll}>
               {myPlants.map((plant) => (
@@ -265,7 +297,7 @@ const TradeProposalsScreen: React.FC = () => {
           </View>
           <View style={styles.offerColumn}>
             <Text style={styles.columnTitle}>
-              {isOwner ? "Their Offer" : "Your Offer"}
+              {isUser1 ? "Their Offer" : "Your Offer"}
             </Text>
             <ScrollView horizontal contentContainerStyle={styles.offerScroll}>
               {otherPlants.map((plant) => (
@@ -435,13 +467,13 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     paddingVertical: 10,
-    marginHorizontal: 4,
+    marginHorizontal: 2,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
   acceptButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
   },
   rejectButton: {
     backgroundColor: COLORS.accentRed,
@@ -450,7 +482,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accentRed,
   },
   completeButton: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.accentGreen,
+  },
+  changedMyMindButton: {
+    backgroundColor: "#F39C12", // for example
   },
   actionButtonText: {
     color: "#fff",
@@ -485,7 +520,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   plantActionButton: {
-    backgroundColor: COLORS.primary,
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 6,
@@ -495,7 +529,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
   },
-  // New styles for the inline CompletedTradeActions component:
   decisionLabelContainer: {
     marginTop: 4,
     paddingVertical: 4,
@@ -512,12 +545,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accentRed,
   },
   individualKeepButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accentGreen,
   },
   allActionsRow: {
     flexDirection: "row",
     marginTop: 10,
-    justifyContent: "space-around",
+    justifyContent: "center",
+    alignItems: "center",
     width: "100%",
+  },
+  keepAllButton: {
+    backgroundColor: COLORS.accentGreen,
+  },
+  deleteAllButton: {
+    backgroundColor: COLORS.accentRed,
   },
 });
