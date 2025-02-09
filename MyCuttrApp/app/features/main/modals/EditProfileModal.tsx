@@ -20,7 +20,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { ChangeLocationModal } from './ChangeLocationModal';
+import {ChangeLocationModal} from './ChangeLocationModal';
 import { COLORS } from '../../../theme/colors';
 import { profileCardStyles } from '../styles/profileCardStyles';
 import { log } from '../../../utils/logger';
@@ -394,6 +394,12 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   
 });

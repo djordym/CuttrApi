@@ -1,43 +1,95 @@
 // File: app/features/onboarding/screens/OnboardingLocationScreen.tsx
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions } from 'react-native';
-import MapView, { Marker, MapPressEvent } from 'react-native-maps';
-import { userService } from '../../../api/userService';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Dimensions,
+} from 'react-native';
+import MapView, { Marker, MapPressEvent, Region } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { COLORS } from '../../../theme/colors';
 import { useUpdateLocation } from '../../main/hooks/useMyProfileHooks';
-
 
 const { width, height } = Dimensions.get('window');
 
 const OnboardingLocationScreen: React.FC = () => {
-  // **New Hook: Update User Location**
+  const navigation = useNavigation();
   const updateLocation = useUpdateLocation();
-  
-  // Some default region or your user’s approximate location
-  const [region, setRegion] = useState({
-    latitude: 37.78825, // Example lat
-    longitude: -122.4324, // Example lng
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
 
+  const [region, setRegion] = useState<Region | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [permissionStatus, setPermissionStatus] =
+    useState<Location.PermissionStatus | null>(null);
 
+  // Request permission and possibly fetch current location on mount.
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setPermissionStatus(status);
+
+      if (status === Location.PermissionStatus.GRANTED) {
+        try {
+          const loc = await Location.getCurrentPositionAsync({});
+          const newRegion: Region = {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          };
+          setRegion(newRegion);
+          setSelectedLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+        } catch (err) {
+          // If we fail to fetch current location, fallback to a default (e.g. SF).
+          setRegion({
+            latitude: 37.78825,
+            longitude: -122.4324,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          });
+        }
+      } else {
+        // Permission denied => fallback region
+        setRegion({
+          latitude: 37.78825,
+          longitude: -122.4324,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        });
+      }
+    })();
+  }, []);
+
+  // Handle taps on the map to place marker
   const handleMapPress = (e: MapPressEvent) => {
     const { latitude, longitude } = e.nativeEvent.coordinate;
     setSelectedLocation({ latitude, longitude });
-    setRegion((prev) => ({
-      ...prev,
-      latitude,
-      longitude,
-    }));
+    setRegion((prev) =>
+      prev
+        ? { ...prev, latitude, longitude }
+        : {
+            latitude,
+            longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }
+    );
   };
 
+  // Confirm the chosen location
   const handleConfirmLocation = async () => {
     if (!selectedLocation) {
-      Alert.alert('No location selected', 'Please tap on the map to select your approximate location');
+      Alert.alert('No Location', 'Please tap on the map to choose a location.');
       return;
     }
     try {
@@ -45,7 +97,8 @@ const OnboardingLocationScreen: React.FC = () => {
         latitude: selectedLocation.latitude,
         longitude: selectedLocation.longitude,
       });
-      
+      // Navigate to the next onboarding step
+      navigation.navigate('OnboardingWelcome' as never);
     } catch (error) {
       Alert.alert('Error', 'Failed to update location. Please try again.');
     }
@@ -53,22 +106,34 @@ const OnboardingLocationScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Set Your Location</Text>
-      <Text style={styles.subtitle}>
-        Tap on the map to drop a pin at your approximate location.
+      <LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={styles.header}>
+        <Text style={styles.headerTitle}>Set Your Location</Text>
+      </LinearGradient>
+
+      <Text style={styles.instructions}>
+        {permissionStatus === Location.PermissionStatus.DENIED
+          ? 'Permission denied. Tap on the map to choose a location.'
+          : 'Tap on the map to set your approximate location.'}
       </Text>
 
-      <MapView
-        style={styles.map}
-        initialRegion={region}
-        onPress={handleMapPress}
-      >
-        {selectedLocation && (
-          <Marker coordinate={selectedLocation} />
+      <View style={styles.mapContainer}>
+        {region && (
+          <MapView
+            style={StyleSheet.absoluteFill}
+            region={region}
+            onPress={handleMapPress}
+          >
+            {selectedLocation && (
+              <Marker
+                coordinate={selectedLocation}
+                title="Selected Location"
+              />
+            )}
+          </MapView>
         )}
-      </MapView>
+      </View>
 
-      <TouchableOpacity onPress={handleConfirmLocation} style={styles.confirmButton}>
+      <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmLocation}>
         <Text style={styles.confirmButtonText}>Confirm & Continue</Text>
       </TouchableOpacity>
     </View>
@@ -80,35 +145,48 @@ export default OnboardingLocationScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'flex-start',
-    paddingTop: 50,
     backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 20,
+  header: {
+    padding: 20,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 26,
     fontWeight: '700',
-    marginHorizontal: 20,
-    marginBottom: 8,
+    color: '#fff',
   },
-  subtitle: {
-    fontSize: 14,
+  instructions: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
     marginHorizontal: 20,
-    marginBottom: 16,
-    color: '#555',
+    marginVertical: 10,
   },
-  map: {
-    width: width,
-    height: height * 0.55,
+  mapContainer: {
+    flex: 1,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    marginBottom: 10,
   },
   confirmButton: {
-    backgroundColor: '#1EAE98',
-    padding: 16,
+    backgroundColor: COLORS.accentGreen,
     margin: 20,
+    paddingVertical: 16,
     borderRadius: 8,
+    alignItems: 'center',
   },
   confirmButtonText: {
     color: '#fff',
+    fontSize: 18,
     fontWeight: '600',
-    textAlign: 'center',
   },
 });

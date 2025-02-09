@@ -15,8 +15,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Location from 'expo-location';
-
 import { PlantCardWithInfo } from '../components/PlantCardWithInfo';
 import { useMyProfile } from '../hooks/useMyProfileHooks';
 import { useMyPlants } from '../hooks/usePlantHooks';
@@ -68,11 +66,6 @@ const MyProfileScreen: React.FC = () => {
   });
   const cardRef = useRef<View>(null);
 
-  // If the user has location
-  const userHasLocation =
-    userProfile?.locationLatitude !== undefined &&
-    userProfile?.locationLongitude !== undefined;
-
   // Handler for measuring the card and opening the modal
   const openEditModal = () => {
     cardRef.current?.measureInWindow((x, y, width, height) => {
@@ -84,32 +77,6 @@ const MyProfileScreen: React.FC = () => {
   const OnDelete = () => {
     // Implement delete functionality here
   };
-
-  // Reverse-geocode for city / country
-  useEffect(() => {
-    (async () => {
-      if (userHasLocation) {
-        try {
-          const [geo] = await Location.reverseGeocodeAsync({
-            latitude: userProfile!.locationLatitude!,
-            longitude: userProfile!.locationLongitude!,
-          });
-          if (geo) {
-            const city = geo.city || geo.subregion || '';
-            const country = geo.country || '';
-            setCityCountry(
-              city && country ? `${city}, ${country}` : city || country
-            );
-          }
-        } catch (error) {
-          console.log('Reverse geocoding error:', error);
-          setCityCountry('');
-        }
-      } else {
-        setCityCountry('');
-      }
-    })();
-  }, [userHasLocation, userProfile]);
 
   // Navigation to AddPlant
   const handleAddPlant = () => {
@@ -196,7 +163,7 @@ const MyProfileScreen: React.FC = () => {
         <View style={styles.plantsSectionWrapper}>
           <View style={styles.plantsSectionHeader}>
             <Text style={styles.plantsSectionTitle}>
-              {userProfile.name} {t('profile_my_plants_section')}
+            {t('profile_my_plants_section')}
             </Text>
             <TouchableOpacity
               onPress={handleAddPlant}

@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+// File: app/features/onboarding/screens/ChangeLocationModal.tsx
+
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -6,16 +8,16 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  TextInput,
   Alert,
+  Dimensions,
 } from 'react-native';
 import MapView, { Marker, MapPressEvent, Region } from 'react-native-maps';
+import * as Location from 'expo-location'; // If using Expo
 import { useTranslation } from 'react-i18next';
-import { userService } from '../../../api/userService';
-import { UpdateLocationRequest } from '../../../types/apiTypes';
 import { log } from '../../../utils/logger';
 import ConfirmCancelButtons from '../components/ConfirmCancelButtons';
-import { Ionicons } from '@expo/vector-icons';
+import { userService } from '../../../api/userService';
+import { UpdateLocationRequest } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
 
 interface ChangeLocationModalProps {
@@ -34,15 +36,12 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
   onUpdated,
 }) => {
   const { t } = useTranslation();
-
-  const [markerPosition, setMarkerPosition] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
+  const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState('');
+  const [permissionStatus, setPermissionStatus] =
+    useState<Location.PermissionStatus | null>(null);
 
   // Check if valid numeric coords (including zero).
   const hasInitialCoords =
@@ -51,59 +50,73 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
     typeof initialLongitude === 'number' &&
     !Number.isNaN(initialLongitude);
 
-  /**
-   * If the modal is opening and we have valid initial coords, set them;
-   * otherwise, reset so the user can place a marker.
-   */
+  // When the modal opens, handle location permission + region setup
   useEffect(() => {
-    if (visible) {
-      if (hasInitialCoords) {
-        log.debug('setting initial coords:', initialLatitude, initialLongitude);
-        // Create a region with a small delta so the user can see the marker
+    if (!visible) return;
+
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setPermissionStatus(status);
+
+      // If granted and no initial coords, try fetching current location
+      if (status === Location.PermissionStatus.GRANTED && !hasInitialCoords) {
+        try {
+          const loc = await Location.getCurrentPositionAsync({});
+          setRegion({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          });
+          setMarkerPosition({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+        } catch (error) {
+          // fallback to a default region if location fails
+          setRegion({
+            latitude: 37.78825,
+            longitude: -122.4324,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          });
+        }
+      } else if (hasInitialCoords) {
         setRegion({
-          latitude: initialLatitude,
-          longitude: initialLongitude,
+          latitude: initialLatitude!,
+          longitude: initialLongitude!,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         });
-        log.debug('region set:', region);
-        setMarkerPosition({ lat: initialLatitude, lng: initialLongitude });
-        log.debug('marker set:', markerPosition);
+        setMarkerPosition({ lat: initialLatitude!, lng: initialLongitude! });
       } else {
-        // Default region or fallback
-        log.debug('no initial coords, setting default region');
+        // If no coords and permission denied, default
         setRegion({
           latitude: 37.78825,
           longitude: -122.4324,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         });
-        setMarkerPosition(null);
       }
-      setSearchInput('');
-      setError(null);
-    }
-  }, [visible, hasInitialCoords, initialLatitude, initialLongitude]);
 
-  /**
-   * Handler for tapping the map to place a marker.
-   */
+      setError(null);
+    })();
+  }, [visible]);
+
+  // If not visible, do not render
+  if (!visible) {
+    return null;
+  }
+
+  // Handle map tap
   const handleMapPress = (e: MapPressEvent) => {
-    const { coordinate } = e.nativeEvent;
-    log.debug('map press:', coordinate);
-    setMarkerPosition({ lat: coordinate.latitude, lng: coordinate.longitude });
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    setMarkerPosition({ lat: latitude, lng: longitude });
   };
 
-  /**
-   * Update the region state after the user pans/zooms.
-   */
+  // Update region after user panning/zooming
   const handleRegionChangeComplete = (newRegion: Region) => {
     setRegion(newRegion);
   };
 
-  /**
-   * Confirm the location: call the API and update user location.
-   */
+  // Confirm location => call API
   const handleConfirm = async () => {
     if (!markerPosition) {
       onClose();
@@ -128,82 +141,21 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
     }
   };
 
-  /**
-   * Cancel the modal without saving anything.
-   */
+  // Cancel
   const handleCancel = () => {
     onClose();
   };
-
-  /**
-   * Use OpenStreetMap's Nominatim to geocode the user's text input,
-   * then set the map region and marker accordingly.
-   */
-  const handleSearch = useCallback(async () => {
-    if (!searchInput) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Use a free OSM/Nominatim endpoint to fetch location for given query
-      // NOTE: Production apps should handle usage policies / user input carefully.
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        searchInput
-      )}&format=json&limit=1`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0];
-        // Convert strings to numbers
-        const latNum = parseFloat(lat);
-        const lonNum = parseFloat(lon);
-        // Set the region so the map moves to that location
-        const newRegion: Region = {
-          latitude: latNum,
-          longitude: lonNum,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        };
-        setRegion(newRegion);
-        setMarkerPosition({ lat: latNum, lng: lonNum });
-      } else {
-        setError(t('No results found for that location.'));
-      }
-    } catch (err) {
-      console.error('Geocoding error:', err);
-      setError(t('change_location_error_message'));
-    } finally {
-      setLoading(false);
-    }
-  }, [searchInput, t]);
-
-  if (!visible) {
-    return null;
-  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <Text style={styles.title}>{t('change_location_title')}</Text>
-          <Text style={styles.subtitle}>{t('change_location_instructions')}</Text>
-
-          {/* Search Box */}
-          <View style={styles.searchRow}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('Enter a city or country...')}
-              value={searchInput}
-              onChangeText={setSearchInput}
-              returnKeyType="search"
-              onSubmitEditing={handleSearch}
-            />
-            <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-              <Ionicons name="search" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.subtitle}>
+            {permissionStatus === Location.PermissionStatus.DENIED
+              ? t('Permission denied. Tap on the map to place a marker.')
+              : t('Tap on the map to place or move the marker.')}
+          </Text>
 
           {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -228,7 +180,7 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
           </View>
 
           {loading && (
-            <ActivityIndicator size="small" color="#1EAE98" style={{ marginVertical: 10 }} />
+            <ActivityIndicator size="small" color={COLORS.accentGreen} style={{ marginVertical: 10 }} />
           )}
 
           <ConfirmCancelButtons
@@ -256,12 +208,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
+    // iOS shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    // Android elevation
+    elevation: 5,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 6,
     textAlign: 'center',
   },
   subtitle: {
@@ -270,32 +229,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  searchInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginRight: 8,
-  },
-  searchButton: {
-    backgroundColor: COLORS.accentGreen,
-    padding: 7,
-    borderRadius: 8,
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
   errorText: {
     color: '#FF6B6B',
     marginBottom: 10,
+    textAlign: 'center',
   },
   mapContainer: {
     flex: 1,
@@ -304,5 +241,4 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: '#eee',
   },
-  
 });

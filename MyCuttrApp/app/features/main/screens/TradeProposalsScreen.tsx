@@ -1,11 +1,8 @@
-// File: app/features/main/screens/TradeProposalsScreen.tsx
-
 import React from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,118 +21,18 @@ import {
 import { TradeProposalResponse } from "../../../types/apiTypes";
 import { TradeProposalStatus } from "../../../types/enums";
 import PlantThumbnail from "../components/PlantThumbnail";
+import CompletedTradeActions from "../components/CompletedTradeActions";
 import { headerStyles } from "../styles/headerStyles";
 import { Ionicons } from "@expo/vector-icons";
+
+// New imports for the info modal functionality.
+import InfoModal from "../modals/InfoModal";
+import PlantCardWithInfo from "../components/PlantCardWithInfo";
+import { PlantResponse } from "../../../types/apiTypes";
 
 type RouteParams = {
   connectionId: number;
 };
-
-// ----- NEW COMPONENT: CompletedTradeActions -----
-// This component renders the plant thumbnails for a completed trade
-// and allows the user to individually mark each plant as "deleted" or "kept."
-// Once all plants have a decision, the confirmCompletion function is automatically called.
-const CompletedTradeActions: React.FC<{
-  plants: any[];
-  proposalId: number;
-  confirmCompletion: (proposalId: number) => void;
-}> = ({ plants, proposalId, confirmCompletion }) => {
-  const [decisions, setDecisions] = React.useState<{ [plantId: number]: "deleted" | "kept" }>({});
-
-  const markPlant = (plantId: number, decision: "deleted" | "kept") => {
-    setDecisions((prev) => ({ ...prev, [plantId]: decision }));
-  };
-
-  // If all plants have been marked, automatically confirm completion.
-  React.useEffect(() => {
-    if (plants.length > 0 && plants.every((p) => decisions[p.plantId] !== undefined)) {
-      confirmCompletion(proposalId);
-    }
-  }, [decisions, plants, proposalId, confirmCompletion]);
-
-  // "Delete All" marks all plants as deleted.
-  const handleDeleteAll = () => {
-    const newDecisions: { [plantId: number]: "deleted" | "kept" } = {};
-    plants.forEach((plant) => {
-      newDecisions[plant.plantId] = "deleted";
-    });
-    setDecisions(newDecisions);
-  };
-
-  // "Keep All" marks all plants as kept.
-  const handleKeepAll = () => {
-    const newDecisions: { [plantId: number]: "deleted" | "kept" } = {};
-    plants.forEach((plant) => {
-      newDecisions[plant.plantId] = "kept";
-    });
-    setDecisions(newDecisions);
-  };
-
-  // Check if at least one plant remains undecided
-  const hasUndecidedPlants = plants.some((plant) => decisions[plant.plantId] === undefined);
-
-  return (
-    <View style={styles.completedSection}>
-      <Text style={styles.completedPrompt}>
-        Trade complete – choose your action for your plants:
-      </Text>
-      <ScrollView horizontal contentContainerStyle={styles.plantScroll}>
-        {plants.map((plant) => {
-          const decision = decisions[plant.plantId];
-          return (
-            <View key={plant.plantId} style={styles.plantThumbnailContainer}>
-              <PlantThumbnail
-                plant={plant}
-                selectable={false}
-                onInfoPress={() => {}}
-              />
-              {decision ? (
-                <View style={styles.decisionLabelContainer}>
-                  <Text style={styles.decisionLabelText}>
-                    {decision === "deleted" ? "Deleted" : "Kept"}
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.plantActions}>
-                  <TouchableOpacity
-                    style={[styles.plantActionButton, styles.individualDeleteButton]}
-                    onPress={() => markPlant(plant.plantId, "deleted")}
-                  >
-                    <Text style={styles.plantActionText}>Delete</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.plantActionButton, styles.individualKeepButton]}
-                    onPress={() => markPlant(plant.plantId, "kept")}
-                  >
-                    <Text style={styles.plantActionText}>Keep</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
-      {hasUndecidedPlants && (
-        <View style={styles.allActionsRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.keepAllButton]}
-            onPress={handleKeepAll}
-          >
-            <Text style={styles.actionButtonText}>Keep All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteAllButton]}
-            onPress={handleDeleteAll}
-          >
-            <Text style={styles.actionButtonText}>Delete All</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-};
-
-// ----- END NEW COMPONENT
 
 const TradeProposalsScreen: React.FC = () => {
   const route = useRoute();
@@ -155,28 +52,30 @@ const TradeProposalsScreen: React.FC = () => {
   const { mutate: updateStatus } = useUpdateTradeProposalStatus(connectionId);
   const { mutate: confirmCompletion } = useConfirmTradeProposalCompletion(connectionId);
 
-  // Helper: update status for transitions like Accepted, Rejected, etc.
+  // State to track which plant's info to display.
+  const [plantInfo, setPlantInfo] = React.useState<PlantResponse | null>(null);
+
+  // Helper to update proposal status.
   const handleUpdateStatus = (proposalId: number, newStatus: TradeProposalStatus) => {
     updateStatus({ proposalId, newStatus });
   };
 
   const renderItem = ({ item }: { item: TradeProposalResponse }) => {
-    // Determine which side of the connection is "mine" based on the connection.
+    // Determine which side is yours.
     const isUser1 = myProfile!.userId === item.connection.user1.userId;
-    // Use isUser1 to choose the plant lists for display.
     const myPlants = isUser1 ? item.plantsProposedByUser1 : item.plantsProposedByUser2;
     const otherPlants = isUser1 ? item.plantsProposedByUser2 : item.plantsProposedByUser1;
 
-    // Use a separate check for "owner" to decide the confirmation flag.
+    // Determine confirmation flag.
     const isOwner = myProfile!.userId === item.proposalOwnerUserId;
     const hasConfirmed = isOwner
       ? item.ownerCompletionConfirmed
       : item.responderCompletionConfirmed;
 
-    // Column titles – always label the plant list that belongs to the logged in user as "Your Offer"
+    // Column titles.
     const userOfferTitle = "Your Offer";
     const otherOfferTitle = "Their Offer";
-  
+
     // Handlers for pending proposals.
     const handleAccept = () =>
       Alert.alert("Accept Proposal", "Do you want to accept this proposal?", [
@@ -205,8 +104,8 @@ const TradeProposalsScreen: React.FC = () => {
             handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
         },
       ]);
-  
-    // For accepted proposals: show both "Mark as Completed" and "Changed My Mind" buttons.
+
+    // Handlers for accepted proposals.
     const handleMarkCompleted = () =>
       Alert.alert("Complete Trade", "Mark this trade as completed?", [
         { text: "No" },
@@ -225,7 +124,7 @@ const TradeProposalsScreen: React.FC = () => {
             handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
         },
       ]);
-  
+
     let actions = null;
     if (item.tradeProposalStatus === TradeProposalStatus.Pending) {
       actions = isOwner ? (
@@ -269,12 +168,13 @@ const TradeProposalsScreen: React.FC = () => {
         </View>
       );
     } else if (item.tradeProposalStatus === TradeProposalStatus.Completed) {
-      // In the completed state, show the CompletedTradeActions for the logged in user's plants.
+      // For completed proposals, show the CompletedTradeActions component.
       actions = !hasConfirmed ? (
         <CompletedTradeActions
           plants={myPlants}
           proposalId={item.tradeProposalId}
           confirmCompletion={confirmCompletion}
+          onPlantInfoPress={(plant) => setPlantInfo(plant)}
         />
       ) : (
         <View style={styles.completedSection}>
@@ -282,52 +182,89 @@ const TradeProposalsScreen: React.FC = () => {
         </View>
       );
     }
-  
+
+    // Determine layout:
+    // • If both offers have exactly one plant, display them side-by-side (horizontally).
+    // • Otherwise, stack the two sections vertically. In both cases the plant thumbnails use a flex container.
+    const isHorizontalLayout = myPlants.length === 1 && otherPlants.length === 1;
+
     return (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Proposal #{item.tradeProposalId}</Text>
         <Text style={styles.cardSubtitle}>
           Created: {new Date(item.createdAt).toLocaleString()}
         </Text>
-    
-        <View style={styles.offersSection}>
-          {/* Left column: myPlants (labeled always as "Your Offer") */}
-          <View style={styles.offerColumn}>
-            <Text style={styles.columnTitle}>{userOfferTitle}</Text>
-            <ScrollView horizontal contentContainerStyle={styles.offerScroll}>
-              {myPlants.map((plant) => (
-                <PlantThumbnail
-                  key={plant.plantId}
-                  plant={plant}
-                  selectable={false}
-                  onInfoPress={() => {}}
-                />
-              ))}
-            </ScrollView>
+
+        {isHorizontalLayout ? (
+          // Horizontal layout (one plant per offer)
+          <View style={styles.offersSectionHorizontal}>
+            <View style={styles.offerColumnHorizontal}>
+              <Text style={styles.columnTitle}>{userOfferTitle}</Text>
+              <View style={styles.offerListFlex}>
+                {myPlants.map((plant) => (
+                  <PlantThumbnail
+                    key={plant.plantId}
+                    plant={plant}
+                    selectable={false}
+                    onInfoPress={() => setPlantInfo(plant)}
+                  />
+                ))}
+              </View>
+            </View>
+            <View style={styles.offerColumnHorizontal}>
+              <Text style={styles.columnTitle}>{otherOfferTitle}</Text>
+              <View style={styles.offerListFlex}>
+                {otherPlants.map((plant) => (
+                  <PlantThumbnail
+                    key={plant.plantId}
+                    plant={plant}
+                    selectable={false}
+                    onInfoPress={() => setPlantInfo(plant)}
+                  />
+                ))}
+              </View>
+            </View>
           </View>
-    
-          {/* Right column: otherPlants (labeled as "Their Offer") */}
-          <View style={styles.offerColumn}>
-            <Text style={styles.columnTitle}>{otherOfferTitle}</Text>
-            <ScrollView horizontal contentContainerStyle={styles.offerScroll}>
-              {otherPlants.map((plant) => (
-                <PlantThumbnail
-                  key={plant.plantId}
-                  plant={plant}
-                  selectable={false}
-                  onInfoPress={() => {}}
-                />
-              ))}
-            </ScrollView>
+        ) : (
+          // Vertical layout: sections stacked one on top of the other
+          <View style={styles.offersSectionVertical}>
+            <View style={styles.offerSection}>
+              <Text style={styles.columnTitle}>{userOfferTitle}</Text>
+              <View style={styles.offerListFlex}>
+                {myPlants.map((plant) => (
+                  <PlantThumbnail
+                    key={plant.plantId}
+                    plant={plant}
+                    selectable={false}
+                    onInfoPress={() => setPlantInfo(plant)}
+                    style={styles.verticalThumbnail}
+                  />
+                ))}
+              </View>
+            </View>
+            <View style={styles.offerSection}>
+              <Text style={styles.columnTitle}>{otherOfferTitle}</Text>
+              <View style={styles.offerListFlex}>
+                {otherPlants.map((plant) => (
+                  <PlantThumbnail
+                    key={plant.plantId}
+                    plant={plant}
+                    selectable={false}
+                    onInfoPress={() => setPlantInfo(plant)}
+                    style={styles.verticalThumbnail}
+                  />
+                ))}
+              </View>
+            </View>
           </View>
-        </View>
-    
+        )}
+
         <Text style={styles.statusText}>Status: {item.tradeProposalStatus}</Text>
         {actions}
       </View>
     );
   };
-  
+
   if (isLoading || profileLoading) {
     return (
       <SafeAreaProvider style={styles.loadingContainer}>
@@ -339,10 +276,7 @@ const TradeProposalsScreen: React.FC = () => {
     return (
       <SafeAreaProvider style={styles.errorContainer}>
         <Text style={styles.errorText}>Failed to load trade proposals.</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={() => refetch()}
-        >
+        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </SafeAreaProvider>
@@ -355,7 +289,10 @@ const TradeProposalsScreen: React.FC = () => {
         style={headerStyles.headerGradient}
       >
         <View style={headerStyles.headerColumn1}>
-        <TouchableOpacity style={headerStyles.headerBackButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={headerStyles.headerBackButton}
+            onPress={() => navigation.goBack()}
+          >
             <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
           </TouchableOpacity>
           <Text style={headerStyles.headerTitle}>Trade Proposals</Text>
@@ -374,6 +311,10 @@ const TradeProposalsScreen: React.FC = () => {
           <Text style={styles.emptyText}>No trade proposals found.</Text>
         </View>
       )}
+      {/* InfoModal shows the full plant card when a thumbnail’s info is pressed */}
+      <InfoModal visible={!!plantInfo} onClose={() => setPlantInfo(null)}>
+        {plantInfo && <PlantCardWithInfo plant={plantInfo} compact={false} />}
+      </InfoModal>
     </SafeAreaProvider>
   );
 };
@@ -445,22 +386,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 12,
   },
-  offersSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  offerColumn: {
-    flex: 1,
-    alignItems: "center",
-  },
   columnTitle: {
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 4,
-  },
-  offerScroll: {
-    paddingHorizontal: 5,
+    textAlign: "center",
   },
   statusText: {
     fontSize: 14,
@@ -500,15 +430,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
   },
-  // Completed trade section styles:
   completedSection: {
     marginTop: 10,
     alignItems: "center",
-  },
-  completedPrompt: {
-    fontSize: 14,
-    marginBottom: 6,
-    color: COLORS.textDark,
   },
   completedMessage: {
     fontSize: 16,
@@ -516,56 +440,35 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     paddingVertical: 10,
   },
-  plantScroll: {
-    paddingHorizontal: 10,
+  // ----- Horizontal Layout Styles (when each offer has one plant) -----
+  offersSectionHorizontal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
-  plantThumbnailContainer: {
-    marginRight: 10,
+  offerColumnHorizontal: {
+    flex: 1,
     alignItems: "center",
   },
-  plantActions: {
-    flexDirection: "row",
-    marginTop: 4,
-  },
-  plantActionButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    marginHorizontal: 2,
-  },
-  plantActionText: {
-    color: "#fff",
-    fontSize: 12,
-  },
-  decisionLabelContainer: {
-    marginTop: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: "#ddd",
-    borderRadius: 6,
-  },
-  decisionLabelText: {
-    fontSize: 12,
-    color: "#555",
-    fontWeight: "600",
-  },
-  individualDeleteButton: {
-    backgroundColor: COLORS.accentRed,
-  },
-  individualKeepButton: {
-    backgroundColor: COLORS.accentGreen,
-  },
-  allActionsRow: {
-    flexDirection: "row",
-    marginTop: 10,
-    justifyContent: "center",
+  // ----- Vertical Layout Styles (when one or both offers have more than one plant) -----
+  offersSectionVertical: {
+    flexDirection: "column",
     alignItems: "center",
+    marginBottom: 12,
+  },
+  offerSection: {
     width: "100%",
+    alignItems: "center",
+    marginBottom: 16,
   },
-  keepAllButton: {
-    backgroundColor: COLORS.accentGreen,
+  // Common flex container for plant thumbnails (similar to MyProfileScreen's thumbViewContainer)
+  offerListFlex: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginTop: 8,
   },
-  deleteAllButton: {
-    backgroundColor: COLORS.accentRed,
+  verticalThumbnail: {
+    margin: 4,
   },
 });

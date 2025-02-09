@@ -357,6 +357,22 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       );
     }
 
+    if (myPlants && myPlants.length === 0) {
+      return (
+        <View style={styles.noPlantsContainer}>
+          <Text style={styles.noPlantsText}>
+            Please add some plants to your gallery before exploring :)
+          </Text>
+          <TouchableOpacity
+            style={styles.reloadButton}
+            onPress={() => navigation.navigate('AddPlant' as never)}
+          >
+            <Text style={styles.reloadButtonText}>Add a Plant</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     if (!plantStack || plantStack.length === 0) {
       return (
         <View style={styles.noPlantsContainer}>
@@ -469,7 +485,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   loaderContainer: {
-    marginTop: 40,
+    flex: 1,
     alignItems: 'center',
   },
   loaderText: {
@@ -478,9 +494,10 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
   },
   noPlantsContainer: {
-    marginTop: 40,
+    flex: 1,
     alignItems: 'center',
     paddingHorizontal: 20,
+    justifyContent: 'center',
   },
   noPlantsText: {
     fontSize: 16,

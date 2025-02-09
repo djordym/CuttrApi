@@ -1790,6 +1790,8 @@ backgroundColor: 'rgba(0,0,0,0.5)',
 borderRadius: 12,
 padding: 2,
 zIndex: 2,
+alignItems: 'center',
+justifyContent: 'center',
 },
 });
 // File: app\features\main\components\ProfileCard.tsx
@@ -2871,6 +2873,17 @@ queryClient.invalidateQueries(["tradeProposals", connectionId]);
 }
 );
 };
+export const useConfirmTradeProposalCompletion = (connectionId: number) => {
+const queryClient = useQueryClient();
+return useMutation(
+(proposalId: number) => connectionService.confirmTradeProposalCompletion(connectionId, proposalId),
+{
+onSuccess: () => {
+queryClient.invalidateQueries(["tradeProposals", connectionId]);
+},
+}
+);
+}
 // File: app\features\main\hooks\useUserMatches.ts
 export const useUserMatches = (connectionId: number) => {
 return useQuery<MatchResponse[]>(
@@ -6448,6 +6461,7 @@ isError,
 updatePreferences,
 isUpdating,
 } = useUserPreferences();
+const [searchRadius, setSearchRadius] = useState<number>(10);
 const [selectedStages, setSelectedStages] = useState<PlantStage[]>([]);
 const [selectedCategories, setSelectedCategories] = useState<PlantCategory[]>([]);
 const [selectedWatering, setSelectedWatering] = useState<WateringNeed[]>([]);
@@ -6460,6 +6474,7 @@ const [selectedExtras, setSelectedExtras] = useState<Extras[]>([]);
 const [error, setError] = useState<string | null>(null);
 useEffect(() => {
 if (preferences) {
+setSearchRadius(preferences.searchRadius ?? 10);
 setSelectedStages(preferences.preferedPlantStage || []);
 setSelectedCategories(preferences.preferedPlantCategory || []);
 setSelectedWatering(preferences.preferedWateringNeed || []);
@@ -6471,6 +6486,10 @@ setSelectedPetFriendly(preferences.preferedPetFriendly || []);
 setSelectedExtras(preferences.preferedExtras || []);
 }
 }, [preferences]);
+const handleSetSearchRadius = (val: number) => {
+if (val === 500) setSearchRadius(40000);
+else setSearchRadius(val);
+}
 const handleCancel = () => {
 navigation.goBack();
 };
@@ -6479,6 +6498,7 @@ if (!preferences) return;
 setError(null);
 const updated: UserPreferencesRequest = {
 ...preferences,
+searchRadius,
 preferedPlantStage: selectedStages,
 preferedPlantCategory: selectedCategories,
 preferedWateringNeed: selectedWatering,
@@ -6536,6 +6556,20 @@ showsVerticalScrollIndicator={false}
 >
 <View style={styles.formContainer}>
 {error && <Text style={styles.errorText}>{error}</Text>}
+{}
+<Text style={styles.label}>Search Radius: {searchRadius} km</Text>
+<Slider
+style={styles.slider}
+minimumValue={1}
+maximumValue={500}
+step={1}
+value={searchRadius}
+onSlidingComplete={(val) => handleSetSearchRadius(val)}
+minimumTrackTintColor={COLORS.accentGreen}
+maximumTrackTintColor="#999"
+trackStyle={{ borderRadius: 10 }}
+thumbTintColor={COLORS.accentGreen}
+/>
 <Text style={styles.label}>Preferred Plant Stages:</Text>
 <TagGroup
 mode="multiple"
@@ -6701,6 +6735,10 @@ fontWeight: '600',
 color: '#333',
 marginTop: 12,
 marginBottom: 6,
+},
+slider: {
+width: '100%',
+height: 40,
 },
 errorText: {
 color: '#FF6F61',
@@ -7225,14 +7263,117 @@ elevation: 6,
 },
 });
 // File: app\features\main\screens\TradeProposalsScreen.tsx
+ActivityIndicator,
+Alert,
+FlatList,
+ScrollView,
+StyleSheet,
+Text,
+TouchableOpacity,
+View,
+} from "react-native";
+useTradeProposals,
+useUpdateTradeProposalStatus,
+useConfirmTradeProposalCompletion,
+} from "../hooks/useTradeProposalHooks";
 type RouteParams = {
 connectionId: number;
+};
+const CompletedTradeActions: React.FC<{
+plants: any[];
+proposalId: number;
+confirmCompletion: (proposalId: number) => void;
+}> = ({ plants, proposalId, confirmCompletion }) => {
+const [decisions, setDecisions] = React.useState<{ [plantId: number]: "deleted" | "kept" }>({});
+const markPlant = (plantId: number, decision: "deleted" | "kept") => {
+setDecisions((prev) => ({ ...prev, [plantId]: decision }));
+};
+React.useEffect(() => {
+if (plants.length > 0 && plants.every((p) => decisions[p.plantId] !== undefined)) {
+confirmCompletion(proposalId);
+}
+}, [decisions, plants, proposalId, confirmCompletion]);
+const handleDeleteAll = () => {
+const newDecisions: { [plantId: number]: "deleted" | "kept" } = {};
+plants.forEach((plant) => {
+newDecisions[plant.plantId] = "deleted";
+});
+setDecisions(newDecisions);
+};
+const handleKeepAll = () => {
+const newDecisions: { [plantId: number]: "deleted" | "kept" } = {};
+plants.forEach((plant) => {
+newDecisions[plant.plantId] = "kept";
+});
+setDecisions(newDecisions);
+};
+const hasUndecidedPlants = plants.some((plant) => decisions[plant.plantId] === undefined);
+return (
+<View style={styles.completedSection}>
+<Text style={styles.completedPrompt}>
+Trade complete – choose your action for your plants:
+</Text>
+<ScrollView horizontal contentContainerStyle={styles.plantScroll}>
+{plants.map((plant) => {
+const decision = decisions[plant.plantId];
+return (
+<View key={plant.plantId} style={styles.plantThumbnailContainer}>
+<PlantThumbnail
+plant={plant}
+selectable={false}
+onInfoPress={() => {}}
+/>
+{decision ? (
+<View style={styles.decisionLabelContainer}>
+<Text style={styles.decisionLabelText}>
+{decision === "deleted" ? "Deleted" : "Kept"}
+</Text>
+</View>
+) : (
+<View style={styles.plantActions}>
+<TouchableOpacity
+style={[styles.plantActionButton, styles.individualDeleteButton]}
+onPress={() => markPlant(plant.plantId, "deleted")}
+>
+<Text style={styles.plantActionText}>Delete</Text>
+</TouchableOpacity>
+<TouchableOpacity
+style={[styles.plantActionButton, styles.individualKeepButton]}
+onPress={() => markPlant(plant.plantId, "kept")}
+>
+<Text style={styles.plantActionText}>Keep</Text>
+</TouchableOpacity>
+</View>
+)}
+</View>
+);
+})}
+</ScrollView>
+{hasUndecidedPlants && (
+<View style={styles.allActionsRow}>
+<TouchableOpacity
+style={[styles.actionButton, styles.keepAllButton]}
+onPress={handleKeepAll}
+>
+<Text style={styles.actionButtonText}>Keep All</Text>
+</TouchableOpacity>
+<TouchableOpacity
+style={[styles.actionButton, styles.deleteAllButton]}
+onPress={handleDeleteAll}
+>
+<Text style={styles.actionButtonText}>Delete All</Text>
+</TouchableOpacity>
+</View>
+)}
+</View>
+);
 };
 const TradeProposalsScreen: React.FC = () => {
 const route = useRoute();
 const navigation = useNavigation();
 const { connectionId } = route.params as RouteParams;
-const { data: myProfile, isLoading: profileLoading, isError: profileError } = useMyProfile();
+const { data: myProfile, isLoading: profileLoading, isError: profileError } =
+useMyProfile();
 const {
 data: proposals,
 isLoading,
@@ -7240,20 +7381,159 @@ isError,
 refetch,
 } = useTradeProposals(connectionId);
 const { mutate: updateStatus } = useUpdateTradeProposalStatus(connectionId);
+const { mutate: confirmCompletion } = useConfirmTradeProposalCompletion(connectionId);
 const handleUpdateStatus = (proposalId: number, newStatus: TradeProposalStatus) => {
 updateStatus({ proposalId, newStatus });
 };
-const handleConfirmCompletion = (proposal: TradeProposalResponse) => {
-handleUpdateStatus(proposal.tradeProposalId, TradeProposalStatus.Completed);
-};
-const handleDeletePlant = (plantId: number) => {
-Alert.alert(
-"Delete Plant",
-"Are you sure you want to remove this plant from your inventory?",
-[
-{ text: "Cancel", style: "cancel" },
-{ text: "Delete", onPress: () => console.log(`Deleting plant ${plantId}`) },
-]
+const renderItem = ({ item }: { item: TradeProposalResponse }) => {
+const isUser1 = myProfile!.userId === item.connection.user1.userId;
+const myPlants = isUser1 ? item.plantsProposedByUser1 : item.plantsProposedByUser2;
+const otherPlants = isUser1 ? item.plantsProposedByUser2 : item.plantsProposedByUser1;
+const isOwner = myProfile!.userId === item.proposalOwnerUserId;
+const hasConfirmed = isOwner
+? item.ownerCompletionConfirmed
+: item.responderCompletionConfirmed;
+const userOfferTitle = "Your Offer";
+const otherOfferTitle = "Their Offer";
+const handleAccept = () =>
+Alert.alert("Accept Proposal", "Do you want to accept this proposal?", [
+{ text: "No" },
+{
+text: "Yes",
+onPress: () =>
+handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Accepted),
+},
+]);
+const handleDecline = () =>
+Alert.alert("Decline Proposal", "Do you want to decline this proposal?", [
+{ text: "No" },
+{
+text: "Yes",
+onPress: () =>
+handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+},
+]);
+const handleCancel = () =>
+Alert.alert("Cancel Proposal", "Do you want to cancel this proposal?", [
+{ text: "No" },
+{
+text: "Yes",
+onPress: () =>
+handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+},
+]);
+const handleMarkCompleted = () =>
+Alert.alert("Complete Trade", "Mark this trade as completed?", [
+{ text: "No" },
+{
+text: "Yes",
+onPress: () =>
+handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Completed),
+},
+]);
+const handleChangedMyMind = () =>
+Alert.alert("Changed Your Mind?", "Do you want to cancel this proposal?", [
+{ text: "No" },
+{
+text: "Yes",
+onPress: () =>
+handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+},
+]);
+let actions = null;
+if (item.tradeProposalStatus === TradeProposalStatus.Pending) {
+actions = isOwner ? (
+<TouchableOpacity
+style={[styles.actionButton, styles.cancelButton]}
+onPress={handleCancel}
+>
+<Text style={styles.actionButtonText}>Cancel Proposal</Text>
+</TouchableOpacity>
+) : (
+<View style={styles.actionRow}>
+<TouchableOpacity
+style={[styles.actionButton, styles.acceptButton]}
+onPress={handleAccept}
+>
+<Text style={styles.actionButtonText}>Accept</Text>
+</TouchableOpacity>
+<TouchableOpacity
+style={[styles.actionButton, styles.rejectButton]}
+onPress={handleDecline}
+>
+<Text style={styles.actionButtonText}>Decline</Text>
+</TouchableOpacity>
+</View>
+);
+} else if (item.tradeProposalStatus === TradeProposalStatus.Accepted) {
+actions = (
+<View style={styles.actionRow}>
+<TouchableOpacity
+style={[styles.actionButton, styles.completeButton]}
+onPress={handleMarkCompleted}
+>
+<Text style={styles.actionButtonText}>Mark as Completed</Text>
+</TouchableOpacity>
+<TouchableOpacity
+style={[styles.actionButton, styles.changedMyMindButton]}
+onPress={handleChangedMyMind}
+>
+<Text style={styles.actionButtonText}>Changed My Mind</Text>
+</TouchableOpacity>
+</View>
+);
+} else if (item.tradeProposalStatus === TradeProposalStatus.Completed) {
+actions = !hasConfirmed ? (
+<CompletedTradeActions
+plants={myPlants}
+proposalId={item.tradeProposalId}
+confirmCompletion={confirmCompletion}
+/>
+) : (
+<View style={styles.completedSection}>
+<Text style={styles.completedMessage}>Trade Completed</Text>
+</View>
+);
+}
+return (
+<View style={styles.card}>
+<Text style={styles.cardTitle}>Proposal #{item.tradeProposalId}</Text>
+<Text style={styles.cardSubtitle}>
+Created: {new Date(item.createdAt).toLocaleString()}
+</Text>
+<View style={styles.offersSection}>
+{}
+<View style={styles.offerColumn}>
+<Text style={styles.columnTitle}>{userOfferTitle}</Text>
+<ScrollView horizontal contentContainerStyle={styles.offerScroll}>
+{myPlants.map((plant) => (
+<PlantThumbnail
+key={plant.plantId}
+plant={plant}
+selectable={false}
+onInfoPress={() => {}}
+/>
+))}
+</ScrollView>
+</View>
+{}
+<View style={styles.offerColumn}>
+<Text style={styles.columnTitle}>{otherOfferTitle}</Text>
+<ScrollView horizontal contentContainerStyle={styles.offerScroll}>
+{otherPlants.map((plant) => (
+<PlantThumbnail
+key={plant.plantId}
+plant={plant}
+selectable={false}
+onInfoPress={() => {}}
+/>
+))}
+</ScrollView>
+</View>
+</View>
+<Text style={styles.statusText}>Status: {item.tradeProposalStatus}</Text>
+{actions}
+</View>
 );
 };
 if (isLoading || profileLoading) {
@@ -7267,57 +7547,24 @@ if (isError || profileError) {
 return (
 <SafeAreaProvider style={styles.errorContainer}>
 <Text style={styles.errorText}>Failed to load trade proposals.</Text>
-<TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+<TouchableOpacity
+style={styles.retryButton}
+onPress={() => refetch()}
+>
 <Text style={styles.retryButtonText}>Retry</Text>
 </TouchableOpacity>
 </SafeAreaProvider>
 );
 }
-const renderItem = ({ item }: { item: TradeProposalResponse }) => {
-const isOwner = myProfile!.userId === item.proposalOwnerUserId;
-const hasConfirmed = isOwner ? item.ownerCompletionConfirmed : item.responderCompletionConfirmed;
-return (
-<View style={styles.proposalCard}>
-{}
-<Text style={styles.proposalTitle}>Trade Proposal #{item.tradeProposalId}</Text>
-<Text>Status: {item.tradeProposalStatus}</Text>
-<Text>Created: {new Date(item.createdAt).toLocaleString()}</Text>
-{}
-{item.tradeProposalStatus === TradeProposalStatus.Accepted && !hasConfirmed && (
-<TouchableOpacity
-style={styles.confirmButton}
-onPress={() => handleConfirmCompletion(item)}
->
-<Text style={styles.buttonText}>Confirm Completion</Text>
-</TouchableOpacity>
-)}
-{}
-{item.tradeProposalStatus === TradeProposalStatus.Completed && (
-<View style={styles.deleteSection}>
-<Text style={styles.deletePrompt}>Trade complete – remove your traded plants:</Text>
-{(isOwner ? item.plantsProposedByUser1 : item.plantsProposedByUser2).map((plant) => (
-<TouchableOpacity
-key={plant.plantId}
-style={styles.deleteButton}
-onPress={() => handleDeletePlant(plant.plantId)}
->
-<Text style={styles.deleteButtonText}>Delete {plant.speciesName}</Text>
-</TouchableOpacity>
-))}
-</View>
-)}
-</View>
-);
-};
 return (
 <SafeAreaProvider style={styles.container}>
-<LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={headerStyles.headerGradient}>
-<View style={headerStyles.headerRow}>
-<TouchableOpacity
-style={headerStyles.headerBackButton}
-onPress={() => navigation.goBack()}
+<LinearGradient
+colors={[COLORS.primary, COLORS.secondary]}
+style={headerStyles.headerGradient}
 >
-<Text style={headerStyles.headerTitle}>Back</Text>
+<View style={headerStyles.headerColumn1}>
+<TouchableOpacity style={headerStyles.headerBackButton} onPress={() => navigation.goBack()}>
+<Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
 </TouchableOpacity>
 <Text style={headerStyles.headerTitle}>Trade Proposals</Text>
 <View style={{ width: 50 }} />
@@ -7385,7 +7632,7 @@ emptyText: {
 fontSize: 16,
 color: COLORS.textDark,
 },
-proposalCard: {
+card: {
 backgroundColor: "#fff",
 borderRadius: 10,
 padding: 16,
@@ -7395,41 +7642,136 @@ shadowOpacity: 0.1,
 shadowRadius: 4,
 elevation: 3,
 },
-proposalTitle: {
+cardTitle: {
 fontSize: 18,
 fontWeight: "bold",
-marginBottom: 8,
+marginBottom: 4,
 },
-confirmButton: {
-backgroundColor: COLORS.primary,
-paddingVertical: 10,
-paddingHorizontal: 16,
-borderRadius: 8,
-marginTop: 10,
+cardSubtitle: {
+fontSize: 14,
+marginBottom: 12,
 },
-buttonText: {
-color: "#fff",
-fontSize: 16,
+offersSection: {
+flexDirection: "row",
+justifyContent: "space-between",
+marginBottom: 12,
+},
+offerColumn: {
+flex: 1,
+alignItems: "center",
+},
+columnTitle: {
+fontSize: 14,
+fontWeight: "600",
+marginBottom: 4,
+},
+offerScroll: {
+paddingHorizontal: 5,
+},
+statusText: {
+fontSize: 14,
+fontWeight: "600",
+marginBottom: 12,
 textAlign: "center",
 },
-deleteSection: {
-marginTop: 10,
+actionRow: {
+flexDirection: "row",
+justifyContent: "space-around",
 },
-deletePrompt: {
+actionButton: {
+flex: 1,
+paddingVertical: 10,
+marginHorizontal: 2,
+borderRadius: 8,
+alignItems: "center",
+justifyContent: "center",
+},
+acceptButton: {
+backgroundColor: COLORS.accentGreen,
+},
+rejectButton: {
+backgroundColor: COLORS.accentRed,
+},
+cancelButton: {
+backgroundColor: COLORS.accentRed,
+},
+completeButton: {
+backgroundColor: COLORS.accentGreen,
+},
+changedMyMindButton: {
+backgroundColor: "#F39C12",
+},
+actionButtonText: {
+color: "#fff",
+fontWeight: "600",
+fontSize: 14,
+},
+completedSection: {
+marginTop: 10,
+alignItems: "center",
+},
+completedPrompt: {
 fontSize: 14,
 marginBottom: 6,
 color: COLORS.textDark,
 },
-deleteButton: {
-backgroundColor: "#d9534f",
-paddingVertical: 8,
-paddingHorizontal: 12,
-borderRadius: 6,
-marginBottom: 6,
+completedMessage: {
+fontSize: 16,
+fontWeight: "600",
+color: COLORS.textDark,
+paddingVertical: 10,
 },
-deleteButtonText: {
+plantScroll: {
+paddingHorizontal: 10,
+},
+plantThumbnailContainer: {
+marginRight: 10,
+alignItems: "center",
+},
+plantActions: {
+flexDirection: "row",
+marginTop: 4,
+},
+plantActionButton: {
+paddingVertical: 6,
+paddingHorizontal: 8,
+borderRadius: 6,
+marginHorizontal: 2,
+},
+plantActionText: {
 color: "#fff",
-fontSize: 14,
+fontSize: 12,
+},
+decisionLabelContainer: {
+marginTop: 4,
+paddingVertical: 4,
+paddingHorizontal: 8,
+backgroundColor: "#ddd",
+borderRadius: 6,
+},
+decisionLabelText: {
+fontSize: 12,
+color: "#555",
+fontWeight: "600",
+},
+individualDeleteButton: {
+backgroundColor: COLORS.accentRed,
+},
+individualKeepButton: {
+backgroundColor: COLORS.accentGreen,
+},
+allActionsRow: {
+flexDirection: "row",
+marginTop: 10,
+justifyContent: "center",
+alignItems: "center",
+width: "100%",
+},
+keepAllButton: {
+backgroundColor: COLORS.accentGreen,
+},
+deleteAllButton: {
+backgroundColor: COLORS.accentRed,
 },
 });
 // File: app\features\main\styles\headerStyles.ts

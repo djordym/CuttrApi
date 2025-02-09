@@ -12,7 +12,7 @@ export async function initI18n() {
     .init({
       fallbackLng: 'en',
       // Use the device locale from expo-localization:
-      lng: Localization.locale, 
+      lng: Localization.getLocales()[0].languageCode, 
       resources: {
         en: { translation: en },
         fr: { translation: fr },

@@ -102,7 +102,7 @@ const ConnectionsScreen: React.FC = () => {
           colors={[COLORS.primary, COLORS.secondary]}
         >
           <Text style={headerStyles.headerTitle}>
-            {t('connections_title', 'Connections')}
+            {t('connections_title')}
           </Text>
         </LinearGradient>
 
@@ -117,18 +117,9 @@ const ConnectionsScreen: React.FC = () => {
           <Text style={styles.emptyStateMessage}>
             {t('connections_none_message')}
           </Text>
-
-          <TouchableOpacity
-            style={styles.emptyStateButton}
-            onPress={() => {
-              // Possibly navigate to a "Swipe" or "Browse" screen
-              navigation.navigate('SwipeScreen' as never);
-            }}
-          >
             <Text style={styles.emptyStateButtonText}>
               {t('connections_none_action')}
             </Text>
-          </TouchableOpacity>
         </View>
       </SafeAreaProvider>
     );

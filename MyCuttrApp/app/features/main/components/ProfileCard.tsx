@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../../theme/colors';
 import { profileCardStyles } from '../styles/profileCardStyles';
 import { UserResponse } from '../../../types/apiTypes'; // Adjust the path based on your project structure
+import ProfileLocationDisplay from './ProfileLocationDisplay'; // Adjust the path based on your project structure
 
 interface ProfileCardProps {
   userProfile: UserResponse;
@@ -68,9 +69,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
               color={COLORS.accentLightRed}
               style={profileCardStyles.locationIcon}
             />
-            <Text style={profileCardStyles.profileLocationText}>
-              {t('profile_no_location')}
-            </Text>
+            {userProfile.locationLatitude && userProfile.locationLongitude && (
+              <ProfileLocationDisplay
+                latitude={userProfile.locationLatitude}
+                longitude={userProfile.locationLongitude}
+              />
+            )}
           </View>
         </View>
         <View style={profileCardStyles.bioContainer}>
