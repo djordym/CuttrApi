@@ -146,7 +146,7 @@ export const profileCardStyles = StyleSheet.create({
   profileLocationText: {
     fontSize: 14,
     color: COLORS.textDark,
-    marginTop: 2,
+    marginTop: 2,    
   },
 
   // Bio

@@ -237,7 +237,6 @@ const TradeProposalsScreen: React.FC = () => {
                     plant={plant}
                     selectable={false}
                     onInfoPress={() => setPlantInfo(plant)}
-                    style={styles.verticalThumbnail}
                   />
                 ))}
               </View>
@@ -251,7 +250,6 @@ const TradeProposalsScreen: React.FC = () => {
                     plant={plant}
                     selectable={false}
                     onInfoPress={() => setPlantInfo(plant)}
-                    style={styles.verticalThumbnail}
                   />
                 ))}
               </View>
@@ -467,8 +465,5 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "center",
     marginTop: 8,
-  },
-  verticalThumbnail: {
-    margin: 4,
   },
 });

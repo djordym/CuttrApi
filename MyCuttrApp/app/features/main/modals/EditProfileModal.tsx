@@ -318,7 +318,7 @@ export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
                   placeholderTextColor="#999"
                 />
               </View>
-              <View style={profileCardStyles.profileLocationRow}>
+              <View style={[profileCardStyles.profileLocationRow, { maxWidth: screenWidth * 0.9 - 215 }]}>
                 {/* Tapping location opens the location modal */}
                 <Ionicons
                   name="location-sharp"
@@ -332,7 +332,6 @@ export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
                       profileCardStyles.profileLocationText,
                       { textDecorationLine: 'underline', color: COLORS.accentRed },
                     ]}
-                    numberOfLines={1}
                   >
                     {cityCountry || t('profile_no_location')}
                   </Text>

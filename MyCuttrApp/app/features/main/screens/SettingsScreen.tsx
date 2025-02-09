@@ -43,7 +43,7 @@ const SettingsScreen: React.FC = () => {
   const [currentLang, setCurrentLang] = useState(i18n.language);
 
   // Toggles
-  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(true);
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
   // Edit states for email/password
@@ -131,39 +131,40 @@ const SettingsScreen: React.FC = () => {
 
   // Delete account
   const handleDeleteAccount = async () => {
-    // Alert.alert(
-    //   t('Delete Account'),
-    //   t('This action cannot be undone. Are you sure?'),
-    //   [
-    //     { text: t('Cancel'), style: 'cancel' },
-    //     {
-    //       text: t('Yes, Delete'),
-    //       style: 'destructive',
-    //       onPress: async () => {
-    //         try {
-    //           // e.g. await userService.deleteAccount();
-    //           navigation.reset({
-    //             index: 0,
-    //             routes: [{ name: 'AuthNavigator' as never }],
-    //           });
-    //         } catch (err) {
-    //           console.error('Failed to delete account:', err);
-    //           Alert.alert(t('Error'), t('Could not delete account.'));
-    //         }
-    //       },
-    //     },
-    //   ],
-    //);
+    Alert.alert(
+      t('Delete Account'),
+      t('Not implemented yet.'),
+      [
+        { text: t('Cancel'), style: 'cancel' },
+        {
+          // text: t('Yes, Delete'),
+          // style: 'destructive',
+          // onPress: async () => {
+          //   try {
+              
+          //   } catch (err) {
+          //     console.error('Failed to delete account:', err);
+          //     Alert.alert(t('Error'), t('Could not delete account.'));
+          //   }
+          // },
+        },
+      ],
+    );
+  };
+
+  // Not implemented yet
+  const handleNotImplemented = () => {
+    Alert.alert(t('Not Implemented'), t('This feature is not implemented yet.'));
   };
 
   // Save toggles
   const handleSaveNotificationSettings = async (value: boolean) => {
-    setPushNotificationsEnabled(value);
+    handleNotImplemented(); 
     // e.g. userPreferencesService.updateNotifications(value);
   };
 
   const handleSaveDarkMode = async (value: boolean) => {
-    setDarkModeEnabled(value);
+    handleNotImplemented();
     // e.g. userPreferencesService.updateDarkMode(value);
   };
 
@@ -191,14 +192,14 @@ const SettingsScreen: React.FC = () => {
           </View>
 
           {/* Edit icon to start editing */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() => {
               setIsEditingEmail(true);
               setNewEmail(userProfile?.email || '');
             }}
           >
             <Ionicons name="pencil-outline" size={18} color={COLORS.accentGreen} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       );
     }
@@ -329,7 +330,7 @@ const SettingsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('Account')}</Text>
           {renderEmailRow()}
-          {renderPasswordRow()}
+          {/* {renderPasswordRow()} */}
 
           {/* Logout */}
           <TouchableOpacity
@@ -469,6 +470,7 @@ const styles = StyleSheet.create({
   },
   rowLeft: {
     flex: 1,
+
   },
   rowLabel: {
     fontSize: 14,

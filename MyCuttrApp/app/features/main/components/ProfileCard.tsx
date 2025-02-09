@@ -15,12 +15,14 @@ interface ProfileCardProps {
   userProfile: UserResponse;
   isEditable?: boolean;
   onEditPress?: () => void;
+  screenWidth: number;
 }
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({
   userProfile,
   isEditable = false,
   onEditPress,
+  screenWidth,
 }) => {
   const { t } = useTranslation();
 
@@ -62,7 +64,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           <View style={profileCardStyles.nameContainer}>
             <Text style={profileCardStyles.profileNameText}>{userProfile.name}</Text>
           </View>
-          <View style={profileCardStyles.profileLocationRow}>
+          <View style={[profileCardStyles.profileLocationRow, {maxWidth: screenWidth*0.9 - 215}]}>
             <Ionicons
               name="location-sharp"
               size={16}

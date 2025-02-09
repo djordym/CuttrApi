@@ -28,7 +28,7 @@ namespace Cuttr.Business.Entities
         public List<Extras> Extras { get; set; }
 
         public string? ImageUrl { get; set; }
-        public bool IsClosed { get; set; }
+        public bool IsTraded { get; set; }
 
         // Reference to the owner
         public User User { get; set; }

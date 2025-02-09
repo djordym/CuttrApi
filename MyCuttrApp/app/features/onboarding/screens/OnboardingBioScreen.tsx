@@ -1,141 +1,114 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Keyboard } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { useTranslation } from 'react-i18next';
-
-// Import userService (and possible utility code)
+import { COLORS } from '../../../theme/colors';
+// Adjust the following import to wherever your profile hook or service is defined.
+import { useMyProfile } from '../../../features/main/hooks/useMyProfileHooks';
 import { userService } from '../../../api/userService';
-import { useMyProfile } from '../../main/hooks/useMyProfileHooks';
-import { log } from '../../../utils/logger';
-
 
 const OnboardingBioScreen: React.FC = () => {
-    const { t } = useTranslation();
-    const navigation = useNavigation();
-  
-    // If needed, fetch userProfile to get user’s current name or other details
-    const { data: userProfile } = useMyProfile();
-  
-    // State for the bio
-    const [bio, setBio] = useState(userProfile?.bio ?? '');
-  
-    const handleSkip = () => {
-      // Let them skip and navigate to the next onboarding screen (or main flow if this is last)
-      // Usually you'd do something like:
+  const navigation = useNavigation();
+  const { data: userProfile } = useMyProfile();
+  const [bio, setBio] = useState(userProfile?.bio ?? '');
+
+  const handleSkip = () => {
+    navigation.navigate('OnboardingLocation' as never);
+  };
+
+  const handleSubmitBio = async () => {
+    // Optionally add validation if bio is empty.
+    Keyboard.dismiss();
+    try {
+      await userService.updateMe({ name: userProfile?.name ?? '', bio });
       navigation.navigate('OnboardingLocation' as never);
-      // or if the location screen is already behind us, navigate to next step.
-    };
-  
-    const handleSubmitBio = async () => {
-      if (!bio) {
-        // They can submit an empty bio or show an alert to confirm
-        // For the sake of example, we allow an empty bio
-        // Or you could do: Alert.alert('Bio is empty', 'Please type something or skip.');
-      }
-  
-      try {
-        // We assume the userService.updateMe uses the shape { name, bio }
-        await userService.updateMe({ name: userProfile?.name ?? '', bio });
-        log.debug('Bio updated successfully');
-        // Navigate to the next step in the onboarding
-        navigation.navigate('OnboardingLocation' as never);
-      } catch (error) {
-        Alert.alert('Error', 'Failed to update bio, please try again later.');
-        log.error('OnboardingBioScreen handleSubmitBio error:', error);
-      }
-    };
-  
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>{t('onboarding_bio_title') /* "Tell Us About Yourself" */}</Text>
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update your bio. Please try again.');
+    }
+  };
+
+  return (
+    <LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Your Story</Text>
         <Text style={styles.subtitle}>
-          {t('onboarding_bio_subtitle') /* e.g. "Add a brief bio so others can know more about you." */}
+          Let others know a little about you. A short bio helps fellow plant enthusiasts know more about who they are entrusting their precious plants with.
         </Text>
-  
         <TextInput
           style={styles.textInput}
           value={bio}
           onChangeText={setBio}
-          placeholder={t('onboarding_bio_placeholder') /* "Your bio here..." */}
+          placeholder="Write a short bio..."
+          placeholderTextColor="#ccc"
           multiline
+          textAlignVertical="top"
         />
-  
         <View style={styles.buttonContainer}>
           <TouchableOpacity onPress={handleSkip} style={[styles.button, styles.skipButton]}>
-            <Text style={styles.buttonText}>{t('onboarding_bio_skip_button') /* "Skip" */}</Text>
+            <Text style={styles.buttonText}>Skip</Text>
           </TouchableOpacity>
-  
           <TouchableOpacity onPress={handleSubmitBio} style={[styles.button, styles.submitButton]}>
-            <Text style={styles.buttonText}>{t('onboarding_bio_submit_button') /* "Save & Continue" */}</Text>
+            <Text style={styles.buttonText}>Next: Choose Location</Text>
           </TouchableOpacity>
         </View>
-  
-        <Text style={styles.note}>
-          {t('onboarding_bio_note') /* e.g. "You can always add or edit your bio later from your profile." */}
-        </Text>
       </View>
-    );
-  };
-  
-  export default OnboardingBioScreen;
-  
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#fff',
-      padding: 20,
-      justifyContent: 'flex-start',
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: '700',
-      marginBottom: 10,
-      color: '#333',
-    },
-    subtitle: {
-      fontSize: 16,
-      marginBottom: 20,
-      color: '#555',
-    },
-    textInput: {
-      borderWidth: 1,
-      borderColor: '#ccc',
-      borderRadius: 8,
-      padding: 10,
-      fontSize: 14,
-      minHeight: 80,
-      marginBottom: 20,
-      textAlignVertical: 'top',
-      backgroundColor: '#fafafa',
-    },
-    buttonContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 10,
-    },
-    button: {
-      flex: 0.45,
-      paddingVertical: 12,
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    skipButton: {
-      backgroundColor: '#ccc',
-    },
-    submitButton: {
-      backgroundColor: '#1EAE98',
-    },
-    buttonText: {
-      color: '#fff',
-      fontWeight: '600',
-      fontSize: 16,
-    },
-    note: {
-      marginTop: 20,
-      fontSize: 14,
-      color: '#777',
-      textAlign: 'center',
-    },
-  });
-  
+    </LinearGradient>
+  );
+};
+
+export default OnboardingBioScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: COLORS.textLight,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 24,
+  },
+  textInput: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 15,
+    fontSize: 16,
+    color: COLORS.textDark,
+    marginBottom: 30,
+    minHeight: 100,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  button: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  skipButton: {
+    backgroundColor: COLORS.accentRed,
+  },
+  submitButton: {
+    backgroundColor: COLORS.accentGreen,
+  },
+  buttonText: {
+    color: COLORS.textLight,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

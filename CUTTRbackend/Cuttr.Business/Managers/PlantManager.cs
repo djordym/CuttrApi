@@ -389,5 +389,34 @@ namespace Cuttr.Business.Managers
                 throw new BusinessException("Error retrieving plants.", ex);
             }
         }
+
+        public async Task MarkPlantAsTradedAsync(int plantId, int userId)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if (user == null)
+                {
+                    throw new NotFoundException($"User with ID {userId} not found.");
+                }
+                var plant = await _plantRepository.GetPlantByIdAsync(plantId);
+                if (plant == null)
+                {
+                    throw new NotFoundException($"Plant with ID {plantId} not found.");
+                }
+
+                plant.IsTraded = true;
+                await _plantRepository.UpdatePlantAsync(plant);
+            }
+            catch (NotFoundException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error marking plant with ID {plantId} as traded.");
+                throw new BusinessException("Error marking plant as traded.", ex);
+            }
+        }
     }
 }

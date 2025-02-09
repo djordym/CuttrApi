@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
+  Dimensions
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -65,6 +66,7 @@ const MyProfileScreen: React.FC = () => {
     height: 0,
   });
   const cardRef = useRef<View>(null);
+  const screenWidth = Dimensions.get('window').width;
 
   // Handler for measuring the card and opening the modal
   const openEditModal = () => {
@@ -156,6 +158,7 @@ const MyProfileScreen: React.FC = () => {
             userProfile={userProfile}
             isEditable={true} // Set to true to show the edit button
             onEditPress={openEditModal}
+            screenWidth={screenWidth}
           />
         </View>
 

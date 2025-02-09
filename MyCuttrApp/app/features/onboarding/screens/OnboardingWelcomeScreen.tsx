@@ -1,29 +1,28 @@
-// File: app/features/onboarding/screens/OnboardingWelcomeScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { COLORS } from '../../../theme/colors';
 
 const OnboardingWelcomeScreen: React.FC = () => {
   const navigation = useNavigation();
 
   const handleNextPress = () => {
-    // Go to the location screen next
     navigation.navigate('OnboardingBio' as never);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to Cuttr!</Text>
-      <Text style={styles.subtitle}>
-        Here’s a quick intro to how you can swap plants safely and easily.
-      </Text>
-      
-      {/* More instructions, slides, or content can be shown here. */}
-      
-      <TouchableOpacity onPress={handleNextPress} style={styles.button}>
-        <Text style={styles.buttonText}>Next: Choose Location</Text>
-      </TouchableOpacity>
-    </View>
+    <LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Welcome to Cuttr!</Text>
+        <Text style={styles.subtitle}>
+          Expand and diversify your plant collection effortlessly. Cuttr lets you trade unique, free plant cuttings from the coolest, hard‐to‐find species – no more relying on big greenhouses that aren’t eco–friendly. Share your cuttings and discover new gems to brighten up your space!
+        </Text>
+        <TouchableOpacity onPress={handleNextPress} style={styles.button}>
+          <Text style={styles.buttonText}>Next: Tell Us About You</Text>
+        </TouchableOpacity>
+      </View>
+    </LinearGradient>
   );
 };
 
@@ -32,26 +31,36 @@ export default OnboardingWelcomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
     justifyContent: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
-    marginBottom: 10,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    marginBottom: 20,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
+    color: COLORS.textLight,
+    textAlign: 'center',
     marginBottom: 40,
+    lineHeight: 26,
   },
   button: {
-    backgroundColor: '#1EAE98',
-    padding: 14,
+    backgroundColor: COLORS.accentGreen,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: 8,
+    alignSelf: 'center',
   },
   buttonText: {
-    color: '#fff',
+    color: COLORS.textLight,
+    fontSize: 18,
     fontWeight: '600',
-    textAlign: 'center',
   },
 });

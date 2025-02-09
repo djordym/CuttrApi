@@ -259,6 +259,37 @@ namespace Cuttr.Api.Controllers
             }
         }
 
+        [HttpPost("mark-as-traded/{plantId}")]
+        public async Task<IActionResult> MarkPlantAsTraded(int plantId)
+        {
+            try
+            {
+                int userId = User.GetUserId();
+                await _plantManager.MarkPlantAsTradedAsync(plantId, userId);
+                return Ok();
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, $"Plant with ID {plantId} not found.");
+                return NotFound(ex.Message);
+            }
+            catch (BusinessException ex)
+            {
+                _logger.LogError(ex, $"Error marking plant with ID {plantId} as traded.");
+                return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized access attempt.");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while marking the plant as traded.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
+        }
+
 
 
 

@@ -65,7 +65,7 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
       <Text style={styles.completedPrompt}>
         Trade complete – choose your action for your plants:
       </Text>
-      <ScrollView horizontal contentContainerStyle={styles.plantScroll}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.plantScroll}>
         {plants.map((plant) => {
           const decision = decisions[plant.plantId];
           return (
