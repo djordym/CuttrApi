@@ -18,8 +18,8 @@ namespace Cuttr.Business.Interfaces.ManagerInterfaces
         Task<List<PlantResponse>> GetPlantsByUserIdAsync(int userId);
         Task<List<PlantResponse>> GetLikablePlantsAsync(int userId, int maxCount);
         Task SeedPlantAsync(SeedPlantRequest plant);
-        Task<List<PlantResponse>> GetPlantsLikedByUserFromMeAsync(int userAId, int currentUserId);
-        Task<List<PlantResponse>> GetPlantsLikedByMeFromUserAsync(int userAId, int currentUserId);
+        Task<List<PlantResponse>> GetTradablePlantsLikedByUserFromMeAsync(int userAId, int currentUserId);
+        Task<List<PlantResponse>> GetTradablePlantsLikedByMeFromUserAsync(int userAId, int currentUserId);
         Task MarkPlantAsTradedAsync(int plantId, int userId);
     }
 }

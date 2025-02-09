@@ -213,7 +213,7 @@ namespace Cuttr.Api.Controllers
             try
             {
                 int currentUserId = User.GetUserId();
-                List<PlantResponse> likedPlants = await _plantManager.GetPlantsLikedByMeFromUserAsync(userAId, currentUserId);
+                List<PlantResponse> likedPlants = await _plantManager.GetTradablePlantsLikedByMeFromUserAsync(userAId, currentUserId);
                 return Ok(likedPlants);
             }
             catch (NotFoundException ex)
@@ -239,7 +239,7 @@ namespace Cuttr.Api.Controllers
             try
             {
                 int currentUserId = User.GetUserId();
-                List<PlantResponse> plantsLikedByUser = await _plantManager.GetPlantsLikedByUserFromMeAsync(userAId, currentUserId);
+                List<PlantResponse> plantsLikedByUser = await _plantManager.GetTradablePlantsLikedByUserFromMeAsync(userAId, currentUserId);
                 return Ok(plantsLikedByUser);
             }
             catch (NotFoundException ex)
@@ -259,23 +259,26 @@ namespace Cuttr.Api.Controllers
             }
         }
 
-        [HttpPost("mark-as-traded/{plantId}")]
-        public async Task<IActionResult> MarkPlantAsTraded(int plantId)
+        [HttpPost("mark-as-traded")]
+        public async Task<IActionResult> MarkPlantsAsTraded([FromBody] List<int> plantIds)
         {
             try
             {
                 int userId = User.GetUserId();
-                await _plantManager.MarkPlantAsTradedAsync(plantId, userId);
+                foreach (var plantId in plantIds)
+                {
+                    await _plantManager.MarkPlantAsTradedAsync(plantId, userId);
+                }
                 return Ok();
             }
             catch (NotFoundException ex)
             {
-                _logger.LogWarning(ex, $"Plant with ID {plantId} not found.");
+                _logger.LogWarning(ex, "One or more plants in the provided list were not found.");
                 return NotFound(ex.Message);
             }
             catch (BusinessException ex)
             {
-                _logger.LogError(ex, $"Error marking plant with ID {plantId} as traded.");
+                _logger.LogError(ex, "Error marking plants as traded.");
                 return BadRequest(ex.Message);
             }
             catch (UnauthorizedAccessException ex)
@@ -285,7 +288,7 @@ namespace Cuttr.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An unexpected error occurred while marking the plant as traded.");
+                _logger.LogError(ex, "An unexpected error occurred while marking the plants as traded.");
                 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
             }
         }

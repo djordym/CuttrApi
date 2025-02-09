@@ -40,4 +40,5 @@ export const COLORS3 = {
     border: '#ddd',
     bubbleLeft: '#fff',
     bubbleRight: '#DCF8C6',
+    accentOrange: '#F39C12'
   };

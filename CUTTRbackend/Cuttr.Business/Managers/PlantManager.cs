@@ -56,6 +56,7 @@ namespace Cuttr.Business.Managers
                 var plant = ContractToBusinessMapper.MapToPlant(request.PlantDetails);
                 plant.ImageUrl = imageUrl;
                 plant.UserId = userId;
+                plant.IsTraded = false;
 
                 var createdPlant = await _plantRepository.AddPlantAsync(plant);
 
@@ -165,7 +166,7 @@ namespace Cuttr.Business.Managers
                     throw new NotFoundException($"User with ID {userId} not found.");
                 }
 
-                var plants = await _plantRepository.GetPlantsByUserIdAsync(userId);
+                var plants = await _plantRepository.GetTradablePlantsByUserIdAsync(userId);
 
                 return BusinessToContractMapper.MapToPlantResponse(plants).ToList();
             }
@@ -201,7 +202,7 @@ namespace Cuttr.Business.Managers
                              : 10000; // or 9999, etc.
 
                 // 3. Retrieve the candidate plants in radius
-                var candidatePlants = await _plantRepository.GetPlantsWithinRadiusAsync(
+                var candidatePlants = await _plantRepository.GetTradablePlantsWithinRadiusAsync(
                                           user.LocationLatitude.Value,
                                           user.LocationLongitude.Value,
                                           radius);
@@ -273,7 +274,7 @@ namespace Cuttr.Business.Managers
                 }
 
                 // 6. Retrieve user's own plants (to check if already swiped)
-                var userPlants = await _plantRepository.GetPlantsByUserIdAsync(userId);
+                var userPlants = await _plantRepository.GetTradablePlantsByUserIdAsync(userId);
 
                 var likablePlants = new List<PlantResponse>();
 
@@ -327,14 +328,15 @@ namespace Cuttr.Business.Managers
                 PropagationEase = request.PropagationEase,
                 PetFriendly = request.PetFriendly,
                 Extras = request.Extras,
-                ImageUrl = request.ImageUrl
+                ImageUrl = request.ImageUrl,
+                IsTraded = false
 
             };
             await _plantRepository.AddPlantAsync(plant);
             return;
         }
 
-        public async Task<List<PlantResponse>> GetPlantsLikedByUserFromMeAsync(int userAId, int currentUserId)
+        public async Task<List<PlantResponse>> GetTradablePlantsLikedByUserFromMeAsync(int userAId, int currentUserId)
         {
             try
             {
@@ -349,7 +351,7 @@ namespace Cuttr.Business.Managers
                 {
                     throw new NotFoundException($"User with ID {currentUserId} not found.");
                 }
-                var likedPlants = await _swipeRepository.GetLikedPlantsBySwiperAsync(userAId, currentUserId);
+                var likedPlants = await _swipeRepository.GetTradableLikedPlantsBySwiperAsync(userAId, currentUserId);
                 return BusinessToContractMapper.MapToPlantResponse(likedPlants).ToList();
             }
             catch (NotFoundException ex)
@@ -363,7 +365,7 @@ namespace Cuttr.Business.Managers
             }
         }
 
-        public async Task<List<PlantResponse>> GetPlantsLikedByMeFromUserAsync(int userAId, int currentUserId)
+        public async Task<List<PlantResponse>> GetTradablePlantsLikedByMeFromUserAsync(int userAId, int currentUserId)
         {
             try
             {
@@ -377,7 +379,7 @@ namespace Cuttr.Business.Managers
                 {
                     throw new NotFoundException($"User with ID {currentUserId} not found.");
                 }
-                var likedPlants = await _swipeRepository.GetLikedPlantsBySwiperAsync(currentUserId, userAId);
+                var likedPlants = await _swipeRepository.GetTradableLikedPlantsBySwiperAsync(currentUserId, userAId);
                 return BusinessToContractMapper.MapToPlantResponse(likedPlants).ToList();
 
             } catch (NotFoundException ex)

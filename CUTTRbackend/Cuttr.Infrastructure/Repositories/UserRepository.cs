@@ -92,7 +92,7 @@ namespace Cuttr.Infrastructure.Repositories
             }
         }
 
-        public async Task UpdateUserNameAndBioAsync(User user)
+        public async Task UpdateUserAsync(User user)
         {
             try
             {

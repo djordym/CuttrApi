@@ -84,6 +84,7 @@ namespace Cuttr.Infrastructure.Mappers
 
                 ImageUrl = efPlant.ImageUrl,
                 User = MapToUserWithoutPlants(efPlant.User),
+                IsTraded = efPlant.IsTraded,
                 // Exclude CreatedAt and UpdatedAt
             };
 
@@ -140,6 +141,7 @@ namespace Cuttr.Infrastructure.Mappers
                 : null,
 
                 ImageUrl = efPlant.ImageUrl,
+                IsTraded = efPlant.IsTraded,
                 // User is not mapped to prevent circular reference
             };
         }

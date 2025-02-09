@@ -62,3 +62,15 @@ export const usePlantsLikedByUserFromMe = (otherUserId: number) => {
     }
   );
 };
+
+export const useMarkPlantsAsTraded = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(async (plantIds: number[]) => (plantService.markPlantsAsTraded(plantIds)), {
+    onSettled: () => {
+      queryClient.invalidateQueries(["myPlants"]);
+      queryClient.invalidateQueries(["plantsLikedByMeFromUser"]);
+      queryClient.invalidateQueries(["plantsLikedByUserFromMe"]);
+    },
+  });
+};

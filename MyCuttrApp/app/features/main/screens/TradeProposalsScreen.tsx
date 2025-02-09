@@ -29,6 +29,7 @@ import { Ionicons } from "@expo/vector-icons";
 import InfoModal from "../modals/InfoModal";
 import PlantCardWithInfo from "../components/PlantCardWithInfo";
 import { PlantResponse } from "../../../types/apiTypes";
+import { useMarkPlantsAsTraded } from "../hooks/usePlantHooks";
 
 type RouteParams = {
   connectionId: number;
@@ -51,6 +52,7 @@ const TradeProposalsScreen: React.FC = () => {
 
   const { mutate: updateStatus } = useUpdateTradeProposalStatus(connectionId);
   const { mutate: confirmCompletion } = useConfirmTradeProposalCompletion(connectionId);
+  const { mutate: markPlantsAsTraded } = useMarkPlantsAsTraded();
 
   // State to track which plant's info to display.
   const [plantInfo, setPlantInfo] = React.useState<PlantResponse | null>(null);
@@ -58,6 +60,25 @@ const TradeProposalsScreen: React.FC = () => {
   // Helper to update proposal status.
   const handleUpdateStatus = (proposalId: number, newStatus: TradeProposalStatus) => {
     updateStatus({ proposalId, newStatus });
+  };
+
+  // Callback invoked by CompletedTradeActions
+  const handleConfirmDecisions = (proposalId: number, plantsToDelete: number[]) => {
+    // 1) Mark the plants as traded if we have any
+    // 2) Then confirm the trade proposal completion
+    if (plantsToDelete.length > 0) {
+      markPlantsAsTraded(plantsToDelete, {
+        onSuccess: () => {
+          confirmCompletion(proposalId);
+        },
+        onError: (err) => {
+          console.error("Error marking as traded:", err);
+        },
+      });
+    } else {
+      // If no plants to delete, just confirm completion
+      confirmCompletion(proposalId);
+    }
   };
 
   const renderItem = ({ item }: { item: TradeProposalResponse }) => {
@@ -173,7 +194,7 @@ const TradeProposalsScreen: React.FC = () => {
         <CompletedTradeActions
           plants={myPlants}
           proposalId={item.tradeProposalId}
-          confirmCompletion={confirmCompletion}
+          onConfirmDecisions={handleConfirmDecisions}
           onPlantInfoPress={(plant) => setPlantInfo(plant)}
         />
       ) : (

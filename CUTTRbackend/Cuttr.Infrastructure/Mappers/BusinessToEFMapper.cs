@@ -68,12 +68,13 @@ namespace Cuttr.Infrastructure.Mappers
                 Extras = plant.Extras != null ? SerializeExtras(plant.Extras) : null,
                 ImageUrl = plant.ImageUrl,
                 User = MapToUserEFWithoutPlants(plant.User),
+                IsTraded = plant.IsTraded,
                 // CreatedAt and UpdatedAt are handled by EF Core
             };
         }
 
         // Helper method to map Plant without User to prevent circular reference
-        private static PlantEF MapToPlantEFWithoutUser(Plant plant)
+        public static PlantEF MapToPlantEFWithoutUser(Plant plant)
         {
             if (plant == null)
                 return null;
@@ -94,6 +95,7 @@ namespace Cuttr.Infrastructure.Mappers
                 PetFriendly = plant.PetFriendly.ToString(),
                 Extras = plant.Extras != null ? SerializeExtras(plant.Extras) : null,
                 ImageUrl = plant.ImageUrl,
+                IsTraded = plant.IsTraded,
                 // User is not mapped to prevent circular reference
             };
         }

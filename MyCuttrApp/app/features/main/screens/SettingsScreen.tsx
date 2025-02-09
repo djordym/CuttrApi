@@ -185,7 +185,7 @@ const SettingsScreen: React.FC = () => {
       return (
         <View style={styles.row}>
           <View style={styles.rowLeft}>
-            <Text style={styles.rowLabel}>{t('Email')}</Text>
+            <Text style={styles.rowLabel}>{t('email')}</Text>
             <Text style={styles.rowValue}>
               {userProfile?.email || t('No email found')}
             </Text>

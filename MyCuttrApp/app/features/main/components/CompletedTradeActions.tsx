@@ -3,69 +3,60 @@ import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../../theme/colors";
 import PlantThumbnail from "./PlantThumbnail";
 
 type CompletedTradeActionsProps = {
   plants: any[];
   proposalId: number;
-  confirmCompletion: (proposalId: number) => void;
-  // New optional callback for opening the plant info modal.
+  onConfirmDecisions: (proposalId: number, plantsToDelete: number[]) => void;
   onPlantInfoPress?: (plant: any) => void;
+  isConfirming?: boolean; // optional loading state if you'd like to disable the button
 };
 
 const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
   plants,
   proposalId,
-  confirmCompletion,
+  onConfirmDecisions,
   onPlantInfoPress,
+  isConfirming = false,
 }) => {
+  // "deleted" or "keep" or undefined if not yet decided
   const [decisions, setDecisions] = React.useState<{
-    [plantId: number]: "deleted" | "kept";
+    [plantId: number]: "delete" | "keep" | undefined;
   }>({});
 
-  const markPlant = (plantId: number, decision: "deleted" | "kept") => {
+  const markPlant = (
+    plantId: number,
+    decision: "delete" | "keep" | undefined
+  ) => {
     setDecisions((prev) => ({ ...prev, [plantId]: decision }));
   };
 
-  // Automatically confirm completion when all plants have a decision.
-  React.useEffect(() => {
-    if (plants.length > 0 && plants.every((p) => decisions[p.plantId] !== undefined)) {
-      confirmCompletion(proposalId);
-    }
-  }, [decisions, plants, proposalId, confirmCompletion]);
+  // Determine if all plants have a decision
+  const allDecided =
+    plants.length > 0 &&
+    plants.every((p) => decisions[p.plantId] !== undefined);
 
-  // "Delete All" marks all plants as deleted.
-  const handleDeleteAll = () => {
-    const newDecisions: { [plantId: number]: "deleted" | "kept" } = {};
-    plants.forEach((plant) => {
-      newDecisions[plant.plantId] = "deleted";
-    });
-    setDecisions(newDecisions);
+  // Handle confirm (call the parent’s callback)
+  const handleConfirm = () => {
+    // Gather plant IDs marked for deletion
+    const plantsToDelete = plants
+      .filter((p) => decisions[p.plantId] === "delete")
+      .map((p) => p.plantId);
+
+    onConfirmDecisions(proposalId, plantsToDelete);
   };
-
-  // "Keep All" marks all plants as kept.
-  const handleKeepAll = () => {
-    const newDecisions: { [plantId: number]: "deleted" | "kept" } = {};
-    plants.forEach((plant) => {
-      newDecisions[plant.plantId] = "kept";
-    });
-    setDecisions(newDecisions);
-  };
-
-  const hasUndecidedPlants = plants.some(
-    (plant) => decisions[plant.plantId] === undefined
-  );
 
   return (
     <View style={styles.completedSection}>
       <Text style={styles.completedPrompt}>
         Trade complete – choose your action for your plants:
       </Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.plantScroll}>
+      <View style={styles.plantGrid}>
         {plants.map((plant) => {
           const decision = decisions[plant.plantId];
           return (
@@ -73,26 +64,41 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
               <PlantThumbnail
                 plant={plant}
                 selectable={false}
-                // Call the provided onPlantInfoPress when info is pressed.
-                onInfoPress={() => onPlantInfoPress && onPlantInfoPress(plant)}
+                onInfoPress={() =>
+                  onPlantInfoPress && onPlantInfoPress(plant)
+                }
               />
               {decision ? (
-                <View style={styles.decisionLabelContainer}>
-                  <Text style={styles.decisionLabelText}>
-                    {decision === "deleted" ? "Deleted" : "Kept"}
-                  </Text>
+                <View style={styles.decisionRow}>
+                  <View style={styles.decisionTag}>
+                    <Text style={styles.decisionLabelText}>
+                      {decision === "delete" ? "Delete" : "Keep"}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.undoButton}
+                    onPress={() => markPlant(plant.plantId, undefined)}
+                  >
+                    <Ionicons name="arrow-undo" size={14} color="#fff" />
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.plantActions}>
                   <TouchableOpacity
-                    style={[styles.plantActionButton, styles.individualDeleteButton]}
-                    onPress={() => markPlant(plant.plantId, "deleted")}
+                    style={[
+                      styles.plantActionButton,
+                      styles.individualDeleteButton,
+                    ]}
+                    onPress={() => markPlant(plant.plantId, "delete")}
                   >
                     <Text style={styles.plantActionText}>Delete</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.plantActionButton, styles.individualKeepButton]}
-                    onPress={() => markPlant(plant.plantId, "kept")}
+                    style={[
+                      styles.plantActionButton,
+                      styles.individualKeepButton,
+                    ]}
+                    onPress={() => markPlant(plant.plantId, "keep")}
                   >
                     <Text style={styles.plantActionText}>Keep</Text>
                   </TouchableOpacity>
@@ -101,23 +107,21 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
             </View>
           );
         })}
-      </ScrollView>
-      {hasUndecidedPlants && (
-        <View style={styles.allActionsRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.keepAllButton]}
-            onPress={handleKeepAll}
-          >
-            <Text style={styles.actionButtonText}>Keep All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteAllButton]}
-            onPress={handleDeleteAll}
-          >
-            <Text style={styles.actionButtonText}>Delete All</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      </View>
+
+      {/* "Confirm" button - only enable if all plants decided */}
+      <TouchableOpacity
+        style={[
+          styles.confirmButton,
+          (!allDecided || isConfirming) && styles.confirmButtonDisabled,
+        ]}
+        onPress={handleConfirm}
+        disabled={!allDecided || isConfirming}
+      >
+        <Text style={styles.confirmButtonText}>
+          {isConfirming ? "Processing..." : "Confirm"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -134,24 +138,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     color: COLORS.textDark,
   },
-  plantScroll: {
+  // Container for the plant grid instead of a scroll view
+  plantGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     paddingHorizontal: 10,
   },
   plantThumbnailContainer: {
-    marginRight: 10,
+    margin: 5, // Increased margin to provide spacing between grid items
     alignItems: "center",
-  },
-  decisionLabelContainer: {
-    marginTop: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: "#ddd",
-    borderRadius: 6,
-  },
-  decisionLabelText: {
-    fontSize: 12,
-    color: "#555",
-    fontWeight: "600",
   },
   plantActions: {
     flexDirection: "row",
@@ -173,30 +169,42 @@ const styles = StyleSheet.create({
   individualKeepButton: {
     backgroundColor: COLORS.accentGreen,
   },
-  allActionsRow: {
+  decisionRow: {
     flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  decisionTag: {
+    backgroundColor: "#ddd",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  decisionLabelText: {
+    fontSize: 12,
+    color: "#555",
+    fontWeight: "600",
+  },
+  undoButton: {
+    marginLeft: 6,
+    backgroundColor: COLORS.accentOrange,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  confirmButton: {
     marginTop: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-  },
-  actionButton: {
-    flex: 1,
+    backgroundColor: COLORS.accentGreen,
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    marginHorizontal: 2,
     borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
   },
-  actionButtonText: {
+  confirmButtonDisabled: {
+    backgroundColor: "#ccc",
+  },
+  confirmButtonText: {
     color: "#fff",
     fontWeight: "600",
-    fontSize: 14,
-  },
-  keepAllButton: {
-    backgroundColor: COLORS.accentGreen,
-  },
-  deleteAllButton: {
-    backgroundColor: COLORS.accentRed,
+    fontSize: 16,
   },
 });

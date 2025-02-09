@@ -120,5 +120,9 @@ export const plantService = {
   getPlantsLikedByUserFromMe: async (otherUserId: number): Promise<PlantResponse[]> => {
     const response = await api.get<PlantResponse[]>(`/plants/liked-by/${otherUserId}/from-me`);
     return response.data;
+  },
+
+  markPlantsAsTraded: async (plantIds: number[]): Promise<void> => {
+    await api.post('/plants/mark-as-traded', plantIds);
   }
 };

@@ -46,7 +46,6 @@ namespace Cuttr.Infrastructure.Repositories
             try
             {
                 var efPlant = await _context.Plants.AsNoTracking()
-                    .Include(p => p.User)
                     .FirstOrDefaultAsync(p => p.PlantId == plantId);
 
                 if (efPlant == null)
@@ -68,7 +67,7 @@ namespace Cuttr.Infrastructure.Repositories
         {
             try
             {
-                var efPlant = BusinessToEFMapper.MapToPlantEF(plant);
+                var efPlant = BusinessToEFMapper.MapToPlantEFWithoutUser(plant);
 
                 _context.Plants.Update(efPlant);
                 await _context.SaveChangesAsync();
@@ -113,12 +112,13 @@ namespace Cuttr.Infrastructure.Repositories
             }
         }
 
-        public async Task<IEnumerable<Plant>> GetPlantsByUserIdAsync(int userId)
+        public async Task<IEnumerable<Plant>> GetTradablePlantsByUserIdAsync(int userId)
         {
             try
             {
                 var efPlants = await _context.Plants.AsNoTracking()
                     .Where(p => p.UserId == userId)
+                    .Where(p => p.IsTraded == false)
                     .Include(p => p.User)
                     .ToListAsync();
 
@@ -148,7 +148,7 @@ namespace Cuttr.Infrastructure.Repositories
             }
         }
 
-        public async Task<IEnumerable<Plant>> GetPlantsWithinRadiusAsync(double originLat, double originLon, double radiusKm)
+        public async Task<IEnumerable<Plant>> GetTradablePlantsWithinRadiusAsync(double originLat, double originLon, double radiusKm)
         {
             // Convert radius to meters
             double radiusMeters = radiusKm * 1000;
@@ -160,7 +160,7 @@ namespace Cuttr.Infrastructure.Repositories
             var efPlants = await _context.Plants
                 .AsNoTracking()
                 .Include(p => p.User)
-                .Where(p => p.User.Location != null && p.User.Location.Distance(origin) <= radiusMeters)
+                .Where(p => p.User.Location != null && p.User.Location.Distance(origin) <= radiusMeters && p.IsTraded==false)
                 .ToListAsync();
 
             return efPlants.Select(EFToBusinessMapper.MapToPlant);

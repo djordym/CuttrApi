@@ -113,7 +113,7 @@ namespace Cuttr.Infrastructure.Repositories
             }
         }
 
-        public async Task<IEnumerable<Plant>> GetLikedPlantsBySwiperAsync(int swiperUserId, int swipedPlantOwnerUserId)
+        public async Task<IEnumerable<Plant>> GetTradableLikedPlantsBySwiperAsync(int swiperUserId, int swipedPlantOwnerUserId)
         {
             try
             {
