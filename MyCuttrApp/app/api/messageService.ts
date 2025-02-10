@@ -12,3 +12,5 @@ export const messageService = {
     return response.data;
   },
 };
+
+export default messageService;

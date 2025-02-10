@@ -196,3 +196,5 @@ export const profileCardStyles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+export default profileCardStyles;

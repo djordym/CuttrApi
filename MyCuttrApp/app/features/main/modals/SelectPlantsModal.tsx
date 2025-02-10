@@ -152,6 +152,8 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
   );
 };
 
+export default SelectPlantsModal;
+
 // Replicating (and adapting) styles from your MyProfileScreen thumbnails:
 const styles = StyleSheet.create({
   modalContainer: {

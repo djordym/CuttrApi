@@ -171,6 +171,8 @@ export const SwipeableCard = forwardRef<SwipeableCardRef, SwipeableCardProps>(
   }
 );
 
+export default SwipeableCard;
+
 const styles = StyleSheet.create({
   cardContainer: {
     position: 'absolute',
@@ -179,7 +181,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginVertical: 'auto',
 
-    backgroundColor: COLORS.cardBg,
+    backgroundColor: COLORS.cardBg1,
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 5,

@@ -49,3 +49,5 @@ export const connectionService = {
     await api.put(`/connections/${connectionId}/proposals/${proposalId}/confirm-completion`);
   },
 };
+
+export default connectionService;

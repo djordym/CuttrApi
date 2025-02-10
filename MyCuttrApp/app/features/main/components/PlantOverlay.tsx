@@ -28,6 +28,8 @@ export const PlantOverlay: React.FC<PlantOverlayProps> = ({ speciesName, descrip
   </View>
 );
 
+export default PlantOverlay;
+
 const styles = StyleSheet.create({
   overlayContent: {
     padding: 10,

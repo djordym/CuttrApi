@@ -86,3 +86,4 @@ export enum PlantStage {
 	Completed = "Completed"
   }
   
+  export default { PlantStage, PlantCategory, WateringNeed, LightRequirement, Size, IndoorOutdoor, PropagationEase, PetFriendly, Extras, TradeProposalStatus }

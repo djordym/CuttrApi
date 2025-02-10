@@ -57,3 +57,5 @@ export const useConfirmTradeProposalCompletion = (connectionId: number) => {
     }
   );
 }
+
+export default useTradeProposals;

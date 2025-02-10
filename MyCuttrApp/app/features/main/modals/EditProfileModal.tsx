@@ -389,6 +389,8 @@ export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
   );
 };
 
+export default EditProfileModal;
+
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,

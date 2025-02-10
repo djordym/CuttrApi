@@ -42,3 +42,5 @@ export const COLORS3 = {
     bubbleRight: '#DCF8C6',
     accentOrange: '#F39C12'
   };
+
+  export default COLORS;

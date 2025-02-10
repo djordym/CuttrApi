@@ -11,3 +11,5 @@ const defaultConfig = {
 };
 
 export const log = logger.createLogger(defaultConfig);
+
+export default log;

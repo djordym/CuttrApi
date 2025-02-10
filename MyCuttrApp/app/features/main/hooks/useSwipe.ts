@@ -47,3 +47,6 @@ export const useLikablePlants = () => {
     clearMatches,
   };
 };
+
+
+export default useLikablePlants;

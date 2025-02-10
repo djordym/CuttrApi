@@ -164,8 +164,10 @@ export const authSlice = createSlice({
         state.refreshToken = null;
         state.error = null;
         state.status = 'idle';
-r      });
+      });
   }
 });
+
+export default authSlice.reducer;
 
 export const { logout, setInitialTokens } = authSlice.actions;

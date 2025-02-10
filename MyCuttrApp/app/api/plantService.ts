@@ -126,3 +126,5 @@ export const plantService = {
     await api.post('/plants/mark-as-traded', plantIds);
   }
 };
+
+export default plantService;

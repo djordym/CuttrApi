@@ -21,3 +21,5 @@ export const useOtherProfile = (userId: number) => {
     );  
   };
 
+
+export default useOtherProfile;

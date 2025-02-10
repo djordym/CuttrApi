@@ -7,3 +7,5 @@ export const matchService = {
     return response.data;
   },
 };
+
+export default matchService;

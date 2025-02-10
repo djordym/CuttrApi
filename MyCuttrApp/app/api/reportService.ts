@@ -7,3 +7,5 @@ export const reportService = {
     return response.data;
   }
 };
+
+export default reportService;

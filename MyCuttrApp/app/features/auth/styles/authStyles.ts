@@ -73,3 +73,5 @@ export const authStyles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+export default authStyles;

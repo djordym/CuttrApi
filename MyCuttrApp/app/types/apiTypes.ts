@@ -204,3 +204,4 @@ export interface TradeProposalResponse{
 }
 
 
+export default { PlantStage, PlantCategory, WateringNeed, LightRequirement, Size, IndoorOutdoor, PropagationEase, PetFriendly, Extras, TradeProposalStatus }

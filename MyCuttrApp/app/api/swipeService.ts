@@ -8,3 +8,5 @@ export const swipeService = {
   },
   
 };
+
+export default swipeService;

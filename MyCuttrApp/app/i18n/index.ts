@@ -23,3 +23,5 @@ export async function initI18n() {
     });
   return i18n;
 }
+
+export default i18n;

@@ -30,3 +30,5 @@ export const useUserPreferences = () => {
     isUpdating: mutation.isLoading
   };
 };
+
+export default useUserPreferences;

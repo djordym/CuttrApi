@@ -9,3 +9,5 @@ export const loggingMiddleware: Middleware = (storeAPI) => (next) => (action: an
   const result = next(action);
   return result;
 };
+
+export default loggingMiddleware;

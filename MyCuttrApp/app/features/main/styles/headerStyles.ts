@@ -45,3 +45,5 @@ export const headerStyles = StyleSheet.create({
     marginBottom: 10,
   },
 });
+
+export default headerStyles;

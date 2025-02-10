@@ -11,3 +11,5 @@ export const userPreferencesService = {
     return response.data;
   }
 };
+
+export default userPreferencesService;

@@ -29,6 +29,8 @@ export const  MessageBubble: React.FC<BubbleProps> = ({ message, isMine }) => {
   );
 };
 
+export default MessageBubble;
+
 const styles = StyleSheet.create({
   bubbleContainer: {
     marginVertical: 3,

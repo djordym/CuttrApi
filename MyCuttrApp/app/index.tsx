@@ -4,7 +4,7 @@ import { Provider } from 'react-redux';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { I18nextProvider } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ErrorBoundary } from './ErrorBoundary';
+import ErrorBoundary from './ErrorBoundary';
 import { store } from './store';
 import AppNavigator from './navigation/AppNavigator';
 import { initI18n } from './i18n';

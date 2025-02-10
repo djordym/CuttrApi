@@ -10,3 +10,5 @@ export const useSearchRadius = () => {
     isError,
   };
 };
+
+export default useSearchRadius;

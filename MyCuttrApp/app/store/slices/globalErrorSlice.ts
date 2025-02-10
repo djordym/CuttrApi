@@ -22,3 +22,5 @@ export const globalErrorSlice = createSlice({
 });
 
 export const { setGlobalError, clearGlobalError } = globalErrorSlice.actions;
+
+export default globalErrorSlice.reducer;

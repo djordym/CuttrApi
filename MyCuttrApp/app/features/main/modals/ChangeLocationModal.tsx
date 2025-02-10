@@ -195,6 +195,8 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
   );
 };
 
+export default ChangeLocationModal;
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,

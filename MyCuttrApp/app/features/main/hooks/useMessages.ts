@@ -40,3 +40,5 @@ export const useMessages = (connectionId: number) => {
     isSending: sendMessageMutation.isLoading,
   };
 };
+
+export default useMessages;

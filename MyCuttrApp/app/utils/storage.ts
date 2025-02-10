@@ -21,3 +21,5 @@ export const storage = {
   },
   getLanguage: async () => SecureStore.getItemAsync(LANGUAGE_KEY),
 };
+
+export default storage;

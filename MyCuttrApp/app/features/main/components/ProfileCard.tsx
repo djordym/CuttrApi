@@ -93,3 +93,5 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
     </View>
   );
 };
+
+export default ProfileCard;

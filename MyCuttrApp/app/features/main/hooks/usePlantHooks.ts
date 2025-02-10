@@ -74,3 +74,5 @@ export const useMarkPlantsAsTraded = () => {
     },
   });
 };
+
+export default useOtherUserPlants;
