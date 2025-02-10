@@ -1,4 +1,5 @@
 // File: app/features/main/screens/MakeTradeProposalScreen.tsx
+
 import React, { useState } from 'react';
 import {
   View,
@@ -13,6 +14,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import {
   usePlantsLikedByMeFromUser,
@@ -33,6 +35,7 @@ interface MakeTradeProposalRouteParams {
 }
 
 const MakeTradeProposalScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
   const { connectionId, otherUserId } = route.params as MakeTradeProposalRouteParams;
@@ -70,7 +73,10 @@ const MakeTradeProposalScreen: React.FC = () => {
 
   const handleTrade = () => {
     if (selectedOtherPlantIds.length === 0 && selectedMyPlantIds.length === 0) {
-      Alert.alert('Empty Trade', 'Select at least one plant to trade!');
+      Alert.alert(
+        t("makeTradeProposal.emptyTradeTitle"),
+        t("makeTradeProposal.emptyTradeMessage")
+      );
       return;
     }
     const payload = {
@@ -79,13 +85,18 @@ const MakeTradeProposalScreen: React.FC = () => {
     };
     createTradeProposal(payload, {
       onSuccess: () => {
-        Alert.alert('Success', 'Trade proposal created!', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert(
+          t("makeTradeProposal.tradeSuccessTitle"),
+          t("makeTradeProposal.tradeSuccessMessage"),
+          [{ text: t("common.ok"), onPress: () => navigation.goBack() }]
+        );
       },
       onError: (err) => {
         console.error('Failed to create proposal:', err);
-        Alert.alert('Error', 'Could not create proposal. Try again.');
+        Alert.alert(
+          t("makeTradeProposal.tradeErrorTitle"),
+          t("makeTradeProposal.tradeErrorMessage")
+        );
       },
     });
   };
@@ -127,7 +138,7 @@ const MakeTradeProposalScreen: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading liked plants...</Text>
+        <Text style={styles.loadingText}>{t("makeTradeProposal.loadingLikedPlants")}</Text>
       </View>
     );
   }
@@ -135,7 +146,7 @@ const MakeTradeProposalScreen: React.FC = () => {
   if (errorOtherPlants || errorMyPlants) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Couldn’t load plants. Please retry.</Text>
+        <Text style={styles.errorText}>{t("makeTradeProposal.errorLoadingPlants")}</Text>
         <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color="#fff" />
         </TouchableOpacity>
@@ -145,12 +156,20 @@ const MakeTradeProposalScreen: React.FC = () => {
 
   return (
     <View style={styles.modalBackground}>
-      <LinearGradient style={styles.modalContainer} colors={[COLORS.primary, COLORS.secondary]}>
+      <LinearGradient
+        style={styles.modalContainer}
+        colors={[COLORS.primary, COLORS.secondary]}
+      >
         <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color="#fff" />
         </TouchableOpacity>
 
-        {renderHorizontalSection("They’re Offering?", othersPlantsILiked, selectedOtherPlantIds, toggleOtherPlantSelection)}
+        {renderHorizontalSection(
+          t("makeTradeProposal.theyOffering"),
+          othersPlantsILiked,
+          selectedOtherPlantIds,
+          toggleOtherPlantSelection
+        )}
 
         {/* Enhanced Divider with a Cool Gradient Trade Button */}
         <View style={styles.tradeDividerContainer}>
@@ -162,7 +181,9 @@ const MakeTradeProposalScreen: React.FC = () => {
               ) : (
                 <View style={styles.tradeButtonContent}>
                   <Ionicons name="swap-horizontal" size={20} color="#fff" />
-                  <Text style={styles.tradeButtonText}> TRADE</Text>
+                  <Text style={styles.tradeButtonText}>
+                    {" "}{t("makeTradeProposal.tradeButton")}
+                  </Text>
                 </View>
               )}
             </LinearGradient>
@@ -170,7 +191,12 @@ const MakeTradeProposalScreen: React.FC = () => {
           <View style={styles.dividerLine} />
         </View>
 
-        {renderHorizontalSection("You’re Offering?", myPlantsTheyLiked, selectedMyPlantIds, toggleMyPlantSelection)}
+        {renderHorizontalSection(
+          t("makeTradeProposal.youOffering"),
+          myPlantsTheyLiked,
+          selectedMyPlantIds,
+          toggleMyPlantSelection
+        )}
       </LinearGradient>
 
       {/* Reusable InfoModal */}

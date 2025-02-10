@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   StyleSheet,
   Text,
@@ -24,7 +25,9 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
   onPlantInfoPress,
   isConfirming = false,
 }) => {
-  // "deleted" or "keep" or undefined if not yet decided
+  const { t } = useTranslation();
+
+  // "delete" or "keep" or undefined if not yet decided
   const [decisions, setDecisions] = React.useState<{
     [plantId: number]: "delete" | "keep" | undefined;
   }>({});
@@ -54,7 +57,7 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
   return (
     <View style={styles.completedSection}>
       <Text style={styles.completedPrompt}>
-        Trade complete – choose your action for your plants:
+        {t("completedTradeActions.prompt")}
       </Text>
       <View style={styles.plantGrid}>
         {plants.map((plant) => {
@@ -72,7 +75,7 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
                 <View style={styles.decisionRow}>
                   <View style={styles.decisionTag}>
                     <Text style={styles.decisionLabelText}>
-                      {decision === "delete" ? "Delete" : "Keep"}
+                      {t(`completedTradeActions.${decision}`)}
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -91,7 +94,9 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
                     ]}
                     onPress={() => markPlant(plant.plantId, "delete")}
                   >
-                    <Text style={styles.plantActionText}>Delete</Text>
+                    <Text style={styles.plantActionText}>
+                      {t("completedTradeActions.delete")}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -100,7 +105,9 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
                     ]}
                     onPress={() => markPlant(plant.plantId, "keep")}
                   >
-                    <Text style={styles.plantActionText}>Keep</Text>
+                    <Text style={styles.plantActionText}>
+                      {t("completedTradeActions.keep")}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -119,7 +126,9 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
         disabled={!allDecided || isConfirming}
       >
         <Text style={styles.confirmButtonText}>
-          {isConfirming ? "Processing..." : "Confirm"}
+          {isConfirming
+            ? t("completedTradeActions.processing")
+            : t("completedTradeActions.confirm")}
         </Text>
       </TouchableOpacity>
     </View>

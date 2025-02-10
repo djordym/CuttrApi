@@ -1,6 +1,6 @@
-// src/screens/OtherProfileScreen.tsx
+// File: src/screens/OtherProfileScreen.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +21,7 @@ import * as Location from 'expo-location';
 
 import { PlantCardWithInfo } from '../components/PlantCardWithInfo';
 import { useOtherProfile } from '../hooks/useOtherProfile';
-import { useMyPlants } from '../hooks/usePlantHooks'; // Assuming you want to show current user's plants related to the other user
+import { useMyPlants } from '../hooks/usePlantHooks';
 import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse, UserResponse } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
@@ -40,40 +41,38 @@ const OtherProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<OtherProfileScreenRouteProp>();
   const { userId } = route.params;
+  const screenWidth = Dimensions.get('window').width;
 
-  // Hooks
+  // Fetch the other user's profile
   const {
     data: otherUserProfile,
     isLoading: loadingProfile,
     isError: errorProfile,
     refetch: refetchProfile,
   } = useOtherProfile(userId);
-  
-  // Assuming you want to display plants related to the other user
-  // If plants are not user-specific, adjust accordingly
+
+  // Fetch current user's plants (if needed to show related plants)
   const {
     data: myPlants,
     isLoading: loadingPlants,
     isError: errorPlants,
     refetch: refetchPlants,
   } = useMyPlants();
-  
+
+  // Fetch search radius (if used for geolocation display)
   const {
     searchRadius,
     isLoading: srLoading,
     isError: srError,
   } = useSearchRadius();
 
-  // For showing city, country
+  // For showing city, country based on location
   const [cityCountry, setCityCountry] = useState<string>('');
 
-  // Toggle: Thumbnails or Full-size for plants
+  // Toggle between Thumbnails and Full-size for plants
   const [showFullSize, setShowFullSize] = useState(false);
 
-  // Position for the EditProfileModal (Not needed for OtherProfileScreen)
-  // Removed related states and functions
-
-  // If the user has location
+  // Determine if the other user has location info
   const userHasLocation =
     otherUserProfile?.locationLatitude !== undefined &&
     otherUserProfile?.locationLongitude !== undefined;
@@ -104,20 +103,18 @@ const OtherProfileScreen: React.FC = () => {
     })();
   }, [userHasLocation, otherUserProfile]);
 
-  // Handler for sending message to the user
+  // Handler for sending a message to the user
   const handleSendMessage = () => {
     navigation.navigate('Chat' as never, { otherUserId: userId } as never);
   };
 
-  // Rendering plants
+  // Render each plant item from current user's plants (or other data if needed)
   const renderPlantItem = (item: PlantResponse) => {
     if (!showFullSize) {
       return (
         <PlantThumbnail
           key={item.plantId}
           plant={item}
-          // Assuming these props are not needed for viewing others' plants
-          // Remove or adjust if necessary
         />
       );
     } else {
@@ -180,39 +177,26 @@ const OtherProfileScreen: React.FC = () => {
               <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
             </TouchableOpacity>
             <View style={styles.headerUserInfo}>
-              <Ionicons name="person-circle-outline" size={30} color={COLORS.textLight} />
-              <Text style={headerStyles.headerTitle}>{t('profile_title')}</Text>
+              <Text style={headerStyles.headerTitle}>{t('other_profile_title')}</Text>
             </View>
           </View>
         </LinearGradient>
 
-        {/* --- Profile Card --- */}
+        {/* Profile Card */}
         <View style={styles.cardContainer}>
           <ProfileCard
             userProfile={otherUserProfile}
-            // No edit functionality
             isEditable={false}
+            screenWidth={screenWidth}
           />
         </View>
 
-        {/* ---- User's Plants Section ---- */}
+        {/* User's Plants Section */}
         <View style={styles.plantsSectionWrapper}>
           <View style={styles.plantsSectionHeader}>
             <Text style={styles.plantsSectionTitle}>
-              {otherUserProfile.name} {t('profile_my_plants_section')}
+              {t('profile_my_plants_section')}
             </Text>
-            {/* If you want to allow interaction like sending a message */}
-            <TouchableOpacity
-              onPress={handleSendMessage}
-              style={styles.addPlantButton} // Reuse styles or create new ones
-              accessibilityRole="button"
-              accessibilityLabel={t('profile_send_message_button')}
-            >
-              <Ionicons name="chatbubble-ellipses" size={24} color={COLORS.textLight} />
-              <Text style={styles.addPlantButtonText}>
-                {t('profile_send_message_button')}
-              </Text>
-            </TouchableOpacity>
           </View>
 
           {/* Toggle between Thumbnails and Full view */}
@@ -252,6 +236,7 @@ const OtherProfileScreen: React.FC = () => {
           </View>
 
           {/* Plants List */}
+          {/** Adjust the plant list source as needed (e.g. other user's plants if available) **/}
           {myPlants && myPlants.length > 0 ? (
             <View style={showFullSize ? styles.fullViewContainer : styles.thumbViewContainer}>
               {myPlants.map((plant) => renderPlantItem(plant))}
@@ -264,15 +249,6 @@ const OtherProfileScreen: React.FC = () => {
             </View>
           )}
         </View>
-
-        {/* Additional Actions (e.g., Follow Button) */}
-        <View style={styles.actionsContainer}>
-          {/* Example: Follow Button */}
-          <TouchableOpacity style={styles.followButton} onPress={() => Alert.alert('Followed!')}>
-            <Text style={styles.followButtonText}>{t('profile_follow_button')}</Text>
-          </TouchableOpacity>
-          {/* Add more actions as needed */}
-        </View>
       </ScrollView>
     </SafeAreaProvider>
   );
@@ -280,7 +256,6 @@ const OtherProfileScreen: React.FC = () => {
 
 export default OtherProfileScreen;
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -314,14 +289,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
   // Profile Card
   cardContainer: {
     marginHorizontal: 16,
     marginTop: 20,
   },
-
-  // ---- Plants Section ----
+  // Plants Section
   plantsSectionWrapper: {
     paddingTop: 20,
     paddingBottom: 15,
@@ -338,33 +311,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textDark,
   },
-  addPlantButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.accentGreen, // or any brand color
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  addPlantButtonText: {
-    color: COLORS.textLight,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-
-  // Toggle for Thumbnails / Full
   viewToggleRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -391,8 +337,7 @@ const styles = StyleSheet.create({
   segmentButtonTextActive: {
     color: COLORS.textLight,
   },
-
-  // Different layouts for the plant items
+  // Layouts for plant items
   thumbViewContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -415,41 +360,10 @@ const styles = StyleSheet.create({
     color: '#555',
     textAlign: 'center',
   },
-
   // Header User Info
   headerUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 10, // Adjust as needed
-  },
-  headerUserImage: {
-    borderColor: COLORS.accentGreen,
-    borderWidth: 3,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 8,
-    backgroundColor: '#ccc', // Placeholder color in case image fails to load
-  },
-
-  // Actions Container
-  actionsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  followButton: {
-    backgroundColor: COLORS.accentGreen,
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    marginBottom: 10,
-    width: '100%',
-    alignItems: 'center',
-  },
-  followButtonText: {
-    color: COLORS.textLight,
-    fontSize: 16,
-    fontWeight: '600',
+    marginLeft: 10,
   },
 });

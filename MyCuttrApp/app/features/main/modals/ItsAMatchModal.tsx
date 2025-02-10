@@ -6,8 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Image,
-  ScrollView,
+  Image
 } from 'react-native';
 import {
   SwipeResponse,
@@ -55,29 +54,31 @@ const ItsAMatchModal: React.FC<ItsAMatchModalProps> = ({
         <View style={styles.modalContainer}>
           <Text style={styles.title}>{t('new_matches')}</Text>
 
-            {/* Show the other user's info once at the top */}
-            <View style={styles.connectionHeader}>
-              <Image
-                source={{ uri: otherUser.profilePictureUrl }}
-                style={styles.connectionImage}
-              />
-              <Text style={styles.connectionName}>{otherUser.name}</Text>
-            </View>
-
-            {/* Render the list of Match objects */}
-            <FlatList
-              data={matchData}
-              keyExtractor={(item) => item.matchId.toString()}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <MatchCard match={item} currentUserId={currentUserId} />
-              )}
-              contentContainerStyle={styles.matchesList}
+          {/* Show the other user's info once at the top */}
+          <View style={styles.connectionHeader}>
+            <Image
+              source={{ uri: otherUser.profilePictureUrl }}
+              style={styles.connectionImage}
             />
+            <Text style={styles.connectionName}>{otherUser.name}</Text>
+          </View>
+
+          {/* Render the list of Match objects */}
+          <FlatList
+            data={matchData}
+            keyExtractor={(item) => item.matchId.toString()}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <MatchCard match={item} currentUserId={currentUserId} />
+            )}
+            contentContainerStyle={styles.matchesList}
+          />
 
           {/* Close button */}
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>Close</Text>
+            <Text style={styles.closeButtonText}>
+              {t('its_a_match_modal.close')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -107,9 +108,6 @@ const styles = StyleSheet.create({
     color: COLORS.accentGreen,
     marginBottom: 16,
     textAlign: 'center',
-  },
-  contentContainer: {
-    paddingBottom: 20,
   },
   connectionHeader: {
     flexDirection: 'row',

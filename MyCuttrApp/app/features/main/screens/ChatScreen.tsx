@@ -1,6 +1,12 @@
 // File: src/features/main/screens/ChatScreen.tsx
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -14,39 +20,39 @@ import {
   Alert,
   Image,
   Animated,
-} from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
+} from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 
 // Hooks
-import { useMyProfile } from '../hooks/useMyProfileHooks';
-import { useMessages } from '../hooks/useMessages';
-import { useOtherProfile } from '../hooks/useOtherProfile';
+import { useMyProfile } from "../hooks/useMyProfileHooks";
+import { useMessages } from "../hooks/useMessages";
+import { useOtherProfile } from "../hooks/useOtherProfile";
 
 // For fetching trade proposals
-import { useQuery } from 'react-query';
-import { connectionService } from '../../../api/connectionService';
-import { TradeProposalResponse } from '../../../types/apiTypes';
-import { TradeProposalStatus } from '../../../types/enums';
+import { useQuery } from "react-query";
+import { connectionService } from "../../../api/connectionService";
+import { TradeProposalResponse } from "../../../types/apiTypes";
+import { TradeProposalStatus } from "../../../types/enums";
 
 // Types
-import { MessageResponse, MessageRequest } from '../../../types/apiTypes';
+import { MessageResponse, MessageRequest } from "../../../types/apiTypes";
 
 // Theme & Styles
-import { COLORS } from '../../../theme/colors';
-import { headerStyles } from '../styles/headerStyles';
+import { COLORS } from "../../../theme/colors";
+import { headerStyles } from "../styles/headerStyles";
 
 // Components
-import { MessageBubble } from '../components/MessageBubble';
-import ProfileCardShelf, { ProfileCardShelfRef } from '../components/ProfileCardShelf';
+import { MessageBubble } from "../components/MessageBubble";
+import log from "../../../utils/logger";
 
 // ---------- Custom hook for trade proposals ----------
 const useTradeProposals = (connectionId: number) => {
   return useQuery<TradeProposalResponse[], Error>(
-    ['tradeProposals', connectionId],
+    ["tradeProposals", connectionId],
     () => connectionService.getTradeProposals(connectionId),
     { staleTime: 1000 * 60 }
   );
@@ -70,7 +76,7 @@ const ChatScreen: React.FC = () => {
     isError: errorMyProfile,
   } = useMyProfile();
 
-  // Other user's profile (for the ProfileCardShelf)
+  // Other user's profile
   const {
     data: otherUserProfile,
     isLoading: loadingOtherUser,
@@ -89,20 +95,38 @@ const ChatScreen: React.FC = () => {
 
   // Trade proposals for this connection (to compute pending proposals)
   const { data: proposals } = useTradeProposals(connectionId);
-  const pendingProposals = proposals?.filter(
-    (proposal) => proposal.tradeProposalStatus === TradeProposalStatus.Pending
-  ) || [];
+  const pendingProposals =
+    proposals?.filter(
+      (proposal) =>
+        proposal.proposalOwnerUserId !== myProfile?.userId &&
+        proposal.tradeProposalStatus === TradeProposalStatus.Pending
+    ) || [];
   const pendingCount = pendingProposals.length;
+
+  const toConfirmProposals =
+    proposals?.filter((proposal) => {
+      return (
+        proposal.tradeProposalStatus === TradeProposalStatus.Completed &&
+        ((proposal.proposalOwnerUserId === myProfile?.userId &&
+          !proposal.ownerCompletionConfirmed) ||
+          (proposal.proposalOwnerUserId !== myProfile?.userId &&
+            !proposal.responderCompletionConfirmed))
+      );
+    }) || [];
+  const toConfirmProposalsCount = toConfirmProposals.length;
+
+  const proposalsAwaitingActionsCount =
+    pendingCount + toConfirmProposalsCount;
 
   // --- Animated values for the trade proposals button ---
   const buttonWidth = useRef(new Animated.Value(56)).current;
   const glimmerAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (pendingCount > 0) {
+    if (pendingCount > 0 || toConfirmProposalsCount > 0) {
       // Expand the background to reveal text
       Animated.timing(buttonWidth, {
-        toValue: 210, // or whatever max width you want
+        toValue: 210,
         duration: 300,
         useNativeDriver: false,
       }).start();
@@ -134,7 +158,7 @@ const ChatScreen: React.FC = () => {
       // Stop pulsing by resetting
       glimmerAnim.setValue(1);
     }
-  }, [pendingCount]);
+  }, [pendingCount, toConfirmProposalsCount]);
 
   // Animated style for the button
   const buttonAnimatedStyle = {
@@ -161,33 +185,29 @@ const ChatScreen: React.FC = () => {
   }, [sortedMessages]);
 
   // Input state
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
 
   // Handle sending a message
   const handleSendMessage = useCallback(() => {
     const text = inputText.trim();
     if (!text) return;
-    setInputText('');
+    setInputText("");
     const payload: MessageRequest = { messageText: text };
     sendMessage(payload, {
       onError: (error) => {
-        console.error('Error sending message:', error);
-        Alert.alert(t('chat_error'), t('chat_send_failed'));
+        console.error("Error sending message:", error);
+        Alert.alert(t("chat_error"), t("chat_send_failed"));
       },
     });
   }, [inputText, sendMessage, t]);
-
-  // Ref for ProfileCardShelf (if used) to close it on input focus
-  const shelfRef = useRef<ProfileCardShelfRef>(null);
-  const handleInputFocus = useCallback(() => {
-    shelfRef.current?.closeShelf();
-  }, []);
 
   if (loadingMyProfile || isLoadingMessages || loadingOtherUser) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>{t('chat_loading_conversation')}</Text>
+        <Text style={styles.loadingText}>
+          {t("chat_loading_conversation")}
+        </Text>
       </SafeAreaProvider>
     );
   }
@@ -195,9 +215,14 @@ const ChatScreen: React.FC = () => {
   if (errorMyProfile || isErrorMessages || errorOtherUser) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
-        <Text style={styles.errorText}>{t('chat_error_message')}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => refetchMessages()}>
-          <Text style={styles.retryButtonText}>{t('chat_retry_button')}</Text>
+        <Text style={styles.errorText}>{t("chat_error_message")}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => refetchMessages()}
+        >
+          <Text style={styles.retryButtonText}>
+            {t("chat_retry_button")}
+          </Text>
         </TouchableOpacity>
       </SafeAreaProvider>
     );
@@ -205,22 +230,28 @@ const ChatScreen: React.FC = () => {
 
   // Navigate to "Browse Matches" screen
   const handleBrowseMatches = () => {
-    navigation.navigate('BrowseMatches' as never, { connectionId } as never);
+    navigation.navigate("BrowseMatches" as never, { connectionId } as never);
   };
 
   // Navigate to Trade Proposals screen
   const handleOpenTradeProposals = () => {
-    navigation.navigate('TradeProposals' as never, { connectionId } as never);
+    navigation.navigate("TradeProposals" as never, { connectionId } as never);
   };
 
-  // Navigate to Make Trade Proposal screen (for creating a new proposal)
+  // Navigate to Make Trade Proposal screen
   const handleOpenTradeProposal = () => {
-    navigation.navigate('MakeTradeProposal' as never, { connectionId, otherUserId } as never);
+    navigation.navigate(
+      "MakeTradeProposal" as never,
+      { connectionId, otherUserId } as never
+    );
   };
 
   // Navigate to the other user's profile screen
   const handleNavigateToProfile = () => {
-    navigation.navigate('OtherProfile' as never, { userId: otherUserProfile.userId } as never);
+    navigation.navigate(
+      "OtherProfile" as never,
+      { userId: otherUserProfile.userId } as never
+    );
   };
 
   return (
@@ -231,16 +262,28 @@ const ChatScreen: React.FC = () => {
         colors={[COLORS.primary, COLORS.secondary]}
       >
         <View style={headerStyles.headerColumn1}>
-          <TouchableOpacity style={headerStyles.headerBackButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
+          <TouchableOpacity
+            style={headerStyles.headerBackButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={30}
+              color={COLORS.textLight}
+            />
           </TouchableOpacity>
           {otherUserProfile && (
-            <TouchableOpacity style={styles.headerUserInfo} onPress={handleNavigateToProfile}>
+            <TouchableOpacity
+              style={styles.headerUserInfo}
+              onPress={handleNavigateToProfile}
+            >
               <Image
                 source={{ uri: otherUserProfile.profilePictureUrl }}
                 style={styles.headerUserImage}
               />
-              <Text style={headerStyles.headerTitle}>{otherUserProfile.name}</Text>
+              <Text style={headerStyles.headerTitle}>
+                {otherUserProfile.name}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -249,16 +292,16 @@ const ChatScreen: React.FC = () => {
       {/* "Browse Matches" button */}
       <TouchableOpacity style={styles.browseButton} onPress={handleBrowseMatches}>
         <Text style={styles.browseButtonText}>
-          {t('chat_browse_matches_button', 'Browse Matches')}
+          {t("chat_browse_matches_button")}
         </Text>
       </TouchableOpacity>
-
-
 
       {/* Chat messages */}
       {sortedMessages.length === 0 ? (
         <View style={styles.emptyChatContainer}>
-          <Text style={styles.noMessagesText}>{t('chat_no_messages_yet')}</Text>
+          <Text style={styles.noMessagesText}>
+            {t("chat_no_messages_yet")}
+          </Text>
         </View>
       ) : (
         <View style={styles.listContainer}>
@@ -282,24 +325,24 @@ const ChatScreen: React.FC = () => {
             { width: buttonWidth, opacity: glimmerAnim },
           ]}
         >
-          {/* Single Touchable: tapping text or circle calls the same onPress */}
           <TouchableOpacity
             style={styles.pendingButtonTouchable}
             onPress={handleOpenTradeProposals}
             activeOpacity={0.8}
           >
-            {/* The “pill” background behind everything */}
             <View style={styles.backgroundBar}>
-              {pendingCount > 0 && (
+              {proposalsAwaitingActionsCount > 0 && (
                 <Text style={styles.pendingButtonText}>
-                  {`${pendingCount} pending proposals`}
+                  {`${proposalsAwaitingActionsCount} ${t("chat_pending_proposals")}`}
                 </Text>
               )}
             </View>
-
-            {/* The circle button (with icon + shadow) pinned on the left */}
             <View style={styles.circleButton}>
-              <Ionicons name="document-text-outline" size={24} color="#fff" />
+              <Ionicons
+                name="document-text-outline"
+                size={24}
+                color="#fff"
+              />
             </View>
           </TouchableOpacity>
         </Animated.View>
@@ -308,12 +351,11 @@ const ChatScreen: React.FC = () => {
         <TouchableOpacity style={styles.tradeFab} onPress={handleOpenTradeProposal}>
           <Ionicons name="swap-horizontal" size={26} color="#fff" />
         </TouchableOpacity>
-
       </View>
 
       {/* Message Input */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={10}
       >
         <View style={styles.inputContainer}>
@@ -321,15 +363,21 @@ const ChatScreen: React.FC = () => {
             style={styles.textInput}
             value={inputText}
             onChangeText={setInputText}
-            placeholder={t('chat_message_placeholder')}
+            placeholder={t("chat_message_placeholder")}
             multiline
-            onFocus={handleInputFocus}
           />
           {isSending ? (
-            <ActivityIndicator style={{ marginRight: 12 }} color={COLORS.primary} />
+            <ActivityIndicator
+              style={{ marginRight: 12 }}
+              color={COLORS.primary}
+            />
           ) : (
             <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
-              <Ionicons name="send" size={20} color={COLORS.background} />
+              <Ionicons
+                name="send"
+                size={20}
+                color={COLORS.background}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -347,8 +395,8 @@ const styles = StyleSheet.create({
   },
   // Header User Info
   headerUserInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginLeft: 10,
   },
   headerUserImage: {
@@ -358,25 +406,25 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     marginRight: 8,
-    backgroundColor: '#ccc',
+    backgroundColor: "#ccc",
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   loadingText: {
     fontSize: 16,
     color: COLORS.textDark,
     marginTop: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   errorText: {
     fontSize: 16,
     color: COLORS.textDark,
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   retryButton: {
     backgroundColor: COLORS.accentGreen,
@@ -386,19 +434,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   retryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   // "Browse Matches" button
   browseButton: {
     margin: 10,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#fff',
-    alignSelf: 'center',
-    minWidth: '60%',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#fff",
+    alignSelf: "center",
+    minWidth: "60%",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 2,
@@ -406,18 +454,18 @@ const styles = StyleSheet.create({
   browseButtonText: {
     color: COLORS.textDark,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   // If no messages
   emptyChatContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   noMessagesText: {
     fontSize: 16,
     color: COLORS.textDark,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: 20,
   },
   // Chat messages list
@@ -430,19 +478,19 @@ const styles = StyleSheet.create({
   },
   // Input
   inputContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 10,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    alignItems: 'flex-end',
+    borderTopColor: "#ddd",
+    alignItems: "flex-end",
   },
   textInput: {
     flex: 1,
     minHeight: 40,
     maxHeight: 100,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: "#f2f2f2",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -456,76 +504,63 @@ const styles = StyleSheet.create({
   },
   // Floating Buttons
   floatingButtonsContainer: {
-    position: 'relative',
-    flexDirection: 'row',
+    position: "relative",
+    flexDirection: "row",
   },
   // Floating Trade Proposals Button (right bottom)
   tradeFab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     right: 20,
     backgroundColor: COLORS.accentGreen,
     width: 56,
     height: 56,
     borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
   },
-
   // Pending Proposals Button (bottom-left)
-  // The container we animate in width (and keep a fixed height).
-  // We use overflow: 'hidden' so text slides out from under the circle.
   pendingButtonContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 20,
     height: 56,
     borderRadius: 28,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
-
-  // Make the entire area clickable by wrapping in a single Touchable.
   pendingButtonTouchable: {
     flex: 1,
     borderRadius: 28,
   },
-
-  // The pill behind the circle and text:
   backgroundBar: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.accentGreen,
     borderRadius: 28,
-    paddingLeft: 56, // Leave room for the circle on the left
-    justifyContent: 'center', 
-    paddingRight: 16, 
+    paddingLeft: 56,
+    justifyContent: "center",
+    paddingRight: 16,
   },
-
-  // The text that appears when expanded:
   pendingButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 14,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
   },
-
-  // The circle with the icon on top, pinned on the left:
   circleButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 0,
     width: 56,
     height: 56,
     borderRadius: 28,
     backgroundColor: COLORS.accentGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    // Shadow (iOS + Android)
-    shadowColor: '#000',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

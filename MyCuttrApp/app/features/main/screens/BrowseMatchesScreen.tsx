@@ -1,5 +1,3 @@
-// File: app/features/main/screens/BrowseMatchesScreen.tsx
-
 import React from "react";
 import {
   View,
@@ -12,6 +10,8 @@ import {
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
 
 // Import your custom hooks and components
 import { useUserMatches } from "../hooks/useUserMatches";
@@ -19,7 +19,6 @@ import { useMyProfile } from "../hooks/useMyProfileHooks";
 import MatchCard from "../components/MatchCard";
 import { headerStyles } from "../styles/headerStyles";
 import { COLORS } from "../../../theme/colors";
-import { Ionicons } from "@expo/vector-icons";
 
 // Define the route params type
 type RouteParams = {
@@ -27,6 +26,7 @@ type RouteParams = {
 };
 
 const BrowseMatchesScreen: React.FC = () => {
+  const { t } = useTranslation();
   // Get the connectionId from the route parameters
   const route = useRoute();
   const { connectionId } = route.params as RouteParams;
@@ -52,9 +52,9 @@ const BrowseMatchesScreen: React.FC = () => {
   if (isError || profileError) {
     return (
       <SafeAreaProvider style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load matches.</Text>
+        <Text style={styles.errorText}>{t("browseMatches.errorLoadingMatches")}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{t("browseMatches.retry")}</Text>
         </TouchableOpacity>
       </SafeAreaProvider>
     );
@@ -77,9 +77,8 @@ const BrowseMatchesScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
-            
           </TouchableOpacity>
-          <Text style={headerStyles.headerTitle}>Browse Matches</Text>
+          <Text style={headerStyles.headerTitle}>{t("browseMatches.headerTitle")}</Text>
         </View>
       </LinearGradient>
       <FlatList

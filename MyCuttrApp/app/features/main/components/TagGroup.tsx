@@ -56,6 +56,12 @@ interface TagGroupProps<T> {
 
   /** Optional style override for text in a selected tag. */
   tagTextSelectedStyle?: StyleProp<TextStyle>;
+
+  /**
+   * Optional function to convert a tag value into its localized label.
+   * If provided, this function will be used to display the tag's text.
+   */
+  getLabel?: (val: T) => string;
 }
 
 function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
@@ -72,6 +78,7 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
     tagSelectedStyle,
     tagTextStyle,
     tagTextSelectedStyle,
+    getLabel,
   } = props;
 
   /**
@@ -93,13 +100,10 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
   const handlePress = (val: T) => {
     if (mode === 'single') {
       if (!onSelectSingle) return;
-
       const alreadySelected = isSelected(val);
       if (isRequired) {
-        // Must have exactly one selected always.
         onSelectSingle(val);
       } else {
-        // Tapping the selected tag again should unselect it.
         onSelectSingle(alreadySelected ? null : val);
       }
     } else {
@@ -113,7 +117,6 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
     <View style={[styles.container, containerStyle]}>
       {values.map((val) => {
         const selected = isSelected(val);
-
         return (
           <TouchableOpacity
             key={String(val)}
@@ -125,7 +128,7 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
             onPress={() => handlePress(val)}
             accessible
             accessibilityRole="button"
-            accessibilityLabel={`Select tag value: ${String(val)}`}
+            accessibilityLabel={`Select tag value: ${getLabel ? getLabel(val) : String(val)}`}
           >
             <Text
               style={[
@@ -134,7 +137,7 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
                 selected && [styles.tagTextSelected, tagTextSelectedStyle],
               ]}
             >
-              {val}
+              {getLabel ? getLabel(val) : String(val)}
             </Text>
           </TouchableOpacity>
         );
@@ -153,7 +156,7 @@ const styles = StyleSheet.create({
   },
   tag: {
     borderWidth: 1,
-    borderColor: COLORS.accentGreen, 
+    borderColor: COLORS.accentGreen,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -165,7 +168,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 12,
-    color: COLORS.accentGreen, 
+    color: COLORS.accentGreen,
     fontWeight: '600',
   },
   tagTextSelected: {

@@ -1,3 +1,5 @@
+// File: src/features/main/screens/SettingsScreen.tsx
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -67,20 +69,20 @@ const SettingsScreen: React.FC = () => {
   // Stub for changing email
   const handleChangeEmail = async () => {
     if (!newEmail.trim()) {
-      Alert.alert('Validation Error', t('Please enter a valid email.'));
+      Alert.alert(t('Validation Error'), t('settings_enter_valid_email'));
       return;
     }
     setSaving(true);
     Keyboard.dismiss();
     try {
       // Example: await userService.updateProfile({ email: newEmail });
-      Alert.alert(t('Success'), t('Email changed successfully!'));
+      Alert.alert(t('Success'), t('settings_email_changed_successfully'));
       setNewEmail('');
       refetchUserProfile();
       setIsEditingEmail(false);
     } catch (err) {
       console.error('Failed to change email:', err);
-      Alert.alert(t('Error'), t('Could not change email.'));
+      Alert.alert(t('Error'), t('settings_could_not_change_email'));
     } finally {
       setSaving(false);
     }
@@ -89,20 +91,20 @@ const SettingsScreen: React.FC = () => {
   // Stub for changing password
   const handleChangePassword = async () => {
     if (!newPassword.trim()) {
-      Alert.alert('Validation Error', t('Please enter a valid password.'));
+      Alert.alert(t('Validation Error'), t('settings_enter_valid_password'));
       return;
     }
     setSaving(true);
     Keyboard.dismiss();
     try {
       // Example: await userService.updateProfile({ password: newPassword });
-      Alert.alert(t('Success'), t('Password changed successfully!'));
+      Alert.alert(t('Success'), t('settings_password_changed_successfully'));
       setNewPassword('');
       refetchUserProfile();
       setIsEditingPassword(false);
     } catch (err) {
       console.error('Failed to change password:', err);
-      Alert.alert(t('Error'), t('Could not change password.'));
+      Alert.alert(t('Error'), t('settings_could_not_change_password'));
     } finally {
       setSaving(false);
     }
@@ -112,7 +114,7 @@ const SettingsScreen: React.FC = () => {
   const handleLogout = async () => {
     Alert.alert(
       t('Logout'),
-      t('Are you sure you want to log out?'),
+      t('settings_logout_confirmation'),
       [
         { text: t('Cancel'), style: 'cancel' },
         {
@@ -133,20 +135,14 @@ const SettingsScreen: React.FC = () => {
   const handleDeleteAccount = async () => {
     Alert.alert(
       t('Delete Account'),
-      t('Not implemented yet.'),
+      t('settings_delete_account_not_implemented'),
       [
         { text: t('Cancel'), style: 'cancel' },
         {
+          // Uncomment and implement when ready:
           // text: t('Yes, Delete'),
           // style: 'destructive',
-          // onPress: async () => {
-          //   try {
-              
-          //   } catch (err) {
-          //     console.error('Failed to delete account:', err);
-          //     Alert.alert(t('Error'), t('Could not delete account.'));
-          //   }
-          // },
+          // onPress: async () => { ... },
         },
       ],
     );
@@ -154,7 +150,7 @@ const SettingsScreen: React.FC = () => {
 
   // Not implemented yet
   const handleNotImplemented = () => {
-    Alert.alert(t('Not Implemented'), t('This feature is not implemented yet.'));
+    Alert.alert(t('Not Implemented'), t('settings_feature_not_implemented'));
   };
 
   // Save toggles
@@ -181,30 +177,18 @@ const SettingsScreen: React.FC = () => {
   // Email Row
   const renderEmailRow = () => {
     if (!isEditingEmail) {
-      // Display mode
       return (
         <View style={styles.row}>
           <View style={styles.rowLeft}>
             <Text style={styles.rowLabel}>{t('email')}</Text>
             <Text style={styles.rowValue}>
-              {userProfile?.email || t('No email found')}
+              {userProfile?.email || t('settings_no_email_found')}
             </Text>
           </View>
-
-          {/* Edit icon to start editing */}
-          {/* <TouchableOpacity
-            onPress={() => {
-              setIsEditingEmail(true);
-              setNewEmail(userProfile?.email || '');
-            }}
-          >
-            <Ionicons name="pencil-outline" size={18} color={COLORS.accentGreen} />
-          </TouchableOpacity> */}
         </View>
       );
     }
 
-    // Edit mode
     return (
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
@@ -219,7 +203,6 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         <View style={styles.rowActions}>
-          {/* Confirm */}
           <TouchableOpacity
             onPress={handleChangeEmail}
             style={{ marginRight: 12 }}
@@ -231,7 +214,6 @@ const SettingsScreen: React.FC = () => {
               <Ionicons name="checkmark-circle" size={24} color={COLORS.accentGreen} />
             )}
           </TouchableOpacity>
-          {/* Cancel */}
           <TouchableOpacity
             onPress={() => {
               setIsEditingEmail(false);
@@ -248,15 +230,12 @@ const SettingsScreen: React.FC = () => {
   // Password Row
   const renderPasswordRow = () => {
     if (!isEditingPassword) {
-      // Display mode
       return (
         <View style={styles.row}>
           <View style={styles.rowLeft}>
             <Text style={styles.rowLabel}>{t('Password')}</Text>
             <Text style={styles.rowValue}>********</Text>
           </View>
-
-          {/* Edit icon to start editing password */}
           <TouchableOpacity
             onPress={() => {
               setIsEditingPassword(true);
@@ -269,7 +248,6 @@ const SettingsScreen: React.FC = () => {
       );
     }
 
-    // Edit mode
     return (
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
@@ -284,7 +262,6 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         <View style={styles.rowActions}>
-          {/* Confirm */}
           <TouchableOpacity
             onPress={handleChangePassword}
             style={{ marginRight: 12 }}
@@ -296,7 +273,6 @@ const SettingsScreen: React.FC = () => {
               <Ionicons name="checkmark-circle" size={24} color={COLORS.accentGreen} />
             )}
           </TouchableOpacity>
-          {/* Cancel */}
           <TouchableOpacity
             onPress={() => {
               setIsEditingPassword(false);
@@ -325,11 +301,11 @@ const SettingsScreen: React.FC = () => {
 
       {/* Content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-
         {/* ACCOUNT INFO SECTION */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('Account')}</Text>
           {renderEmailRow()}
+          {/* Uncomment to allow password editing */}
           {/* {renderPasswordRow()} */}
 
           {/* Logout */}
@@ -470,7 +446,6 @@ const styles = StyleSheet.create({
   },
   rowLeft: {
     flex: 1,
-
   },
   rowLabel: {
     fontSize: 14,

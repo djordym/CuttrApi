@@ -83,22 +83,24 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          
-
           {isLoading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading your plants...</Text>
+              <Text style={styles.loadingText}>
+                {t('select_plants_modal.loading')}
+              </Text>
             </View>
           )}
 
           {isError && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>
-                Could not load your plants. Please try again.
+                {t('select_plants_modal.error')}
               </Text>
               <TouchableOpacity style={styles.retryButton} onPress={refetch}>
-                <Text style={styles.retryButtonText}>Retry</Text>
+                <Text style={styles.retryButtonText}>
+                  {t('select_plants_modal.retry')}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -108,14 +110,16 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
               {myPlants.length === 0 ? (
                 <View style={styles.emptyStateContainer}>
                   <Text style={styles.emptyStateText}>
-                    You have no plants in your collection yet.
+                    {t('select_plants_modal.empty')}
                   </Text>
                 </View>
               ) : (
                 <ScrollView style={styles.scrollArea}>
-                  <Text style={styles.modalTitle}>Select Plants</Text>
+                  <Text style={styles.modalTitle}>
+                    {t('select_plants_modal.title')}
+                  </Text>
                   <Text style={styles.titleText}>
-                    Select the plants you want to trade for. Tap on a plant to select it.
+                    {t('select_plants_modal.instructions')}
                   </Text>
                   <View style={styles.gridContainer}>
                     {myPlants.map((plant: PlantResponse) => {
@@ -132,20 +136,17 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
                     })}
                   </View>
                   <View style={styles.actionbuttons}>
-                  <ConfirmCancelButtons
-                    onConfirm={handleConfirm}
-                    onCancel={onClose}
-                    confirmButtonText="Confirm"
-                    cancelButtonText="Cancel"
-                  />
+                    <ConfirmCancelButtons
+                      onConfirm={handleConfirm}
+                      onCancel={onClose}
+                      confirmButtonText="confirmCancelButtons.confirm"
+                      cancelButtonText="confirmCancelButtons.cancel"
+                    />
                   </View>
                 </ScrollView>
               )}
             </>
           )}
-
-          
-
         </View>
       </View>
     </Modal>
@@ -154,7 +155,6 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
 
 export default SelectPlantsModal;
 
-// Replicating (and adapting) styles from your MyProfileScreen thumbnails:
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
@@ -229,8 +229,7 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     textAlign: 'center',
   },
-  scrollArea: {
-  },
+  scrollArea: {},
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -10,12 +10,24 @@ import AppNavigator from './navigation/AppNavigator';
 import { initI18n } from './i18n';
 import { log } from './utils/logger';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from './theme/colors';
+import * as Sentry from '@sentry/react-native';
+import { isRunningInExpoGo } from 'expo';
+
+// Construct a new integration instance. This is needed to communicate between the integration and React
+const navigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: !isRunningInExpoGo(),
+});
+
+Sentry.init({
+  dsn: 'https://257bb6061b5f62855c8c40b523c87628@o4508793864978432.ingest.de.sentry.io/4508793930317904',
+  debug: true,
+});
+
 
 const queryClient = new QueryClient();
 
-export default function App() {
+export function App() {
   log.debug('App.tsx rendering...');
 
   const [i18nInstance, setI18nInstance] = useState<any>(null);
@@ -56,3 +68,5 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+export default Sentry.wrap(App);

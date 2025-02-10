@@ -139,8 +139,6 @@ const AddPlantScreen: React.FC = () => {
     );
   };
 
-  const isExtraSelected = (extra: Extras) => selectedExtras.includes(extra);
-
   const handleCancel = () => {
     navigation.goBack();
   };
@@ -248,6 +246,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={stage}
               onSelectSingle={(val) => setStage(val)}
               isRequired={true}
+              getLabel={(val) => t(`plantStage.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_category_label')}:</Text>
@@ -257,6 +256,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={category}
               onSelectSingle={(val) => setCategory(val === category ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`plantCategory.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_watering_label')}:</Text>
@@ -266,6 +266,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={watering}
               onSelectSingle={(val) => setWatering(val === watering ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`wateringNeed.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_light_label')}:</Text>
@@ -275,6 +276,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={light}
               onSelectSingle={(val) => setLight(val === light ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`lightRequirement.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_size_question')}:</Text>
@@ -284,6 +286,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={size}
               onSelectSingle={(val) => setSize(val === size ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`size.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_indoor_outdoor_question')}:</Text>
@@ -293,6 +296,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={indoorOutdoor}
               onSelectSingle={(val) => setIndoorOutdoor(val === indoorOutdoor ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`indoorOutdoor.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_propagation_ease_question')}:</Text>
@@ -302,6 +306,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={propagationEase}
               onSelectSingle={(val) => setPropagationEase(val === propagationEase ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`propagationEase.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_pet_friendly_question')}:</Text>
@@ -311,6 +316,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={petFriendly}
               onSelectSingle={(val) => setPetFriendly(val === petFriendly ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`petFriendly.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_extras_question')}:</Text>
@@ -319,6 +325,7 @@ const AddPlantScreen: React.FC = () => {
               values={Object.values(Extras)}
               selectedValues={selectedExtras}
               onToggleMulti={(val) => handleExtraToggle(val)}
+              getLabel={(val) => t(`extras.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_select_image_title')}:</Text>

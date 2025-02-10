@@ -9,13 +9,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useUserPreferences } from '../hooks/usePreferences';
-import Slider from '@react-native-community/slider'; // <-- Import Slider
+import Slider from '@react-native-community/slider';
 
 import TagGroup from '../components/TagGroup';
+import ConfirmCancelButtons from '../components/ConfirmCancelButtons';
 import { COLORS } from '../../../theme/colors';
 import { headerStyles } from '../styles/headerStyles';
-import ConfirmCancelButtons from '../components/ConfirmCancelButtons';
 
 import {
   PlantStage,
@@ -29,9 +28,12 @@ import {
   Extras,
 } from '../../../types/enums';
 import { UserPreferencesRequest } from '../../../types/apiTypes';
+import { useUserPreferences } from '../hooks/usePreferences';
+import { useTranslation } from 'react-i18next';
 
 const SetUserPreferencesScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const {
     data: preferences,
     isLoading,
@@ -72,7 +74,7 @@ const SetUserPreferencesScreen: React.FC = () => {
   const handleSetSearchRadius = (val: number) => { 
     if (val === 500) setSearchRadius(40000);
     else setSearchRadius(val);
-    }
+  };
 
   const handleCancel = () => {
     navigation.goBack();
@@ -101,14 +103,14 @@ const SetUserPreferencesScreen: React.FC = () => {
       navigation.goBack();
     } catch (err) {
       console.error('Error updating preferences:', err);
-      setError('Could not update preferences.');
+      setError(t('set_preferences_update_error'));
     }
   };
 
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <Text>Loading preferences...</Text>
+        <Text>{t('set_preferences_loading')}</Text>
       </View>
     );
   }
@@ -116,7 +118,7 @@ const SetUserPreferencesScreen: React.FC = () => {
   if (isError || !preferences) {
     return (
       <View style={styles.center}>
-        <Text>Error loading preferences</Text>
+        <Text>{t('set_preferences_error')}</Text>
       </View>
     );
   }
@@ -136,7 +138,7 @@ const SetUserPreferencesScreen: React.FC = () => {
               style={headerStyles.headerBackButton}
               onPress={() => navigation.goBack()}
             />
-            <Text style={headerStyles.headerTitle}>User Preferences</Text>
+            <Text style={headerStyles.headerTitle}>{t('set_preferences_title')}</Text>
           </View>
           <MaterialIcons name="settings" size={24} color="#fff" />
         </View>
@@ -149,21 +151,23 @@ const SetUserPreferencesScreen: React.FC = () => {
             {error && <Text style={styles.errorText}>{error}</Text>}
 
             {/* Slider for Search Radius */}
-            <Text style={styles.label}>Search Radius: {searchRadius} km</Text>
+            <Text style={styles.label}>
+              {t('set_preferences_search_radius', { radius: searchRadius })}
+            </Text>
             <Slider
               style={styles.slider}
               minimumValue={1}
               maximumValue={500}
               step={1}
               value={searchRadius}
-              onSlidingComplete={(val) => handleSetSearchRadius(val)}
+              onSlidingComplete={handleSetSearchRadius}
               minimumTrackTintColor={COLORS.accentGreen}
               maximumTrackTintColor="#999"
-              trackStyle={{ borderRadius: 10 }}
               thumbTintColor={COLORS.accentGreen}
             />
 
-            <Text style={styles.label}>Preferred Plant Stages:</Text>
+            {/* Preferred Plant Stages */}
+            <Text style={styles.label}>{t('set_preferences_preferred_plant_stages')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(PlantStage)}
@@ -175,9 +179,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('plantStage.' + val)}
             />
 
-            <Text style={styles.label}>Preferred Categories:</Text>
+            {/* Preferred Categories */}
+            <Text style={styles.label}>{t('set_preferences_preferred_categories')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(PlantCategory)}
@@ -189,9 +195,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('plantCategory.' + val)}
             />
 
-            <Text style={styles.label}>Watering Need:</Text>
+            {/* Watering Need */}
+            <Text style={styles.label}>{t('set_preferences_watering_need')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(WateringNeed)}
@@ -203,9 +211,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('wateringNeed.' + val)}
             />
 
-            <Text style={styles.label}>Light Requirement:</Text>
+            {/* Light Requirement */}
+            <Text style={styles.label}>{t('set_preferences_light_requirement')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(LightRequirement)}
@@ -217,9 +227,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('lightRequirement.' + val)}
             />
 
-            <Text style={styles.label}>Size:</Text>
+            {/* Size */}
+            <Text style={styles.label}>{t('set_preferences_size')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(Size)}
@@ -231,9 +243,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('size.' + val)}
             />
 
-            <Text style={styles.label}>Indoor/Outdoor:</Text>
+            {/* Indoor/Outdoor */}
+            <Text style={styles.label}>{t('set_preferences_indoor_outdoor')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(IndoorOutdoor)}
@@ -245,9 +259,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('indoorOutdoor.' + val)}
             />
 
-            <Text style={styles.label}>Propagation Ease:</Text>
+            {/* Propagation Ease */}
+            <Text style={styles.label}>{t('set_preferences_propagation_ease')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(PropagationEase)}
@@ -259,9 +275,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('propagationEase.' + val)}
             />
 
-            <Text style={styles.label}>Pet Friendly:</Text>
+            {/* Pet Friendly */}
+            <Text style={styles.label}>{t('set_preferences_pet_friendly')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(PetFriendly)}
@@ -273,9 +291,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('petFriendly.' + val)}
             />
 
-            <Text style={styles.label}>Extras:</Text>
+            {/* Extras */}
+            <Text style={styles.label}>{t('set_preferences_extras')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(Extras)}
@@ -287,13 +307,14 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('extras.' + val)}
             />
 
             <ConfirmCancelButtons
               onConfirm={handleSave}
-              confirmButtonText="Save"
+              confirmButtonText={t('common.save')}
               onCancel={handleCancel}
-              cancelButtonText="Cancel"
+              cancelButtonText={t('common.cancel')}
               loading={isUpdating}
             />
           </View>

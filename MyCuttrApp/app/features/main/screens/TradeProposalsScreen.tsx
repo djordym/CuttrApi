@@ -31,11 +31,15 @@ import PlantCardWithInfo from "../components/PlantCardWithInfo";
 import { PlantResponse } from "../../../types/apiTypes";
 import { useMarkPlantsAsTraded } from "../hooks/usePlantHooks";
 
+// Import the translation hook
+import { useTranslation } from "react-i18next";
+
 type RouteParams = {
   connectionId: number;
 };
 
 const TradeProposalsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
   const { connectionId } = route.params as RouteParams;
@@ -94,57 +98,77 @@ const TradeProposalsScreen: React.FC = () => {
       : item.responderCompletionConfirmed;
 
     // Column titles.
-    const userOfferTitle = "Your Offer";
-    const otherOfferTitle = "Their Offer";
+    const userOfferTitle = t("tradeProposalsScreen.yourOffer");
+    const otherOfferTitle = t("tradeProposalsScreen.theirOffer");
 
     // Handlers for pending proposals.
     const handleAccept = () =>
-      Alert.alert("Accept Proposal", "Do you want to accept this proposal?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Accepted),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.acceptProposalTitle"),
+        t("tradeProposalsScreen.alert.acceptProposalMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Accepted),
+          },
+        ]
+      );
     const handleDecline = () =>
-      Alert.alert("Decline Proposal", "Do you want to decline this proposal?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.declineProposalTitle"),
+        t("tradeProposalsScreen.alert.declineProposalMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+          },
+        ]
+      );
     const handleCancel = () =>
-      Alert.alert("Cancel Proposal", "Do you want to cancel this proposal?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.cancelProposalTitle"),
+        t("tradeProposalsScreen.alert.cancelProposalMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+          },
+        ]
+      );
 
     // Handlers for accepted proposals.
     const handleMarkCompleted = () =>
-      Alert.alert("Complete Trade", "Mark this trade as completed?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Completed),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.completeTradeTitle"),
+        t("tradeProposalsScreen.alert.completeTradeMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Completed),
+          },
+        ]
+      );
     const handleChangedMyMind = () =>
-      Alert.alert("Changed Your Mind?", "Do you want to cancel this proposal?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.changedMyMindTitle"),
+        t("tradeProposalsScreen.alert.changedMyMindMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+          },
+        ]
+      );
 
     let actions = null;
     if (item.tradeProposalStatus === TradeProposalStatus.Pending) {
@@ -153,7 +177,9 @@ const TradeProposalsScreen: React.FC = () => {
           style={[styles.actionButton, styles.cancelButton]}
           onPress={handleCancel}
         >
-          <Text style={styles.actionButtonText}>Cancel Proposal</Text>
+          <Text style={styles.actionButtonText}>
+            {t("tradeProposalsScreen.button.cancelProposal")}
+          </Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.actionRow}>
@@ -161,13 +187,17 @@ const TradeProposalsScreen: React.FC = () => {
             style={[styles.actionButton, styles.acceptButton]}
             onPress={handleAccept}
           >
-            <Text style={styles.actionButtonText}>Accept</Text>
+            <Text style={styles.actionButtonText}>
+              {t("tradeProposalsScreen.button.accept")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.rejectButton]}
             onPress={handleDecline}
           >
-            <Text style={styles.actionButtonText}>Decline</Text>
+            <Text style={styles.actionButtonText}>
+              {t("tradeProposalsScreen.button.decline")}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -178,13 +208,17 @@ const TradeProposalsScreen: React.FC = () => {
             style={[styles.actionButton, styles.completeButton]}
             onPress={handleMarkCompleted}
           >
-            <Text style={styles.actionButtonText}>Mark as Completed</Text>
+            <Text style={styles.actionButtonText}>
+              {t("tradeProposalsScreen.button.markCompleted")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.changedMyMindButton]}
             onPress={handleChangedMyMind}
           >
-            <Text style={styles.actionButtonText}>Changed My Mind</Text>
+            <Text style={styles.actionButtonText}>
+              {t("tradeProposalsScreen.button.changedMyMind")}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -199,7 +233,9 @@ const TradeProposalsScreen: React.FC = () => {
         />
       ) : (
         <View style={styles.completedSection}>
-          <Text style={styles.completedMessage}>Trade Completed</Text>
+          <Text style={styles.completedMessage}>
+            {t("tradeProposalsScreen.completed.tradeCompleted")}
+          </Text>
         </View>
       );
     }
@@ -211,9 +247,11 @@ const TradeProposalsScreen: React.FC = () => {
 
     return (
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Proposal #{item.tradeProposalId}</Text>
+        <Text style={styles.cardTitle}>
+          {t("tradeProposalsScreen.proposalTitle")}{item.tradeProposalId}
+        </Text>
         <Text style={styles.cardSubtitle}>
-          Created: {new Date(item.createdAt).toLocaleString()}
+          {t("tradeProposalsScreen.card.createdAt")} {new Date(item.createdAt).toLocaleString()}
         </Text>
 
         {isHorizontalLayout ? (
@@ -278,7 +316,9 @@ const TradeProposalsScreen: React.FC = () => {
           </View>
         )}
 
-        <Text style={styles.statusText}>Status: {item.tradeProposalStatus}</Text>
+        <Text style={styles.statusText}>
+          {t("tradeProposalsScreen.statusText")}{item.tradeProposalStatus}
+        </Text>
         {actions}
       </View>
     );
@@ -294,9 +334,11 @@ const TradeProposalsScreen: React.FC = () => {
   if (isError || profileError) {
     return (
       <SafeAreaProvider style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load trade proposals.</Text>
+        <Text style={styles.errorText}>
+          {t("tradeProposalsScreen.error.failedToLoad")}
+        </Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{t("tradeProposalsScreen.retry")}</Text>
         </TouchableOpacity>
       </SafeAreaProvider>
     );
@@ -314,7 +356,9 @@ const TradeProposalsScreen: React.FC = () => {
           >
             <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
           </TouchableOpacity>
-          <Text style={headerStyles.headerTitle}>Trade Proposals</Text>
+          <Text style={headerStyles.headerTitle}>
+            {t("tradeProposalsScreen.headerTitle")}
+          </Text>
           <View style={{ width: 50 }} />
         </View>
       </LinearGradient>
@@ -327,7 +371,9 @@ const TradeProposalsScreen: React.FC = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No trade proposals found.</Text>
+          <Text style={styles.emptyText}>
+            {t("tradeProposalsScreen.empty.noProposals")}
+          </Text>
         </View>
       )}
       {/* InfoModal shows the full plant card when a thumbnail’s info is pressed */}

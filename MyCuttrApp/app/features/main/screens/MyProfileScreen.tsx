@@ -1,4 +1,4 @@
-// src/screens/MyProfileScreen.tsx
+// File: src/screens/MyProfileScreen.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
-  Dimensions
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -23,16 +23,16 @@ import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
 import { EditProfileModal } from '../modals/EditProfileModal';
-import PlantThumbnail  from '../components/PlantThumbnail';
+import PlantThumbnail from '../components/PlantThumbnail';
 import { headerStyles } from '../styles/headerStyles';
 import { ProfileCard } from '../components/ProfileCard';
-import { ToggleButton } from '../components/ToggleButton'; // Import the new ToggleButton component
+import { ToggleButton } from '../components/ToggleButton'; // New ToggleButton component
 
 const MyProfileScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
 
-  // Hooks
+  // Hooks for profile, plants, and search radius
   const {
     data: userProfile,
     isLoading: loadingProfile,
@@ -45,13 +45,9 @@ const MyProfileScreen: React.FC = () => {
     isError: errorPlants,
     refetch: refetchPlants,
   } = useMyPlants();
-  const {
-    searchRadius,
-    isLoading: srLoading,
-    isError: srError,
-  } = useSearchRadius();
+  const { searchRadius, isLoading: srLoading, isError: srError } = useSearchRadius();
 
-  // For showing city, country
+  // For showing city, country (if needed)
   const [cityCountry, setCityCountry] = useState<string>('');
   const [editProfileVisible, setEditProfileVisible] = useState(false);
 
@@ -85,7 +81,7 @@ const MyProfileScreen: React.FC = () => {
     navigation.navigate('AddPlant' as never);
   };
 
-  // Rendering plants
+  // Rendering plants (either as thumbnails or full-size)
   const renderPlantItem = (item: PlantResponse) => {
     if (viewOption === 'Thumbnails') {
       return (
@@ -156,7 +152,7 @@ const MyProfileScreen: React.FC = () => {
         <View ref={cardRef} style={styles.cardContainer}>
           <ProfileCard
             userProfile={userProfile}
-            isEditable={true} // Set to true to show the edit button
+            isEditable={true} // Show the edit button
             onEditPress={openEditModal}
             screenWidth={screenWidth}
           />
@@ -166,7 +162,7 @@ const MyProfileScreen: React.FC = () => {
         <View style={styles.plantsSectionWrapper}>
           <View style={styles.plantsSectionHeader}>
             <Text style={styles.plantsSectionTitle}>
-            {t('profile_my_plants_section')}
+              {t('profile_my_plants_section')}
             </Text>
             <TouchableOpacity
               onPress={handleAddPlant}
@@ -190,7 +186,9 @@ const MyProfileScreen: React.FC = () => {
 
           {/* Plants List */}
           {myPlants && myPlants.length > 0 ? (
-            <View style={viewOption === 'Full Size' ? styles.fullViewContainer : styles.thumbViewContainer}>
+            <View
+              style={viewOption === 'Full Size' ? styles.fullViewContainer : styles.thumbViewContainer}
+            >
               {myPlants.map((plant) => renderPlantItem(plant))}
             </View>
           ) : (
@@ -218,8 +216,6 @@ const MyProfileScreen: React.FC = () => {
 };
 
 export default MyProfileScreen;
-
-// Updated Styles
 
 const styles = StyleSheet.create({
   container: {
@@ -254,13 +250,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
   // Profile Card
   cardContainer: {
     marginHorizontal: 16,
     marginTop: 20,
   },
-
   // ---- Plants Section ----
   plantsSectionWrapper: {
     paddingTop: 20,
@@ -281,7 +275,7 @@ const styles = StyleSheet.create({
   addPlantButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.accentGreen, // or any brand color
+    backgroundColor: COLORS.accentGreen,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
@@ -303,7 +297,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-  // Different layouts for the plant items
+  // Layouts for plant items
   thumbViewContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',

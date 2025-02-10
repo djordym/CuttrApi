@@ -5,6 +5,7 @@ import * as Localization from 'expo-localization';
 
 import en from './locales/en.json';
 import fr from './locales/fr.json';
+import nl from './locales/nl.json';
 
 export async function initI18n() {
   await i18n
@@ -16,6 +17,7 @@ export async function initI18n() {
       resources: {
         en: { translation: en },
         fr: { translation: fr },
+        nl: { translation: nl },
       },
       interpolation: {
         escapeValue: false,

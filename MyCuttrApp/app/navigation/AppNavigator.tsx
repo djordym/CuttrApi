@@ -88,12 +88,6 @@ useEffect(() => {
     );
   }
 
-  
-  // 3. If location is NOT set, show onboarding flow
-  if (!userProfile?.locationLatitude || !userProfile?.locationLongitude) {
-    return <OnboardingNavigator />;
-  }
-  
   if (userProfileError && !userProfileLoading) {
     return (
       <View style={styles.errorContainer}>
@@ -104,6 +98,12 @@ useEffect(() => {
       </View>
     );
   }
+  
+  // 3. If location is NOT set, show onboarding flow
+  if (!userProfile?.locationLatitude || !userProfile?.locationLongitude) {
+    return <OnboardingNavigator />;
+  }
+  
   // 4. Otherwise, user has location -> show main app
   return <MainRootStackNavigator />;
 };

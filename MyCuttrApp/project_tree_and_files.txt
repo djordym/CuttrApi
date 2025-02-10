@@ -20,45 +20,31 @@ MyCuttrApp
 │   │   ├── common
 │   │   │   └── TextInputField.tsx
 │   │   ├── feedback
-│   │   │   ├── ErrorMessage.tsx
-│   │   │   ├── ErrorState.tsx
-│   │   │   └── LoadingSpinner.tsx
-│   │   ├── index.ts
+│   │   │   └── ErrorMessage.tsx
 │   │   └── layout
-│   ├── context
-│   │   └── AuthContext.tsx
 │   ├── features
 │   │   ├── auth
-│   │   │   ├── hooks
-│   │   │   │   └── useAuth.ts
-│   │   │   ├── index.ts
 │   │   │   ├── screens
 │   │   │   │   ├── LoginScreen.tsx
 │   │   │   │   └── RegisterScreen.tsx
 │   │   │   ├── store
 │   │   │   │   └── authSlice.ts
-│   │   │   ├── styles
-│   │   │   │   └── authStyles.ts
-│   │   │   └── types
-│   │   │       └── authTypes.ts
+│   │   │   └── styles
+│   │   │       └── authStyles.ts
 │   │   ├── main
 │   │   │   ├── components
-│   │   │   │   ├── ChatShelf.tsx
 │   │   │   │   ├── CompletedTradeActions.tsx
 │   │   │   │   ├── ConfirmCancelButtons.tsx
 │   │   │   │   ├── MatchCard.tsx
 │   │   │   │   ├── MessageBubble.tsx
-│   │   │   │   ├── MultiSelectTagGroup.tsx
 │   │   │   │   ├── PlantCardWithInfo.tsx
 │   │   │   │   ├── PlantOverlay.tsx
 │   │   │   │   ├── PlantThumbnail.tsx
 │   │   │   │   ├── ProfileCard.tsx
-│   │   │   │   ├── ProfileCardShelf.tsx
 │   │   │   │   ├── ProfileLocationDisplay.tsx
 │   │   │   │   ├── SwipeableCard.tsx
 │   │   │   │   ├── TagGroup.tsx
-│   │   │   │   ├── ToggleButton.tsx
-│   │   │   │   └── TradeProposalComponent.tsx
+│   │   │   │   └── ToggleButton.tsx
 │   │   │   ├── hooks
 │   │   │   │   ├── useConnections.ts
 │   │   │   │   ├── useMessages.ts
@@ -70,7 +56,6 @@ MyCuttrApp
 │   │   │   │   ├── useSwipe.ts
 │   │   │   │   ├── useTradeProposalHooks.ts
 │   │   │   │   └── useUserMatches.ts
-│   │   │   ├── index.ts
 │   │   │   ├── modals
 │   │   │   │   ├── ChangeLocationModal.tsx
 │   │   │   │   ├── EditProfileModal.tsx
@@ -89,11 +74,9 @@ MyCuttrApp
 │   │   │   │   ├── SettingsScreen.tsx
 │   │   │   │   ├── SwipeScreen.tsx
 │   │   │   │   └── TradeProposalsScreen.tsx
-│   │   │   ├── styles
-│   │   │   │   ├── headerStyles.ts
-│   │   │   │   └── profileCardStyles.ts
-│   │   │   └── types
-│   │   │       └── mainTypes.ts
+│   │   │   └── styles
+│   │   │       ├── headerStyles.ts
+│   │   │       └── profileCardStyles.ts
 │   │   └── onboarding
 │   │       ├── screens
 │   │       │   ├── OnboardingBioScreen.tsx
@@ -101,9 +84,6 @@ MyCuttrApp
 │   │       │   └── OnboardingWelcomeScreen.tsx
 │   │       └── store
 │   ├── hooks
-│   │   ├── useAuthToken.ts
-│   │   ├── useAxiosErrorHandler.ts
-│   │   └── useNetworkStatus.ts
 │   ├── i18n
 │   │   ├── index.ts
 │   │   └── locales
@@ -124,24 +104,18 @@ MyCuttrApp
 │   │   └── slices
 │   │       └── globalErrorSlice.ts
 │   ├── theme
-│   │   ├── colors.ts
-│   │   ├── index.ts
-│   │   ├── spacing.ts
-│   │   └── typography.ts
+│   │   └── colors.ts
 │   ├── types
 │   │   ├── apiTypes.ts
-│   │   ├── enums.ts
-│   │   └── global.ts
+│   │   └── enums.ts
 │   └── utils
-│       ├── formatting.ts
-│       ├── index.ts
 │       ├── logger.ts
-│       ├── storage.ts
-│       └── validation.ts
+│       └── storage.ts
 ├── app.json
 ├── app_overview.py
 ├── babel.config.js
 ├── expo-env.d.ts
+├── metro.config.js
 ├── package.json
 ├── previous shelf with matches.txt
 ├── project_tree.txt
@@ -195,7 +169,18 @@ Combined Mobile App Files:
       "expo-localization",
       "expo-font",
       "expo-secure-store",
-      "expo-location"
+      ["expo-location",
+      {
+        "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+      }],
+      ["@sentry/react-native/expo",
+        {
+          "organization": "jordy-vermeulen",
+          "project": "cuttr",
+          // If you are using a self-hosted instance, update the value of the url property
+          // to point towards your self-hosted instance. For example, https://self-hosted.example.com/.
+          "url": "https://sentry.io/"
+        }]
     ],
     "experiments": {
       "typedRoutes": true
@@ -218,6 +203,16 @@ module.exports = function(api) {
 /// <reference types="expo/types" />
 
 // NOTE: This file should not be edited and should be in your git ignore
+
+// File: metro.config.js
+// This replaces `const { getDefaultConfig } = require('expo/metro-config');`
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
+
+// This replaces `const config = getDefaultConfig(__dirname);`
+const config = getSentryExpoConfig(__dirname);
+
+module.exports = config;
+
 
 // File: package.json
 {
@@ -244,6 +239,7 @@ module.exports = function(api) {
     "@react-navigation/native-stack": "^7.2.0",
     "@react-navigation/stack": "^7.1.1",
     "@reduxjs/toolkit": "^2.5.0",
+    "@sentry/react-native": "~6.3.0",
     "axios": "^1.7.9",
     "expo": "~52.0.26",
     "expo-blur": "~14.0.3",
@@ -321,7 +317,7 @@ interface ErrorBoundaryProps {
   children: React.ReactNode;
 }
 
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps> {
   state = { hasError: false };
 
   static getDerivedStateFromError(error: Error) {
@@ -347,6 +343,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps> {
   }
 }
 
+export default ErrorBoundary;
 
 // File: app\index.tsx
 import React, { useEffect, useState } from 'react';
@@ -355,7 +352,7 @@ import { Provider } from 'react-redux';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { I18nextProvider } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ErrorBoundary } from './ErrorBoundary';
+import ErrorBoundary from './ErrorBoundary';
 import { store } from './store';
 import AppNavigator from './navigation/AppNavigator';
 import { initI18n } from './i18n';
@@ -363,10 +360,17 @@ import { log } from './utils/logger';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from './theme/colors';
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://257bb6061b5f62855c8c40b523c87628@o4508793864978432.ingest.de.sentry.io/4508793930317904',
+  debug: __DEV__,
+});
+
 
 const queryClient = new QueryClient();
 
-export default function App() {
+export function App() {
   log.debug('App.tsx rendering...');
 
   const [i18nInstance, setI18nInstance] = useState<any>(null);
@@ -408,6 +412,7 @@ export default function App() {
   );
 }
 
+export default Sentry.wrap(App);
 
 // File: app\api\authService.ts
 import api from './axiosConfig';
@@ -438,6 +443,8 @@ export const authService = {
     await api.post('/auth/logout');
   },
 };
+
+export default authService;
 
 
 // File: app\api\axiosConfig.ts
@@ -649,6 +656,7 @@ export const connectionService = {
   },
 };
 
+export default connectionService;
 
 // File: app\api\matchService.ts
 import api from './axiosConfig';
@@ -661,6 +669,7 @@ export const matchService = {
   },
 };
 
+export default matchService;
 
 // File: app\api\messageService.ts
 import api from './axiosConfig';
@@ -678,6 +687,7 @@ export const messageService = {
   },
 };
 
+export default messageService;
 
 // File: app\api\plantService.ts
 import api from "./axiosConfig";
@@ -809,6 +819,7 @@ export const plantService = {
   }
 };
 
+export default plantService;
 
 // File: app\api\reportService.ts
 import api from './axiosConfig';
@@ -821,6 +832,7 @@ export const reportService = {
   }
 };
 
+export default reportService;
 
 // File: app\api\swipeService.ts
 import api from './axiosConfig';
@@ -834,6 +846,7 @@ export const swipeService = {
   
 };
 
+export default swipeService;
 
 // File: app\api\userPreferencesService.ts
 import api from './axiosConfig';
@@ -850,6 +863,7 @@ export const userPreferencesService = {
   }
 };
 
+export default userPreferencesService;
 
 // File: app\api\userService.ts
 import api from './axiosConfig';
@@ -889,9 +903,7 @@ export const userService = {
   },
 };
 
-
-// File: app\components\index.ts
-
+export default userService;
 
 // File: app\components\common\TextInputField.tsx
 import React from 'react';
@@ -967,21 +979,6 @@ const styles = StyleSheet.create({
     textAlign:'center'
   }
 });
-
-
-// File: app\components\feedback\ErrorState.tsx
-
-
-// File: app\components\feedback\LoadingSpinner.tsx
-
-
-// File: app\context\AuthContext.tsx
-
-
-// File: app\features\auth\index.ts
-
-
-// File: app\features\auth\hooks\useAuth.ts
 
 
 // File: app\features\auth\screens\LoginScreen.tsx
@@ -1412,9 +1409,11 @@ export const authSlice = createSlice({
         state.refreshToken = null;
         state.error = null;
         state.status = 'idle';
-r      });
+      });
   }
 });
+
+export default authSlice.reducer;
 
 export const { logout, setInitialTokens } = authSlice.actions;
 
@@ -1496,183 +1495,11 @@ export const authStyles = StyleSheet.create({
   },
 });
 
-
-// File: app\features\auth\types\authTypes.ts
-
-
-// File: app\features\main\index.ts
-
-
-// File: app\features\main\components\ChatShelf.tsx
-import React, {
-  useState,
-  useRef,
-  useCallback,
-  memo,
-  forwardRef,
-  useImperativeHandle,
-} from 'react';
-import {
-  Animated,
-  Easing,
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  LayoutChangeEvent,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-
-import { COLORS } from '../../../theme/colors';
-import { PlantCardWithInfo } from './PlantCardWithInfo';
-import { PlantResponse } from '../../../types/apiTypes';
-import { log } from '../../../utils/logger';
-
-export interface ChatShelfRef {
-  toggleShelf: () => void;
-  openShelf: () => void;
-  closeShelf: () => void;
-}
-
-interface ChatShelfProps {
-  plant1?: PlantResponse;
-  plant2?: PlantResponse;
-}
-
-// Wrap with forwardRef to expose imperative methods
-const ChatShelf = forwardRef<ChatShelfRef, ChatShelfProps>(
-  function ChatShelf({ plant1, plant2 }, ref) {
-    const [isShelfOpen, setIsShelfOpen] = useState(true);
-    const [maxShelfHeight, setMaxShelfHeight] = useState<number>(0);
-    const shelfAnim = useRef(new Animated.Value(0)).current;
-
-    const handleShelfLayout = useCallback(
-      (event: LayoutChangeEvent) => {
-        const { height } = event.nativeEvent.layout;
-        log.debug('Measured layout height:', height);
-        if (height > maxShelfHeight) {
-          setMaxShelfHeight(height);
-          // Keep shelf fully open if we are currently open
-          if (isShelfOpen) {
-            shelfAnim.setValue(height);
-          }
-        }
-      },
-      [isShelfOpen, maxShelfHeight, shelfAnim]
-    );
-
-    // The actual animation
-    const animateTo = useCallback(
-      (toValue: number) => {
-        Animated.timing(shelfAnim, {
-          toValue,
-          duration: 300,
-          easing: Easing.ease,
-          useNativeDriver: false,
-        }).start();
-      },
-      [shelfAnim]
-    );
-
-    const toggleShelf = useCallback(() => {
-      if (!maxShelfHeight) return; // if not measured, skip
-      const collapsedHeight = styles.shelfToggleButton.height;
-      const targetValue = isShelfOpen ? collapsedHeight : maxShelfHeight;
-      animateTo(targetValue);
-      setIsShelfOpen(!isShelfOpen);
-    }, [isShelfOpen, maxShelfHeight, animateTo]);
-
-    const closeShelf = useCallback(() => {
-      if (!maxShelfHeight) return;
-      if (isShelfOpen) {
-        const collapsedHeight = styles.shelfToggleButton.height;
-        animateTo(collapsedHeight);
-        setIsShelfOpen(false);
-      }
-    }, [isShelfOpen, maxShelfHeight, animateTo]);
-
-    const openShelf = useCallback(() => {
-      if (!maxShelfHeight) return;
-      if (!isShelfOpen) {
-        animateTo(maxShelfHeight);
-        setIsShelfOpen(true);
-      }
-    }, [isShelfOpen, maxShelfHeight, animateTo]);
-
-    /**
-     * Expose these methods via useImperativeHandle
-     */
-    useImperativeHandle(ref, () => ({
-      toggleShelf,
-      closeShelf,
-      openShelf,
-    }));
-
-    // If not yet measured, don't force any height. Otherwise, animate the height with shelfAnim.
-    const containerStyle = maxShelfHeight > 0 ? { height: shelfAnim } : undefined;
-
-    return (
-      <Animated.View style={[styles.animatedShelf, containerStyle]}>
-        <View style={styles.shelfInnerContainer} onLayout={handleShelfLayout}>
-          <View style={styles.plantCardWrapper}>
-            {plant1 && <PlantCardWithInfo plant={plant1} compact />}
-          </View>
-          <View style={styles.plantCardWrapper}>
-            {plant2 && <PlantCardWithInfo plant={plant2} compact />}
-          </View>
-        </View>
-
-        {/* The toggle handle pinned at the bottom */}
-        <TouchableOpacity
-          style={styles.shelfToggleButton}
-          onPress={toggleShelf}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={isShelfOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
-            size={10}
-            color="#fff"
-          />
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  }
-);
-
-export default memo(ChatShelf);
-
-const styles = StyleSheet.create({
-  animatedShelf: {
-    overflow: 'hidden',
-    backgroundColor: '#f1f1f1',
-  },
-  shelfInnerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    paddingBottom: 23,
-  },
-  plantCardWrapper: {
-    width: '45%',
-    borderRadius: 8,
-    alignSelf: 'center',
-  },
-  shelfToggleButton: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 15,
-    backgroundColor: COLORS.accentGreen,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-
+export default authStyles;
 
 // File: app\features\main\components\CompletedTradeActions.tsx
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   StyleSheet,
   Text,
@@ -1698,7 +1525,9 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
   onPlantInfoPress,
   isConfirming = false,
 }) => {
-  // "deleted" or "keep" or undefined if not yet decided
+  const { t } = useTranslation();
+
+  // "delete" or "keep" or undefined if not yet decided
   const [decisions, setDecisions] = React.useState<{
     [plantId: number]: "delete" | "keep" | undefined;
   }>({});
@@ -1728,7 +1557,7 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
   return (
     <View style={styles.completedSection}>
       <Text style={styles.completedPrompt}>
-        Trade complete – choose your action for your plants:
+        {t("completedTradeActions.prompt")}
       </Text>
       <View style={styles.plantGrid}>
         {plants.map((plant) => {
@@ -1746,7 +1575,7 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
                 <View style={styles.decisionRow}>
                   <View style={styles.decisionTag}>
                     <Text style={styles.decisionLabelText}>
-                      {decision === "delete" ? "Delete" : "Keep"}
+                      {t(`completedTradeActions.${decision}`)}
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -1765,7 +1594,9 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
                     ]}
                     onPress={() => markPlant(plant.plantId, "delete")}
                   >
-                    <Text style={styles.plantActionText}>Delete</Text>
+                    <Text style={styles.plantActionText}>
+                      {t("completedTradeActions.delete")}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -1774,7 +1605,9 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
                     ]}
                     onPress={() => markPlant(plant.plantId, "keep")}
                   >
-                    <Text style={styles.plantActionText}>Keep</Text>
+                    <Text style={styles.plantActionText}>
+                      {t("completedTradeActions.keep")}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1793,7 +1626,9 @@ const CompletedTradeActions: React.FC<CompletedTradeActionsProps> = ({
         disabled={!allDecided || isConfirming}
       >
         <Text style={styles.confirmButtonText}>
-          {isConfirming ? "Processing..." : "Confirm"}
+          {isConfirming
+            ? t("completedTradeActions.processing")
+            : t("completedTradeActions.confirm")}
         </Text>
       </TouchableOpacity>
     </View>
@@ -2045,6 +1880,8 @@ export const  MessageBubble: React.FC<BubbleProps> = ({ message, isMine }) => {
   );
 };
 
+export default MessageBubble;
+
 const styles = StyleSheet.create({
   bubbleContainer: {
     marginVertical: 3,
@@ -2092,91 +1929,14 @@ const styles = StyleSheet.create({
 });
 
 
-// File: app\features\main\components\MultiSelectTagGroup.tsx
-// components/shared/MultiSelectTagGroup.tsx
-import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-
-interface MultiSelectTagGroupProps<T extends string | number> {
-  values: T[];
-  selectedValues: T[];
-  onToggle: (val: T) => void;
-}
-
-function MultiSelectTagGroup<T extends string | number>({
-  values,
-  selectedValues,
-  onToggle,
-}: MultiSelectTagGroupProps<T>) {
-  return (
-    <View style={styles.tagGroupContainer}>
-      {values.map((val) => {
-        const isSelected = selectedValues.includes(val);
-        return (
-          <TouchableOpacity
-            key={String(val)}
-            style={[
-              styles.singleTag,
-              isSelected && styles.singleTagSelected,
-            ]}
-            onPress={() => onToggle(val)}
-          >
-            <Text
-              style={[
-                styles.singleTagText,
-                isSelected && styles.singleTagTextSelected,
-              ]}
-            >
-              {val}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-}
-
-export default MultiSelectTagGroup;
-
-const styles = StyleSheet.create({
-  tagGroupContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 6,
-  },
-  singleTag: {
-    borderWidth: 1,
-    borderColor: '#1EAE98', // or your "COLORS.primary"
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  singleTagSelected: {
-    backgroundColor: '#1EAE98', // or your "COLORS.primary"
-  },
-  singleTagText: {
-    fontSize: 12,
-    color: '#1EAE98', // or your "COLORS.primary"
-  },
-  singleTagTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-});
-
-
 // File: app\features\main\components\PlantCardWithInfo.tsx
-// FullSizePlantCard.tsx
-
 import React, { useState, useCallback } from 'react';
 import {
-    View,
-    Image,
-    StyleSheet,
-    Platform,
-    LayoutChangeEvent,
+  View,
+  Image,
+  StyleSheet,
+  Platform,
+  LayoutChangeEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../theme/colors';
@@ -2185,163 +1945,150 @@ import { PlantResponse } from '../../../types/apiTypes';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface PlantCardWithInfoProps {
-    plant: PlantResponse;
-    compact?: boolean;
-    /**
-     * If true, the black extension height is dynamic (half the overlay).
-     * If false, the black extension uses a fixed height.
-     */
-    isDynamic?: boolean;
-    /**
-     * When isDynamic=false, this sets the black extension height (default 120).
-     */
-    fixedExtensionHeight?: number;
+  plant: PlantResponse;
+  compact?: boolean;
+  /**
+   * If true, the black extension height is dynamic (half the overlay).
+   * If false, the black extension uses a fixed height.
+   */
+  isDynamic?: boolean;
+  /**
+   * When isDynamic=false, this sets the black extension height (default 120).
+   */
+  fixedExtensionHeight?: number;
 }
 
 export const PlantCardWithInfo: React.FC<PlantCardWithInfoProps> = ({
-    plant,
-    compact = false,
-    isDynamic = true,
-    fixedExtensionHeight = 120,
+  plant,
+  compact = false,
+  isDynamic = true,
+  fixedExtensionHeight = 120,
 }) => {
-    const [overlayHeight, setOverlayHeight] = useState(0);
+  const [overlayHeight, setOverlayHeight] = useState(0);
 
-    // Combine any tags for the overlay
-    const allTags = [
-        plant.plantStage,
-        plant.plantCategory,
-        plant.wateringNeed,
-        plant.lightRequirement,
-        plant.size,
-        plant.indoorOutdoor,
-        plant.propagationEase,
-        plant.petFriendly,
-        ...(plant.extras ?? []),
-    ].filter(Boolean);
+  // Combine any tags for the overlay (these values will be translated in the overlay)
+  const allTags = [
+    plant.plantStage,
+    plant.plantCategory,
+    plant.wateringNeed,
+    plant.lightRequirement,
+    plant.size,
+    plant.indoorOutdoor,
+    plant.propagationEase,
+    plant.petFriendly,
+    ...(plant.extras ?? []),
+  ].filter(Boolean);
 
-    /**
-     * Only measure the overlay if dynamic. We store its height to compute extension.
-     */
-    const handleOverlayLayout = useCallback(
-        (event: LayoutChangeEvent) => {
-            if (isDynamic && overlayHeight === 0) { // Only set once
-                const { height } = event.nativeEvent.layout;
-                setOverlayHeight(height);
-            }
-        },
-        [isDynamic, overlayHeight]
-    );
+  /**
+   * Only measure the overlay if dynamic. We store its height to compute extension.
+   */
+  const handleOverlayLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      if (isDynamic && overlayHeight === 0) {
+        // Only set once
+        const { height } = event.nativeEvent.layout;
+        setOverlayHeight(height);
+      }
+    },
+    [isDynamic, overlayHeight]
+  );
 
-    /**
-     * If dynamic, black extension height = half the overlay’s measured height.
-     * Otherwise, use the fixed extension height.
-     */
-    const blackExtensionHeight = isDynamic
-        ? overlayHeight / 2
-        : fixedExtensionHeight;
+  /**
+   * If dynamic, black extension height = half the overlay’s measured height.
+   * Otherwise, use the fixed extension height.
+   */
+  const blackExtensionHeight = isDynamic ? overlayHeight / 2 : fixedExtensionHeight;
 
-    return (
-        <View style={styles.cardContainer}>
-            {/* ---- Plant Image / Placeholder ---- */}
-            <View style={styles.imageContainer}>
-                {plant.imageUrl ? (
-                    <Image
-                        source={{ uri: plant.imageUrl }}
-                        style={styles.fullImage}
-                        resizeMode="contain"
-                    />
-                ) : (
-                    <View style={styles.plantPlaceholder}>
-                        <Ionicons name="leaf" size={60} color={COLORS.primary} />
-                    </View>
-                )}
-                <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,1)']} style={[styles.lowerGradient, { height: compact ? overlayHeight : overlayHeight * 1.5}]} />
-            </View>
+  return (
+    <View style={styles.cardContainer}>
+      {/* ---- Plant Image / Placeholder ---- */}
+      <View style={styles.imageContainer}>
+        {plant.imageUrl ? (
+          <Image
+            source={{ uri: plant.imageUrl }}
+            style={styles.fullImage}
+            resizeMode="contain"
+          />
+        ) : (
+          <View style={styles.plantPlaceholder}>
+            <Ionicons name="leaf" size={60} color={COLORS.primary} />
+          </View>
+        )}
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,1)']}
+          style={[styles.lowerGradient, { height: compact ? overlayHeight : overlayHeight * 1.5 }]}
+        />
+      </View>
 
-            {/* ---- Black Extension (dynamic or fixed) ---- */}
-            <View
-                style={[
-                    styles.blackExtension,
-                    { height: blackExtensionHeight },
-                ]}
-            />
-            <View
-                style={styles.overlayWrapper}
-                onLayout={handleOverlayLayout}
-            >
-                <PlantOverlay
-                    speciesName={plant.speciesName}
-                    description={plant.description}
-                    tags={allTags}
-                    compact={compact}
-                />
-            </View>
-            {/* 
-        ---- Overlay Section ----
-        The overlay will measure itself (if dynamic),
-      */}
-        </View>
-    );
+      {/* ---- Black Extension (dynamic or fixed) ---- */}
+      <View style={[styles.blackExtension, { height: blackExtensionHeight }]} />
+
+      <View style={styles.overlayWrapper} onLayout={handleOverlayLayout}>
+        <PlantOverlay
+          speciesName={plant.speciesName}
+          description={plant.description}
+          tags={allTags}
+          compact={compact}
+        />
+      </View>
+    </View>
+  );
 };
 
 export default PlantCardWithInfo;
 
 const styles = StyleSheet.create({
-    cardContainer: {
-        borderRadius: 8,
-        overflow: 'hidden',
-        backgroundColor: '#fff',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOpacity: 0.12,
-                shadowRadius: 5,
-                shadowOffset: { width: 0, height: 3 },
-            },
-            android: {
-                elevation: 3,
-            },
-        }),
-    },
-    imageContainer: {
-        width: '100%',
-    },
-    fullImage: {
-        width: '100%',
-        aspectRatio: 3 / 4,
-    },
-    plantPlaceholder: {
-        width: '100%',
-        aspectRatio: 3 / 4,
-        backgroundColor: '#eee',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    lowerGradient: {
-        position: 'absolute',
-        bottom: -1,
-        width: '100%',
-    },
-
-    blackExtension: {
-        width: '100%',
-        backgroundColor: '#000',
-    },
-    overlayWrapper: {
-        position: 'absolute',
-        bottom: 0,
-        // We measure this layout if isDynamic=true, so we can
-        // compute overlayHeight and adjust the extension accordingly.
-        // The negative margin is applied dynamically above.
-    },
+  cardContainer: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 5,
+        shadowOffset: { width: 0, height: 3 },
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  imageContainer: {
+    width: '100%',
+  },
+  fullImage: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+  },
+  plantPlaceholder: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    backgroundColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lowerGradient: {
+    position: 'absolute',
+    bottom: -1,
+    width: '100%',
+  },
+  blackExtension: {
+    width: '100%',
+    backgroundColor: '#000',
+  },
+  overlayWrapper: {
+    position: 'absolute',
+    bottom: 0,
+  },
 });
 
 
 // File: app\features\main\components\PlantOverlay.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../../../theme/colors'; 
+import { COLORS } from '../../../theme/colors';
+import { useTranslation } from 'react-i18next';
 
 interface PlantOverlayProps {
   speciesName: string;
@@ -2350,23 +2097,39 @@ interface PlantOverlayProps {
   compact?: boolean;
 }
 
-export const PlantOverlay: React.FC<PlantOverlayProps> = ({ speciesName, description, tags = [], compact=false }) => (
-  <View style={[styles.overlayContent, compact && styles.overlayContentCompact]}>
-    <Text style={[styles.fullPlantName, compact && styles.fullPlantNameCompact]}>{speciesName}</Text>
-    {tags.length > 0 && (
-      <View style={[styles.tagRow, compact && styles.tagRowCompact]}>
-        {tags.map((tag) => (
-          <View key={tag} style={[styles.tag, compact && styles.tagCompact]}>
-            <Text style={[styles.tagText, compact && styles.tagTextCompact]}>{tag}</Text>
-          </View>
-        ))}
-      </View>
-    )}
-    {description ? (
-      <Text style={[styles.fullDescription, compact && styles.fullDescriptionCompact]}>{description}</Text>
-    ) : null}
-  </View>
-);
+export const PlantOverlay: React.FC<PlantOverlayProps> = ({
+  speciesName,
+  description,
+  tags = [],
+  compact = false,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <View style={[styles.overlayContent, compact && styles.overlayContentCompact]}>
+      <Text style={[styles.fullPlantName, compact && styles.fullPlantNameCompact]}>
+        {speciesName}
+      </Text>
+      {tags.length > 0 && (
+        <View style={[styles.tagRow, compact && styles.tagRowCompact]}>
+          {tags.map((tag) => (
+            <View key={tag} style={[styles.tag, compact && styles.tagCompact]}>
+              <Text style={[styles.tagText, compact && styles.tagTextCompact]}>
+                {t(`plantTags.${tag}`)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {description ? (
+        <Text style={[styles.fullDescription, compact && styles.fullDescriptionCompact]}>
+          {description}
+        </Text>
+      ) : null}
+    </View>
+  );
+};
+
+export default PlantOverlay;
 
 const styles = StyleSheet.create({
   overlayContent: {
@@ -2688,209 +2451,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   );
 };
 
-
-// File: app\features\main\components\ProfileCardShelf.tsx
-// File: src/features/main/components/ProfileCardShelf.tsx
-
-import React, {
-  useState,
-  useRef,
-  useCallback,
-  memo,
-  forwardRef,
-  useImperativeHandle,
-} from 'react';
-import {
-  Animated,
-  Easing,
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  LayoutChangeEvent,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-
-import { COLORS } from '../../../theme/colors';
-import { log } from '../../../utils/logger';
-import { UserResponse } from '../../../types/apiTypes';
-import { ProfileCard } from './ProfileCard';
-
-/**
- * Exposes imperative methods for opening, closing, toggling.
- */
-export interface ProfileCardShelfRef {
-  toggleShelf: () => void;
-  openShelf: () => void;
-  closeShelf: () => void;
-}
-
-interface ProfileCardShelfProps {
-  /**
-   * The user profile to display inside the shelf.
-   */
-  userProfile?: UserResponse;
-}
-
-const ProfileCardShelf = forwardRef<ProfileCardShelfRef, ProfileCardShelfProps>(
-  function ProfileCardShelf({ userProfile }, ref) {
-    // Start in open state
-    const [isShelfOpen, setIsShelfOpen] = useState(true);
-    // Store the maximum shelf height once measured
-    const [maxShelfHeight, setMaxShelfHeight] = useState<number>(0);
-
-    // This animated value transitions between minHeight and maxShelfHeight
-    const shelfAnim = useRef(new Animated.Value(0)).current;
-
-    /**
-     * On layout, measure the full height so we can animate from that in the future.
-     * If it's bigger than any previously recorded height, save it.
-     * If the shelf is still open, set the animated value to that full height.
-     */
-    const handleShelfLayout = useCallback(
-      (event: LayoutChangeEvent) => {
-        const { height } = event.nativeEvent.layout;
-        log.debug('Measured shelf layout height:', height);
-
-        if (height > maxShelfHeight) {
-          setMaxShelfHeight(height);
-
-          // If we’re meant to be open, show the full shelf right now
-          if (isShelfOpen) {
-            shelfAnim.setValue(height);
-          }
-        }
-      },
-      [isShelfOpen, maxShelfHeight, shelfAnim]
-    );
-
-    /**
-     * A simple function to animate the shelfAnim to a given height.
-     */
-    const animateTo = useCallback(
-      (toValue: number) => {
-        Animated.timing(shelfAnim, {
-          toValue,
-          duration: 300,
-          easing: Easing.ease,
-          useNativeDriver: false,
-        }).start();
-      },
-      [shelfAnim]
-    );
-
-    /**
-     * Toggle between fully open (maxShelfHeight) and collapsed (~15 px).
-     */
-    const toggleShelf = useCallback(() => {
-      if (!maxShelfHeight) return; // Not measured yet, so skip
-
-      // The small height for the toggle handle only
-      const collapsedHeight = styles.shelfToggleButton.height;
-      const targetValue = isShelfOpen ? collapsedHeight : maxShelfHeight;
-
-      animateTo(targetValue);
-      setIsShelfOpen(!isShelfOpen);
-    }, [isShelfOpen, maxShelfHeight, animateTo]);
-
-    /**
-     * Explicitly close the shelf (collapse).
-     */
-    const closeShelf = useCallback(() => {
-      if (!maxShelfHeight) return; // Not measured yet
-
-      if (isShelfOpen) {
-        const collapsedHeight = styles.shelfToggleButton.height;
-        animateTo(collapsedHeight);
-        setIsShelfOpen(false);
-      }
-    }, [isShelfOpen, maxShelfHeight, animateTo]);
-
-    /**
-     * Explicitly open the shelf (expand).
-     */
-    const openShelf = useCallback(() => {
-      if (!maxShelfHeight) return; // Not measured yet
-
-      if (!isShelfOpen) {
-        animateTo(maxShelfHeight);
-        setIsShelfOpen(true);
-      }
-    }, [isShelfOpen, maxShelfHeight, animateTo]);
-
-    // Expose these methods for the parent (ChatScreen, etc.)
-    useImperativeHandle(ref, () => ({
-      toggleShelf,
-      closeShelf,
-      openShelf,
-    }));
-
-    /**
-     * If we've already measured, we animate the container to shelfAnim.
-     * If not measured yet, we let it wrap content naturally (so we can measure).
-     */
-    const containerStyle =
-      maxShelfHeight > 0
-        ? { height: shelfAnim }
-        : undefined;
-
-    return (
-      <Animated.View style={[styles.animatedShelf, containerStyle]}>
-        <View style={styles.shelfInnerContainer} onLayout={handleShelfLayout}>
-          {userProfile && (
-            <View style={styles.profileCardWrapper}>
-              <ProfileCard
-                userProfile={userProfile}
-              />
-            </View>
-          )}
-        </View>
-
-        {/* The toggle "handle" pinned at the bottom */}
-        <TouchableOpacity
-          style={styles.shelfToggleButton}
-          onPress={toggleShelf}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={isShelfOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
-            size={10}
-            color="#fff"
-          />
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  }
-);
-
-export default memo(ProfileCardShelf);
-
-const styles = StyleSheet.create({
-  animatedShelf: {
-    overflow: 'hidden',
-    backgroundColor: '#f1f1f1',
-  },
-  shelfInnerContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    paddingBottom: 23,
-  },
-  profileCardWrapper: {
-    borderRadius: 8,
-    alignSelf: 'center',
-  },
-  shelfToggleButton: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 15,
-    backgroundColor: COLORS.accentGreen,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-
+export default ProfileCard;
 
 // File: app\features\main\components\ProfileLocationDisplay.tsx
 // File: app/features/main/components/ProfileLocationDisplay.tsx
@@ -3104,6 +2665,8 @@ export const SwipeableCard = forwardRef<SwipeableCardRef, SwipeableCardProps>(
   }
 );
 
+export default SwipeableCard;
+
 const styles = StyleSheet.create({
   cardContainer: {
     position: 'absolute',
@@ -3112,7 +2675,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginVertical: 'auto',
 
-    backgroundColor: COLORS.cardBg,
+    backgroundColor: COLORS.cardBg1,
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 5,
@@ -3243,6 +2806,12 @@ interface TagGroupProps<T> {
 
   /** Optional style override for text in a selected tag. */
   tagTextSelectedStyle?: StyleProp<TextStyle>;
+
+  /**
+   * Optional function to convert a tag value into its localized label.
+   * If provided, this function will be used to display the tag's text.
+   */
+  getLabel?: (val: T) => string;
 }
 
 function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
@@ -3259,6 +2828,7 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
     tagSelectedStyle,
     tagTextStyle,
     tagTextSelectedStyle,
+    getLabel,
   } = props;
 
   /**
@@ -3280,13 +2850,10 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
   const handlePress = (val: T) => {
     if (mode === 'single') {
       if (!onSelectSingle) return;
-
       const alreadySelected = isSelected(val);
       if (isRequired) {
-        // Must have exactly one selected always.
         onSelectSingle(val);
       } else {
-        // Tapping the selected tag again should unselect it.
         onSelectSingle(alreadySelected ? null : val);
       }
     } else {
@@ -3300,7 +2867,6 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
     <View style={[styles.container, containerStyle]}>
       {values.map((val) => {
         const selected = isSelected(val);
-
         return (
           <TouchableOpacity
             key={String(val)}
@@ -3312,7 +2878,7 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
             onPress={() => handlePress(val)}
             accessible
             accessibilityRole="button"
-            accessibilityLabel={`Select tag value: ${String(val)}`}
+            accessibilityLabel={`Select tag value: ${getLabel ? getLabel(val) : String(val)}`}
           >
             <Text
               style={[
@@ -3321,7 +2887,7 @@ function TagGroup<T extends string | number>(props: TagGroupProps<T>) {
                 selected && [styles.tagTextSelected, tagTextSelectedStyle],
               ]}
             >
-              {val}
+              {getLabel ? getLabel(val) : String(val)}
             </Text>
           </TouchableOpacity>
         );
@@ -3340,7 +2906,7 @@ const styles = StyleSheet.create({
   },
   tag: {
     borderWidth: 1,
-    borderColor: COLORS.accentGreen, 
+    borderColor: COLORS.accentGreen,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -3352,7 +2918,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 12,
-    color: COLORS.accentGreen, 
+    color: COLORS.accentGreen,
     fontWeight: '600',
   },
   tagTextSelected: {
@@ -3442,9 +3008,6 @@ const styles = StyleSheet.create({
 });
 
 
-// File: app\features\main\components\TradeProposalComponent.tsx
-
-
 // File: app\features\main\hooks\useConnections.ts
 // File: app/features/main/hooks/useConnections.ts
 
@@ -3452,18 +3015,19 @@ import { useQuery } from 'react-query';
 import { connectionService } from '../../../api/connectionService';
 import { ConnectionResponse } from '../../../types/apiTypes';
 
-export function useConnections() {
+export const useConnections = () =>{
   return useQuery<ConnectionResponse[], Error>('myConnections', () =>
     connectionService.getMyConnections()
   );
 }
 
-export function useConnection(connectionId: number) {
+export const useConnection = (connectionId: number) => {
   return useQuery<ConnectionResponse, Error>(['connection', connectionId], () =>
     connectionService.getConnectionById(connectionId)
   );
 }
 
+export default useConnections;
 
 // File: app\features\main\hooks\useMessages.ts
 // File: src/features/main/hooks/useMatchConversation.ts
@@ -3508,6 +3072,8 @@ export const useMessages = (connectionId: number) => {
     isSending: sendMessageMutation.isLoading,
   };
 };
+
+export default useMessages;
 
 
 // File: app\features\main\hooks\useMyProfileHooks.ts
@@ -3588,6 +3154,7 @@ export const useUpdateLocation = () => {
   );
 };
 
+export default useMyProfile;
 
 // File: app\features\main\hooks\useOtherProfile.ts
 import {useQuery} from 'react-query';
@@ -3614,6 +3181,7 @@ export const useOtherProfile = (userId: number) => {
   };
 
 
+export default useOtherProfile;
 
 // File: app\features\main\hooks\usePlantHooks.ts
 // src/features/main/hooks/usePlantHooks.ts
@@ -3693,6 +3261,8 @@ export const useMarkPlantsAsTraded = () => {
   });
 };
 
+export default useOtherUserPlants;
+
 // File: app\features\main\hooks\usePreferences.ts
 // src/features/main/hooks/useUserPreferences.ts
 import { useQuery, useMutation, useQueryClient } from 'react-query';
@@ -3727,6 +3297,7 @@ export const useUserPreferences = () => {
   };
 };
 
+export default useUserPreferences;
 
 // File: app\features\main\hooks\useSearchRadius.ts
 // File: app/features/main/hooks/useSearchRadius.ts
@@ -3742,6 +3313,7 @@ export const useSearchRadius = () => {
   };
 };
 
+export default useSearchRadius;
 
 // File: app\features\main\hooks\useSwipe.ts
 // useLikablePlants.ts
@@ -3794,6 +3366,8 @@ export const useLikablePlants = () => {
   };
 };
 
+
+export default useLikablePlants;
 
 // File: app\features\main\hooks\useTradeProposalHooks.ts
 import { useMutation, useQueryClient } from 'react-query';
@@ -3856,6 +3430,8 @@ export const useConfirmTradeProposalCompletion = (connectionId: number) => {
   );
 }
 
+export default useTradeProposals;
+
 // File: app\features\main\hooks\useUserMatches.ts
 // File: app/features/main/hooks/useUserMatches.ts
 import { useQuery } from 'react-query';
@@ -3876,6 +3452,7 @@ export const useUserMatches = (connectionId: number) => {
   );
 };
 
+export default useUserMatches;
 
 // File: app\features\main\modals\ChangeLocationModal.tsx
 // File: app/features/onboarding/screens/ChangeLocationModal.tsx
@@ -3886,9 +3463,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Dimensions,
 } from 'react-native';
 import MapView, { Marker, MapPressEvent, Region } from 'react-native-maps';
@@ -4033,8 +3608,8 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
           <Text style={styles.title}>{t('change_location_title')}</Text>
           <Text style={styles.subtitle}>
             {permissionStatus === Location.PermissionStatus.DENIED
-              ? t('Permission denied. Tap on the map to place a marker.')
-              : t('Tap on the map to place or move the marker.')}
+              ? t('change_location_permission_denied')
+              : t('change_location_instruction')}
           </Text>
 
           {error && <Text style={styles.errorText}>{error}</Text>}
@@ -4060,20 +3635,26 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
           </View>
 
           {loading && (
-            <ActivityIndicator size="small" color={COLORS.accentGreen} style={{ marginVertical: 10 }} />
+            <ActivityIndicator
+              size="small"
+              color={COLORS.accentGreen}
+              style={{ marginVertical: 10 }}
+            />
           )}
 
           <ConfirmCancelButtons
             onCancel={handleCancel}
             onConfirm={handleConfirm}
-            confirmButtonText={t('Confirm')}
-            cancelButtonText={t('Cancel')}
+            confirmButtonText="confirmCancelButtons.confirm"
+            cancelButtonText="confirmCancelButtons.cancel"
           />
         </View>
       </View>
     </Modal>
   );
 };
+
+export default ChangeLocationModal;
 
 const styles = StyleSheet.create({
   overlay: {
@@ -4147,7 +3728,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import {ChangeLocationModal} from './ChangeLocationModal';
+import { ChangeLocationModal } from './ChangeLocationModal';
 import { COLORS } from '../../../theme/colors';
 import { profileCardStyles } from '../styles/profileCardStyles';
 import { log } from '../../../utils/logger';
@@ -4166,7 +3747,7 @@ interface EditProfileModalProps {
   cardLayout: { x: number; y: number; width: number; height: number };
 }
 
-export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
+export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   visible,
   userProfile,
   onClose,
@@ -4313,7 +3894,7 @@ export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
         name: 'profile.jpg',
         type: 'image/jpeg',
       } as any;
-      updateProfilePicture({image: photo});
+      updateProfilePicture({ image: photo });
     } catch (err) {
       console.error('Error preparing profile picture:', err);
       Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));
@@ -4516,6 +4097,8 @@ export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
   );
 };
 
+export default EditProfileModal;
+
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
@@ -4527,7 +4110,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  
 });
 
 
@@ -4599,8 +4181,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Image,
-  ScrollView,
+  Image
 } from 'react-native';
 import {
   SwipeResponse,
@@ -4648,29 +4229,31 @@ const ItsAMatchModal: React.FC<ItsAMatchModalProps> = ({
         <View style={styles.modalContainer}>
           <Text style={styles.title}>{t('new_matches')}</Text>
 
-            {/* Show the other user's info once at the top */}
-            <View style={styles.connectionHeader}>
-              <Image
-                source={{ uri: otherUser.profilePictureUrl }}
-                style={styles.connectionImage}
-              />
-              <Text style={styles.connectionName}>{otherUser.name}</Text>
-            </View>
-
-            {/* Render the list of Match objects */}
-            <FlatList
-              data={matchData}
-              keyExtractor={(item) => item.matchId.toString()}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <MatchCard match={item} currentUserId={currentUserId} />
-              )}
-              contentContainerStyle={styles.matchesList}
+          {/* Show the other user's info once at the top */}
+          <View style={styles.connectionHeader}>
+            <Image
+              source={{ uri: otherUser.profilePictureUrl }}
+              style={styles.connectionImage}
             />
+            <Text style={styles.connectionName}>{otherUser.name}</Text>
+          </View>
+
+          {/* Render the list of Match objects */}
+          <FlatList
+            data={matchData}
+            keyExtractor={(item) => item.matchId.toString()}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <MatchCard match={item} currentUserId={currentUserId} />
+            )}
+            contentContainerStyle={styles.matchesList}
+          />
 
           {/* Close button */}
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>Close</Text>
+            <Text style={styles.closeButtonText}>
+              {t('its_a_match_modal.close')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -4700,9 +4283,6 @@ const styles = StyleSheet.create({
     color: COLORS.accentGreen,
     marginBottom: 16,
     textAlign: 'center',
-  },
-  contentContainer: {
-    paddingBottom: 20,
   },
   connectionHeader: {
     flexDirection: 'row',
@@ -4825,22 +4405,24 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          
-
           {isLoading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading your plants...</Text>
+              <Text style={styles.loadingText}>
+                {t('select_plants_modal.loading')}
+              </Text>
             </View>
           )}
 
           {isError && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>
-                Could not load your plants. Please try again.
+                {t('select_plants_modal.error')}
               </Text>
               <TouchableOpacity style={styles.retryButton} onPress={refetch}>
-                <Text style={styles.retryButtonText}>Retry</Text>
+                <Text style={styles.retryButtonText}>
+                  {t('select_plants_modal.retry')}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -4850,14 +4432,16 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
               {myPlants.length === 0 ? (
                 <View style={styles.emptyStateContainer}>
                   <Text style={styles.emptyStateText}>
-                    You have no plants in your collection yet.
+                    {t('select_plants_modal.empty')}
                   </Text>
                 </View>
               ) : (
                 <ScrollView style={styles.scrollArea}>
-                  <Text style={styles.modalTitle}>Select Plants</Text>
+                  <Text style={styles.modalTitle}>
+                    {t('select_plants_modal.title')}
+                  </Text>
                   <Text style={styles.titleText}>
-                    Select the plants you want to trade for. Tap on a plant to select it.
+                    {t('select_plants_modal.instructions')}
                   </Text>
                   <View style={styles.gridContainer}>
                     {myPlants.map((plant: PlantResponse) => {
@@ -4874,27 +4458,25 @@ export const SelectPlantsModal: React.FC<SelectPlantsModalProps> = ({
                     })}
                   </View>
                   <View style={styles.actionbuttons}>
-                  <ConfirmCancelButtons
-                    onConfirm={handleConfirm}
-                    onCancel={onClose}
-                    confirmButtonText="Confirm"
-                    cancelButtonText="Cancel"
-                  />
+                    <ConfirmCancelButtons
+                      onConfirm={handleConfirm}
+                      onCancel={onClose}
+                      confirmButtonText="confirmCancelButtons.confirm"
+                      cancelButtonText="confirmCancelButtons.cancel"
+                    />
                   </View>
                 </ScrollView>
               )}
             </>
           )}
-
-          
-
         </View>
       </View>
     </Modal>
   );
 };
 
-// Replicating (and adapting) styles from your MyProfileScreen thumbnails:
+export default SelectPlantsModal;
+
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
@@ -4969,8 +4551,7 @@ const styles = StyleSheet.create({
     color: COLORS.textDark,
     textAlign: 'center',
   },
-  scrollArea: {
-  },
+  scrollArea: {},
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -5126,8 +4707,6 @@ const AddPlantScreen: React.FC = () => {
     );
   };
 
-  const isExtraSelected = (extra: Extras) => selectedExtras.includes(extra);
-
   const handleCancel = () => {
     navigation.goBack();
   };
@@ -5235,6 +4814,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={stage}
               onSelectSingle={(val) => setStage(val)}
               isRequired={true}
+              getLabel={(val) => t(`plantStage.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_category_label')}:</Text>
@@ -5244,6 +4824,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={category}
               onSelectSingle={(val) => setCategory(val === category ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`plantCategory.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_watering_label')}:</Text>
@@ -5253,6 +4834,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={watering}
               onSelectSingle={(val) => setWatering(val === watering ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`wateringNeed.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_light_label')}:</Text>
@@ -5262,6 +4844,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={light}
               onSelectSingle={(val) => setLight(val === light ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`lightRequirement.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_size_question')}:</Text>
@@ -5271,6 +4854,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={size}
               onSelectSingle={(val) => setSize(val === size ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`size.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_indoor_outdoor_question')}:</Text>
@@ -5280,6 +4864,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={indoorOutdoor}
               onSelectSingle={(val) => setIndoorOutdoor(val === indoorOutdoor ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`indoorOutdoor.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_propagation_ease_question')}:</Text>
@@ -5289,6 +4874,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={propagationEase}
               onSelectSingle={(val) => setPropagationEase(val === propagationEase ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`propagationEase.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_pet_friendly_question')}:</Text>
@@ -5298,6 +4884,7 @@ const AddPlantScreen: React.FC = () => {
               selectedValue={petFriendly}
               onSelectSingle={(val) => setPetFriendly(val === petFriendly ? null : val)}
               isRequired={false}
+              getLabel={(val) => t(`petFriendly.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_extras_question')}:</Text>
@@ -5306,6 +4893,7 @@ const AddPlantScreen: React.FC = () => {
               values={Object.values(Extras)}
               selectedValues={selectedExtras}
               onToggleMulti={(val) => handleExtraToggle(val)}
+              getLabel={(val) => t(`extras.${val}`)}
             />
 
             <Text style={styles.label}>{t('add_plant_select_image_title')}:</Text>
@@ -5419,8 +5007,6 @@ const styles = StyleSheet.create({
 
 
 // File: app\features\main\screens\BrowseMatchesScreen.tsx
-// File: app/features/main/screens/BrowseMatchesScreen.tsx
-
 import React from "react";
 import {
   View,
@@ -5433,6 +5019,8 @@ import {
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
 
 // Import your custom hooks and components
 import { useUserMatches } from "../hooks/useUserMatches";
@@ -5440,7 +5028,6 @@ import { useMyProfile } from "../hooks/useMyProfileHooks";
 import MatchCard from "../components/MatchCard";
 import { headerStyles } from "../styles/headerStyles";
 import { COLORS } from "../../../theme/colors";
-import { Ionicons } from "@expo/vector-icons";
 
 // Define the route params type
 type RouteParams = {
@@ -5448,6 +5035,7 @@ type RouteParams = {
 };
 
 const BrowseMatchesScreen: React.FC = () => {
+  const { t } = useTranslation();
   // Get the connectionId from the route parameters
   const route = useRoute();
   const { connectionId } = route.params as RouteParams;
@@ -5473,9 +5061,9 @@ const BrowseMatchesScreen: React.FC = () => {
   if (isError || profileError) {
     return (
       <SafeAreaProvider style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load matches.</Text>
+        <Text style={styles.errorText}>{t("browseMatches.errorLoadingMatches")}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{t("browseMatches.retry")}</Text>
         </TouchableOpacity>
       </SafeAreaProvider>
     );
@@ -5498,9 +5086,8 @@ const BrowseMatchesScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
-            
           </TouchableOpacity>
-          <Text style={headerStyles.headerTitle}>Browse Matches</Text>
+          <Text style={headerStyles.headerTitle}>{t("browseMatches.headerTitle")}</Text>
         </View>
       </LinearGradient>
       <FlatList
@@ -5557,7 +5144,13 @@ const styles = StyleSheet.create({
 // File: app\features\main\screens\ChatScreen.tsx
 // File: src/features/main/screens/ChatScreen.tsx
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -5571,39 +5164,39 @@ import {
   Alert,
   Image,
   Animated,
-} from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
+} from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 
 // Hooks
-import { useMyProfile } from '../hooks/useMyProfileHooks';
-import { useMessages } from '../hooks/useMessages';
-import { useOtherProfile } from '../hooks/useOtherProfile';
+import { useMyProfile } from "../hooks/useMyProfileHooks";
+import { useMessages } from "../hooks/useMessages";
+import { useOtherProfile } from "../hooks/useOtherProfile";
 
 // For fetching trade proposals
-import { useQuery } from 'react-query';
-import { connectionService } from '../../../api/connectionService';
-import { TradeProposalResponse } from '../../../types/apiTypes';
-import { TradeProposalStatus } from '../../../types/enums';
+import { useQuery } from "react-query";
+import { connectionService } from "../../../api/connectionService";
+import { TradeProposalResponse } from "../../../types/apiTypes";
+import { TradeProposalStatus } from "../../../types/enums";
 
 // Types
-import { MessageResponse, MessageRequest } from '../../../types/apiTypes';
+import { MessageResponse, MessageRequest } from "../../../types/apiTypes";
 
 // Theme & Styles
-import { COLORS } from '../../../theme/colors';
-import { headerStyles } from '../styles/headerStyles';
+import { COLORS } from "../../../theme/colors";
+import { headerStyles } from "../styles/headerStyles";
 
 // Components
-import { MessageBubble } from '../components/MessageBubble';
-import ProfileCardShelf, { ProfileCardShelfRef } from '../components/ProfileCardShelf';
+import { MessageBubble } from "../components/MessageBubble";
+import log from "../../../utils/logger";
 
 // ---------- Custom hook for trade proposals ----------
 const useTradeProposals = (connectionId: number) => {
   return useQuery<TradeProposalResponse[], Error>(
-    ['tradeProposals', connectionId],
+    ["tradeProposals", connectionId],
     () => connectionService.getTradeProposals(connectionId),
     { staleTime: 1000 * 60 }
   );
@@ -5627,7 +5220,7 @@ const ChatScreen: React.FC = () => {
     isError: errorMyProfile,
   } = useMyProfile();
 
-  // Other user's profile (for the ProfileCardShelf)
+  // Other user's profile
   const {
     data: otherUserProfile,
     isLoading: loadingOtherUser,
@@ -5646,20 +5239,38 @@ const ChatScreen: React.FC = () => {
 
   // Trade proposals for this connection (to compute pending proposals)
   const { data: proposals } = useTradeProposals(connectionId);
-  const pendingProposals = proposals?.filter(
-    (proposal) => proposal.tradeProposalStatus === TradeProposalStatus.Pending
-  ) || [];
+  const pendingProposals =
+    proposals?.filter(
+      (proposal) =>
+        proposal.proposalOwnerUserId !== myProfile?.userId &&
+        proposal.tradeProposalStatus === TradeProposalStatus.Pending
+    ) || [];
   const pendingCount = pendingProposals.length;
+
+  const toConfirmProposals =
+    proposals?.filter((proposal) => {
+      return (
+        proposal.tradeProposalStatus === TradeProposalStatus.Completed &&
+        ((proposal.proposalOwnerUserId === myProfile?.userId &&
+          !proposal.ownerCompletionConfirmed) ||
+          (proposal.proposalOwnerUserId !== myProfile?.userId &&
+            !proposal.responderCompletionConfirmed))
+      );
+    }) || [];
+  const toConfirmProposalsCount = toConfirmProposals.length;
+
+  const proposalsAwaitingActionsCount =
+    pendingCount + toConfirmProposalsCount;
 
   // --- Animated values for the trade proposals button ---
   const buttonWidth = useRef(new Animated.Value(56)).current;
   const glimmerAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (pendingCount > 0) {
+    if (pendingCount > 0 || toConfirmProposalsCount > 0) {
       // Expand the background to reveal text
       Animated.timing(buttonWidth, {
-        toValue: 210, // or whatever max width you want
+        toValue: 210,
         duration: 300,
         useNativeDriver: false,
       }).start();
@@ -5691,7 +5302,7 @@ const ChatScreen: React.FC = () => {
       // Stop pulsing by resetting
       glimmerAnim.setValue(1);
     }
-  }, [pendingCount]);
+  }, [pendingCount, toConfirmProposalsCount]);
 
   // Animated style for the button
   const buttonAnimatedStyle = {
@@ -5718,33 +5329,29 @@ const ChatScreen: React.FC = () => {
   }, [sortedMessages]);
 
   // Input state
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
 
   // Handle sending a message
   const handleSendMessage = useCallback(() => {
     const text = inputText.trim();
     if (!text) return;
-    setInputText('');
+    setInputText("");
     const payload: MessageRequest = { messageText: text };
     sendMessage(payload, {
       onError: (error) => {
-        console.error('Error sending message:', error);
-        Alert.alert(t('chat_error'), t('chat_send_failed'));
+        console.error("Error sending message:", error);
+        Alert.alert(t("chat_error"), t("chat_send_failed"));
       },
     });
   }, [inputText, sendMessage, t]);
-
-  // Ref for ProfileCardShelf (if used) to close it on input focus
-  const shelfRef = useRef<ProfileCardShelfRef>(null);
-  const handleInputFocus = useCallback(() => {
-    shelfRef.current?.closeShelf();
-  }, []);
 
   if (loadingMyProfile || isLoadingMessages || loadingOtherUser) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>{t('chat_loading_conversation')}</Text>
+        <Text style={styles.loadingText}>
+          {t("chat_loading_conversation")}
+        </Text>
       </SafeAreaProvider>
     );
   }
@@ -5752,9 +5359,14 @@ const ChatScreen: React.FC = () => {
   if (errorMyProfile || isErrorMessages || errorOtherUser) {
     return (
       <SafeAreaProvider style={styles.centerContainer}>
-        <Text style={styles.errorText}>{t('chat_error_message')}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => refetchMessages()}>
-          <Text style={styles.retryButtonText}>{t('chat_retry_button')}</Text>
+        <Text style={styles.errorText}>{t("chat_error_message")}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => refetchMessages()}
+        >
+          <Text style={styles.retryButtonText}>
+            {t("chat_retry_button")}
+          </Text>
         </TouchableOpacity>
       </SafeAreaProvider>
     );
@@ -5762,22 +5374,28 @@ const ChatScreen: React.FC = () => {
 
   // Navigate to "Browse Matches" screen
   const handleBrowseMatches = () => {
-    navigation.navigate('BrowseMatches' as never, { connectionId } as never);
+    navigation.navigate("BrowseMatches" as never, { connectionId } as never);
   };
 
   // Navigate to Trade Proposals screen
   const handleOpenTradeProposals = () => {
-    navigation.navigate('TradeProposals' as never, { connectionId } as never);
+    navigation.navigate("TradeProposals" as never, { connectionId } as never);
   };
 
-  // Navigate to Make Trade Proposal screen (for creating a new proposal)
+  // Navigate to Make Trade Proposal screen
   const handleOpenTradeProposal = () => {
-    navigation.navigate('MakeTradeProposal' as never, { connectionId, otherUserId } as never);
+    navigation.navigate(
+      "MakeTradeProposal" as never,
+      { connectionId, otherUserId } as never
+    );
   };
 
   // Navigate to the other user's profile screen
   const handleNavigateToProfile = () => {
-    navigation.navigate('OtherProfile' as never, { userId: otherUserProfile.userId } as never);
+    navigation.navigate(
+      "OtherProfile" as never,
+      { userId: otherUserProfile.userId } as never
+    );
   };
 
   return (
@@ -5788,16 +5406,28 @@ const ChatScreen: React.FC = () => {
         colors={[COLORS.primary, COLORS.secondary]}
       >
         <View style={headerStyles.headerColumn1}>
-          <TouchableOpacity style={headerStyles.headerBackButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
+          <TouchableOpacity
+            style={headerStyles.headerBackButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={30}
+              color={COLORS.textLight}
+            />
           </TouchableOpacity>
           {otherUserProfile && (
-            <TouchableOpacity style={styles.headerUserInfo} onPress={handleNavigateToProfile}>
+            <TouchableOpacity
+              style={styles.headerUserInfo}
+              onPress={handleNavigateToProfile}
+            >
               <Image
                 source={{ uri: otherUserProfile.profilePictureUrl }}
                 style={styles.headerUserImage}
               />
-              <Text style={headerStyles.headerTitle}>{otherUserProfile.name}</Text>
+              <Text style={headerStyles.headerTitle}>
+                {otherUserProfile.name}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -5806,16 +5436,16 @@ const ChatScreen: React.FC = () => {
       {/* "Browse Matches" button */}
       <TouchableOpacity style={styles.browseButton} onPress={handleBrowseMatches}>
         <Text style={styles.browseButtonText}>
-          {t('chat_browse_matches_button', 'Browse Matches')}
+          {t("chat_browse_matches_button")}
         </Text>
       </TouchableOpacity>
-
-
 
       {/* Chat messages */}
       {sortedMessages.length === 0 ? (
         <View style={styles.emptyChatContainer}>
-          <Text style={styles.noMessagesText}>{t('chat_no_messages_yet')}</Text>
+          <Text style={styles.noMessagesText}>
+            {t("chat_no_messages_yet")}
+          </Text>
         </View>
       ) : (
         <View style={styles.listContainer}>
@@ -5839,24 +5469,24 @@ const ChatScreen: React.FC = () => {
             { width: buttonWidth, opacity: glimmerAnim },
           ]}
         >
-          {/* Single Touchable: tapping text or circle calls the same onPress */}
           <TouchableOpacity
             style={styles.pendingButtonTouchable}
             onPress={handleOpenTradeProposals}
             activeOpacity={0.8}
           >
-            {/* The “pill” background behind everything */}
             <View style={styles.backgroundBar}>
-              {pendingCount > 0 && (
+              {proposalsAwaitingActionsCount > 0 && (
                 <Text style={styles.pendingButtonText}>
-                  {`${pendingCount} pending proposals`}
+                  {`${proposalsAwaitingActionsCount} ${t("chat_pending_proposals")}`}
                 </Text>
               )}
             </View>
-
-            {/* The circle button (with icon + shadow) pinned on the left */}
             <View style={styles.circleButton}>
-              <Ionicons name="document-text-outline" size={24} color="#fff" />
+              <Ionicons
+                name="document-text-outline"
+                size={24}
+                color="#fff"
+              />
             </View>
           </TouchableOpacity>
         </Animated.View>
@@ -5865,12 +5495,11 @@ const ChatScreen: React.FC = () => {
         <TouchableOpacity style={styles.tradeFab} onPress={handleOpenTradeProposal}>
           <Ionicons name="swap-horizontal" size={26} color="#fff" />
         </TouchableOpacity>
-
       </View>
 
       {/* Message Input */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={10}
       >
         <View style={styles.inputContainer}>
@@ -5878,15 +5507,21 @@ const ChatScreen: React.FC = () => {
             style={styles.textInput}
             value={inputText}
             onChangeText={setInputText}
-            placeholder={t('chat_message_placeholder')}
+            placeholder={t("chat_message_placeholder")}
             multiline
-            onFocus={handleInputFocus}
           />
           {isSending ? (
-            <ActivityIndicator style={{ marginRight: 12 }} color={COLORS.primary} />
+            <ActivityIndicator
+              style={{ marginRight: 12 }}
+              color={COLORS.primary}
+            />
           ) : (
             <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
-              <Ionicons name="send" size={20} color={COLORS.background} />
+              <Ionicons
+                name="send"
+                size={20}
+                color={COLORS.background}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -5904,8 +5539,8 @@ const styles = StyleSheet.create({
   },
   // Header User Info
   headerUserInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginLeft: 10,
   },
   headerUserImage: {
@@ -5915,25 +5550,25 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     marginRight: 8,
-    backgroundColor: '#ccc',
+    backgroundColor: "#ccc",
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   loadingText: {
     fontSize: 16,
     color: COLORS.textDark,
     marginTop: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   errorText: {
     fontSize: 16,
     color: COLORS.textDark,
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   retryButton: {
     backgroundColor: COLORS.accentGreen,
@@ -5943,19 +5578,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   retryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   // "Browse Matches" button
   browseButton: {
     margin: 10,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#fff',
-    alignSelf: 'center',
-    minWidth: '60%',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#fff",
+    alignSelf: "center",
+    minWidth: "60%",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 2,
@@ -5963,18 +5598,18 @@ const styles = StyleSheet.create({
   browseButtonText: {
     color: COLORS.textDark,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   // If no messages
   emptyChatContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   noMessagesText: {
     fontSize: 16,
     color: COLORS.textDark,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: 20,
   },
   // Chat messages list
@@ -5987,19 +5622,19 @@ const styles = StyleSheet.create({
   },
   // Input
   inputContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 10,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    alignItems: 'flex-end',
+    borderTopColor: "#ddd",
+    alignItems: "flex-end",
   },
   textInput: {
     flex: 1,
     minHeight: 40,
     maxHeight: 100,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: "#f2f2f2",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -6013,76 +5648,63 @@ const styles = StyleSheet.create({
   },
   // Floating Buttons
   floatingButtonsContainer: {
-    position: 'relative',
-    flexDirection: 'row',
+    position: "relative",
+    flexDirection: "row",
   },
   // Floating Trade Proposals Button (right bottom)
   tradeFab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     right: 20,
     backgroundColor: COLORS.accentGreen,
     width: 56,
     height: 56,
     borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
   },
-
   // Pending Proposals Button (bottom-left)
-  // The container we animate in width (and keep a fixed height).
-  // We use overflow: 'hidden' so text slides out from under the circle.
   pendingButtonContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 20,
     height: 56,
     borderRadius: 28,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
-
-  // Make the entire area clickable by wrapping in a single Touchable.
   pendingButtonTouchable: {
     flex: 1,
     borderRadius: 28,
   },
-
-  // The pill behind the circle and text:
   backgroundBar: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.accentGreen,
     borderRadius: 28,
-    paddingLeft: 56, // Leave room for the circle on the left
-    justifyContent: 'center', 
-    paddingRight: 16, 
+    paddingLeft: 56,
+    justifyContent: "center",
+    paddingRight: 16,
   },
-
-  // The text that appears when expanded:
   pendingButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 14,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
   },
-
-  // The circle with the icon on top, pinned on the left:
   circleButton: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 0,
     width: 56,
     height: 56,
     borderRadius: 28,
     backgroundColor: COLORS.accentGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    // Shadow (iOS + Android)
-    shadowColor: '#000',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -6263,9 +5885,9 @@ const ConnectionsScreen: React.FC = () => {
                 <Text style={styles.userName}>{otherUser.name}</Text>
                 {/* Using connection.numberOfMatches to show match info if relevant */}
                 <Text style={styles.matchCount}>
-                  {t('connections_matches_label', {
+                    {t(connection.numberOfMatches === 1 ? 'connections_match_label' : 'connections_matches_label', {
                     count: connection.numberOfMatches,
-                  })}
+                    })}
                 </Text>
               </View>
               <Ionicons
@@ -6388,6 +6010,7 @@ const styles = StyleSheet.create({
 
 // File: app\features\main\screens\MakeTradeProposalScreen.tsx
 // File: app/features/main/screens/MakeTradeProposalScreen.tsx
+
 import React, { useState } from 'react';
 import {
   View,
@@ -6402,6 +6025,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import {
   usePlantsLikedByMeFromUser,
@@ -6422,6 +6046,7 @@ interface MakeTradeProposalRouteParams {
 }
 
 const MakeTradeProposalScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
   const { connectionId, otherUserId } = route.params as MakeTradeProposalRouteParams;
@@ -6459,7 +6084,10 @@ const MakeTradeProposalScreen: React.FC = () => {
 
   const handleTrade = () => {
     if (selectedOtherPlantIds.length === 0 && selectedMyPlantIds.length === 0) {
-      Alert.alert('Empty Trade', 'Select at least one plant to trade!');
+      Alert.alert(
+        t("makeTradeProposal.emptyTradeTitle"),
+        t("makeTradeProposal.emptyTradeMessage")
+      );
       return;
     }
     const payload = {
@@ -6468,13 +6096,18 @@ const MakeTradeProposalScreen: React.FC = () => {
     };
     createTradeProposal(payload, {
       onSuccess: () => {
-        Alert.alert('Success', 'Trade proposal created!', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert(
+          t("makeTradeProposal.tradeSuccessTitle"),
+          t("makeTradeProposal.tradeSuccessMessage"),
+          [{ text: t("common.ok"), onPress: () => navigation.goBack() }]
+        );
       },
       onError: (err) => {
         console.error('Failed to create proposal:', err);
-        Alert.alert('Error', 'Could not create proposal. Try again.');
+        Alert.alert(
+          t("makeTradeProposal.tradeErrorTitle"),
+          t("makeTradeProposal.tradeErrorMessage")
+        );
       },
     });
   };
@@ -6516,7 +6149,7 @@ const MakeTradeProposalScreen: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading liked plants...</Text>
+        <Text style={styles.loadingText}>{t("makeTradeProposal.loadingLikedPlants")}</Text>
       </View>
     );
   }
@@ -6524,7 +6157,7 @@ const MakeTradeProposalScreen: React.FC = () => {
   if (errorOtherPlants || errorMyPlants) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Couldn’t load plants. Please retry.</Text>
+        <Text style={styles.errorText}>{t("makeTradeProposal.errorLoadingPlants")}</Text>
         <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color="#fff" />
         </TouchableOpacity>
@@ -6534,12 +6167,20 @@ const MakeTradeProposalScreen: React.FC = () => {
 
   return (
     <View style={styles.modalBackground}>
-      <LinearGradient style={styles.modalContainer} colors={[COLORS.primary, COLORS.secondary]}>
+      <LinearGradient
+        style={styles.modalContainer}
+        colors={[COLORS.primary, COLORS.secondary]}
+      >
         <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color="#fff" />
         </TouchableOpacity>
 
-        {renderHorizontalSection("They’re Offering?", othersPlantsILiked, selectedOtherPlantIds, toggleOtherPlantSelection)}
+        {renderHorizontalSection(
+          t("makeTradeProposal.theyOffering"),
+          othersPlantsILiked,
+          selectedOtherPlantIds,
+          toggleOtherPlantSelection
+        )}
 
         {/* Enhanced Divider with a Cool Gradient Trade Button */}
         <View style={styles.tradeDividerContainer}>
@@ -6551,7 +6192,9 @@ const MakeTradeProposalScreen: React.FC = () => {
               ) : (
                 <View style={styles.tradeButtonContent}>
                   <Ionicons name="swap-horizontal" size={20} color="#fff" />
-                  <Text style={styles.tradeButtonText}> TRADE</Text>
+                  <Text style={styles.tradeButtonText}>
+                    {" "}{t("makeTradeProposal.tradeButton")}
+                  </Text>
                 </View>
               )}
             </LinearGradient>
@@ -6559,7 +6202,12 @@ const MakeTradeProposalScreen: React.FC = () => {
           <View style={styles.dividerLine} />
         </View>
 
-        {renderHorizontalSection("You’re Offering?", myPlantsTheyLiked, selectedMyPlantIds, toggleMyPlantSelection)}
+        {renderHorizontalSection(
+          t("makeTradeProposal.youOffering"),
+          myPlantsTheyLiked,
+          selectedMyPlantIds,
+          toggleMyPlantSelection
+        )}
       </LinearGradient>
 
       {/* Reusable InfoModal */}
@@ -6677,7 +6325,7 @@ const styles = StyleSheet.create({
 
 
 // File: app\features\main\screens\MyProfileScreen.tsx
-// src/screens/MyProfileScreen.tsx
+// File: src/screens/MyProfileScreen.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -6688,7 +6336,7 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
-  Dimensions
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -6702,16 +6350,16 @@ import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
 import { EditProfileModal } from '../modals/EditProfileModal';
-import PlantThumbnail  from '../components/PlantThumbnail';
+import PlantThumbnail from '../components/PlantThumbnail';
 import { headerStyles } from '../styles/headerStyles';
 import { ProfileCard } from '../components/ProfileCard';
-import { ToggleButton } from '../components/ToggleButton'; // Import the new ToggleButton component
+import { ToggleButton } from '../components/ToggleButton'; // New ToggleButton component
 
 const MyProfileScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
 
-  // Hooks
+  // Hooks for profile, plants, and search radius
   const {
     data: userProfile,
     isLoading: loadingProfile,
@@ -6724,13 +6372,9 @@ const MyProfileScreen: React.FC = () => {
     isError: errorPlants,
     refetch: refetchPlants,
   } = useMyPlants();
-  const {
-    searchRadius,
-    isLoading: srLoading,
-    isError: srError,
-  } = useSearchRadius();
+  const { searchRadius, isLoading: srLoading, isError: srError } = useSearchRadius();
 
-  // For showing city, country
+  // For showing city, country (if needed)
   const [cityCountry, setCityCountry] = useState<string>('');
   const [editProfileVisible, setEditProfileVisible] = useState(false);
 
@@ -6764,7 +6408,7 @@ const MyProfileScreen: React.FC = () => {
     navigation.navigate('AddPlant' as never);
   };
 
-  // Rendering plants
+  // Rendering plants (either as thumbnails or full-size)
   const renderPlantItem = (item: PlantResponse) => {
     if (viewOption === 'Thumbnails') {
       return (
@@ -6835,7 +6479,7 @@ const MyProfileScreen: React.FC = () => {
         <View ref={cardRef} style={styles.cardContainer}>
           <ProfileCard
             userProfile={userProfile}
-            isEditable={true} // Set to true to show the edit button
+            isEditable={true} // Show the edit button
             onEditPress={openEditModal}
             screenWidth={screenWidth}
           />
@@ -6845,7 +6489,7 @@ const MyProfileScreen: React.FC = () => {
         <View style={styles.plantsSectionWrapper}>
           <View style={styles.plantsSectionHeader}>
             <Text style={styles.plantsSectionTitle}>
-            {t('profile_my_plants_section')}
+              {t('profile_my_plants_section')}
             </Text>
             <TouchableOpacity
               onPress={handleAddPlant}
@@ -6869,7 +6513,9 @@ const MyProfileScreen: React.FC = () => {
 
           {/* Plants List */}
           {myPlants && myPlants.length > 0 ? (
-            <View style={viewOption === 'Full Size' ? styles.fullViewContainer : styles.thumbViewContainer}>
+            <View
+              style={viewOption === 'Full Size' ? styles.fullViewContainer : styles.thumbViewContainer}
+            >
               {myPlants.map((plant) => renderPlantItem(plant))}
             </View>
           ) : (
@@ -6897,8 +6543,6 @@ const MyProfileScreen: React.FC = () => {
 };
 
 export default MyProfileScreen;
-
-// Updated Styles
 
 const styles = StyleSheet.create({
   container: {
@@ -6933,13 +6577,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
   // Profile Card
   cardContainer: {
     marginHorizontal: 16,
     marginTop: 20,
   },
-
   // ---- Plants Section ----
   plantsSectionWrapper: {
     paddingTop: 20,
@@ -6960,7 +6602,7 @@ const styles = StyleSheet.create({
   addPlantButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.accentGreen, // or any brand color
+    backgroundColor: COLORS.accentGreen,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
@@ -6982,7 +6624,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-  // Different layouts for the plant items
+  // Layouts for plant items
   thumbViewContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -7009,9 +6651,9 @@ const styles = StyleSheet.create({
 
 
 // File: app\features\main\screens\OtherProfileScreen.tsx
-// src/screens/OtherProfileScreen.tsx
+// File: src/screens/OtherProfileScreen.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7021,6 +6663,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -7031,7 +6674,7 @@ import * as Location from 'expo-location';
 
 import { PlantCardWithInfo } from '../components/PlantCardWithInfo';
 import { useOtherProfile } from '../hooks/useOtherProfile';
-import { useMyPlants } from '../hooks/usePlantHooks'; // Assuming you want to show current user's plants related to the other user
+import { useMyPlants } from '../hooks/usePlantHooks';
 import { useSearchRadius } from '../hooks/useSearchRadius';
 import { PlantResponse, UserResponse } from '../../../types/apiTypes';
 import { COLORS } from '../../../theme/colors';
@@ -7051,40 +6694,38 @@ const OtherProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<OtherProfileScreenRouteProp>();
   const { userId } = route.params;
+  const screenWidth = Dimensions.get('window').width;
 
-  // Hooks
+  // Fetch the other user's profile
   const {
     data: otherUserProfile,
     isLoading: loadingProfile,
     isError: errorProfile,
     refetch: refetchProfile,
   } = useOtherProfile(userId);
-  
-  // Assuming you want to display plants related to the other user
-  // If plants are not user-specific, adjust accordingly
+
+  // Fetch current user's plants (if needed to show related plants)
   const {
     data: myPlants,
     isLoading: loadingPlants,
     isError: errorPlants,
     refetch: refetchPlants,
   } = useMyPlants();
-  
+
+  // Fetch search radius (if used for geolocation display)
   const {
     searchRadius,
     isLoading: srLoading,
     isError: srError,
   } = useSearchRadius();
 
-  // For showing city, country
+  // For showing city, country based on location
   const [cityCountry, setCityCountry] = useState<string>('');
 
-  // Toggle: Thumbnails or Full-size for plants
+  // Toggle between Thumbnails and Full-size for plants
   const [showFullSize, setShowFullSize] = useState(false);
 
-  // Position for the EditProfileModal (Not needed for OtherProfileScreen)
-  // Removed related states and functions
-
-  // If the user has location
+  // Determine if the other user has location info
   const userHasLocation =
     otherUserProfile?.locationLatitude !== undefined &&
     otherUserProfile?.locationLongitude !== undefined;
@@ -7115,20 +6756,18 @@ const OtherProfileScreen: React.FC = () => {
     })();
   }, [userHasLocation, otherUserProfile]);
 
-  // Handler for sending message to the user
+  // Handler for sending a message to the user
   const handleSendMessage = () => {
     navigation.navigate('Chat' as never, { otherUserId: userId } as never);
   };
 
-  // Rendering plants
+  // Render each plant item from current user's plants (or other data if needed)
   const renderPlantItem = (item: PlantResponse) => {
     if (!showFullSize) {
       return (
         <PlantThumbnail
           key={item.plantId}
           plant={item}
-          // Assuming these props are not needed for viewing others' plants
-          // Remove or adjust if necessary
         />
       );
     } else {
@@ -7191,39 +6830,26 @@ const OtherProfileScreen: React.FC = () => {
               <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
             </TouchableOpacity>
             <View style={styles.headerUserInfo}>
-              <Ionicons name="person-circle-outline" size={30} color={COLORS.textLight} />
-              <Text style={headerStyles.headerTitle}>{t('profile_title')}</Text>
+              <Text style={headerStyles.headerTitle}>{t('other_profile_title')}</Text>
             </View>
           </View>
         </LinearGradient>
 
-        {/* --- Profile Card --- */}
+        {/* Profile Card */}
         <View style={styles.cardContainer}>
           <ProfileCard
             userProfile={otherUserProfile}
-            // No edit functionality
             isEditable={false}
+            screenWidth={screenWidth}
           />
         </View>
 
-        {/* ---- User's Plants Section ---- */}
+        {/* User's Plants Section */}
         <View style={styles.plantsSectionWrapper}>
           <View style={styles.plantsSectionHeader}>
             <Text style={styles.plantsSectionTitle}>
-              {otherUserProfile.name} {t('profile_my_plants_section')}
+              {t('profile_my_plants_section')}
             </Text>
-            {/* If you want to allow interaction like sending a message */}
-            <TouchableOpacity
-              onPress={handleSendMessage}
-              style={styles.addPlantButton} // Reuse styles or create new ones
-              accessibilityRole="button"
-              accessibilityLabel={t('profile_send_message_button')}
-            >
-              <Ionicons name="chatbubble-ellipses" size={24} color={COLORS.textLight} />
-              <Text style={styles.addPlantButtonText}>
-                {t('profile_send_message_button')}
-              </Text>
-            </TouchableOpacity>
           </View>
 
           {/* Toggle between Thumbnails and Full view */}
@@ -7263,6 +6889,7 @@ const OtherProfileScreen: React.FC = () => {
           </View>
 
           {/* Plants List */}
+          {/** Adjust the plant list source as needed (e.g. other user's plants if available) **/}
           {myPlants && myPlants.length > 0 ? (
             <View style={showFullSize ? styles.fullViewContainer : styles.thumbViewContainer}>
               {myPlants.map((plant) => renderPlantItem(plant))}
@@ -7275,15 +6902,6 @@ const OtherProfileScreen: React.FC = () => {
             </View>
           )}
         </View>
-
-        {/* Additional Actions (e.g., Follow Button) */}
-        <View style={styles.actionsContainer}>
-          {/* Example: Follow Button */}
-          <TouchableOpacity style={styles.followButton} onPress={() => Alert.alert('Followed!')}>
-            <Text style={styles.followButtonText}>{t('profile_follow_button')}</Text>
-          </TouchableOpacity>
-          {/* Add more actions as needed */}
-        </View>
       </ScrollView>
     </SafeAreaProvider>
   );
@@ -7291,7 +6909,6 @@ const OtherProfileScreen: React.FC = () => {
 
 export default OtherProfileScreen;
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -7325,14 +6942,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
   // Profile Card
   cardContainer: {
     marginHorizontal: 16,
     marginTop: 20,
   },
-
-  // ---- Plants Section ----
+  // Plants Section
   plantsSectionWrapper: {
     paddingTop: 20,
     paddingBottom: 15,
@@ -7349,33 +6964,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textDark,
   },
-  addPlantButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.accentGreen, // or any brand color
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  addPlantButtonText: {
-    color: COLORS.textLight,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-
-  // Toggle for Thumbnails / Full
   viewToggleRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -7402,8 +6990,7 @@ const styles = StyleSheet.create({
   segmentButtonTextActive: {
     color: COLORS.textLight,
   },
-
-  // Different layouts for the plant items
+  // Layouts for plant items
   thumbViewContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -7426,47 +7013,18 @@ const styles = StyleSheet.create({
     color: '#555',
     textAlign: 'center',
   },
-
   // Header User Info
   headerUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 10, // Adjust as needed
-  },
-  headerUserImage: {
-    borderColor: COLORS.accentGreen,
-    borderWidth: 3,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 8,
-    backgroundColor: '#ccc', // Placeholder color in case image fails to load
-  },
-
-  // Actions Container
-  actionsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  followButton: {
-    backgroundColor: COLORS.accentGreen,
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    marginBottom: 10,
-    width: '100%',
-    alignItems: 'center',
-  },
-  followButtonText: {
-    color: COLORS.textLight,
-    fontSize: 16,
-    fontWeight: '600',
+    marginLeft: 10,
   },
 });
 
 
 // File: app\features\main\screens\SettingsScreen.tsx
+// File: src/features/main/screens/SettingsScreen.tsx
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -7536,20 +7094,20 @@ const SettingsScreen: React.FC = () => {
   // Stub for changing email
   const handleChangeEmail = async () => {
     if (!newEmail.trim()) {
-      Alert.alert('Validation Error', t('Please enter a valid email.'));
+      Alert.alert(t('Validation Error'), t('settings_enter_valid_email'));
       return;
     }
     setSaving(true);
     Keyboard.dismiss();
     try {
       // Example: await userService.updateProfile({ email: newEmail });
-      Alert.alert(t('Success'), t('Email changed successfully!'));
+      Alert.alert(t('Success'), t('settings_email_changed_successfully'));
       setNewEmail('');
       refetchUserProfile();
       setIsEditingEmail(false);
     } catch (err) {
       console.error('Failed to change email:', err);
-      Alert.alert(t('Error'), t('Could not change email.'));
+      Alert.alert(t('Error'), t('settings_could_not_change_email'));
     } finally {
       setSaving(false);
     }
@@ -7558,20 +7116,20 @@ const SettingsScreen: React.FC = () => {
   // Stub for changing password
   const handleChangePassword = async () => {
     if (!newPassword.trim()) {
-      Alert.alert('Validation Error', t('Please enter a valid password.'));
+      Alert.alert(t('Validation Error'), t('settings_enter_valid_password'));
       return;
     }
     setSaving(true);
     Keyboard.dismiss();
     try {
       // Example: await userService.updateProfile({ password: newPassword });
-      Alert.alert(t('Success'), t('Password changed successfully!'));
+      Alert.alert(t('Success'), t('settings_password_changed_successfully'));
       setNewPassword('');
       refetchUserProfile();
       setIsEditingPassword(false);
     } catch (err) {
       console.error('Failed to change password:', err);
-      Alert.alert(t('Error'), t('Could not change password.'));
+      Alert.alert(t('Error'), t('settings_could_not_change_password'));
     } finally {
       setSaving(false);
     }
@@ -7581,7 +7139,7 @@ const SettingsScreen: React.FC = () => {
   const handleLogout = async () => {
     Alert.alert(
       t('Logout'),
-      t('Are you sure you want to log out?'),
+      t('settings_logout_confirmation'),
       [
         { text: t('Cancel'), style: 'cancel' },
         {
@@ -7602,20 +7160,14 @@ const SettingsScreen: React.FC = () => {
   const handleDeleteAccount = async () => {
     Alert.alert(
       t('Delete Account'),
-      t('Not implemented yet.'),
+      t('settings_delete_account_not_implemented'),
       [
         { text: t('Cancel'), style: 'cancel' },
         {
+          // Uncomment and implement when ready:
           // text: t('Yes, Delete'),
           // style: 'destructive',
-          // onPress: async () => {
-          //   try {
-              
-          //   } catch (err) {
-          //     console.error('Failed to delete account:', err);
-          //     Alert.alert(t('Error'), t('Could not delete account.'));
-          //   }
-          // },
+          // onPress: async () => { ... },
         },
       ],
     );
@@ -7623,7 +7175,7 @@ const SettingsScreen: React.FC = () => {
 
   // Not implemented yet
   const handleNotImplemented = () => {
-    Alert.alert(t('Not Implemented'), t('This feature is not implemented yet.'));
+    Alert.alert(t('Not Implemented'), t('settings_feature_not_implemented'));
   };
 
   // Save toggles
@@ -7650,30 +7202,18 @@ const SettingsScreen: React.FC = () => {
   // Email Row
   const renderEmailRow = () => {
     if (!isEditingEmail) {
-      // Display mode
       return (
         <View style={styles.row}>
           <View style={styles.rowLeft}>
             <Text style={styles.rowLabel}>{t('email')}</Text>
             <Text style={styles.rowValue}>
-              {userProfile?.email || t('No email found')}
+              {userProfile?.email || t('settings_no_email_found')}
             </Text>
           </View>
-
-          {/* Edit icon to start editing */}
-          {/* <TouchableOpacity
-            onPress={() => {
-              setIsEditingEmail(true);
-              setNewEmail(userProfile?.email || '');
-            }}
-          >
-            <Ionicons name="pencil-outline" size={18} color={COLORS.accentGreen} />
-          </TouchableOpacity> */}
         </View>
       );
     }
 
-    // Edit mode
     return (
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
@@ -7688,7 +7228,6 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         <View style={styles.rowActions}>
-          {/* Confirm */}
           <TouchableOpacity
             onPress={handleChangeEmail}
             style={{ marginRight: 12 }}
@@ -7700,7 +7239,6 @@ const SettingsScreen: React.FC = () => {
               <Ionicons name="checkmark-circle" size={24} color={COLORS.accentGreen} />
             )}
           </TouchableOpacity>
-          {/* Cancel */}
           <TouchableOpacity
             onPress={() => {
               setIsEditingEmail(false);
@@ -7717,15 +7255,12 @@ const SettingsScreen: React.FC = () => {
   // Password Row
   const renderPasswordRow = () => {
     if (!isEditingPassword) {
-      // Display mode
       return (
         <View style={styles.row}>
           <View style={styles.rowLeft}>
             <Text style={styles.rowLabel}>{t('Password')}</Text>
             <Text style={styles.rowValue}>********</Text>
           </View>
-
-          {/* Edit icon to start editing password */}
           <TouchableOpacity
             onPress={() => {
               setIsEditingPassword(true);
@@ -7738,7 +7273,6 @@ const SettingsScreen: React.FC = () => {
       );
     }
 
-    // Edit mode
     return (
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
@@ -7753,7 +7287,6 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         <View style={styles.rowActions}>
-          {/* Confirm */}
           <TouchableOpacity
             onPress={handleChangePassword}
             style={{ marginRight: 12 }}
@@ -7765,7 +7298,6 @@ const SettingsScreen: React.FC = () => {
               <Ionicons name="checkmark-circle" size={24} color={COLORS.accentGreen} />
             )}
           </TouchableOpacity>
-          {/* Cancel */}
           <TouchableOpacity
             onPress={() => {
               setIsEditingPassword(false);
@@ -7794,11 +7326,11 @@ const SettingsScreen: React.FC = () => {
 
       {/* Content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
-
         {/* ACCOUNT INFO SECTION */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('Account')}</Text>
           {renderEmailRow()}
+          {/* Uncomment to allow password editing */}
           {/* {renderPasswordRow()} */}
 
           {/* Logout */}
@@ -7939,7 +7471,6 @@ const styles = StyleSheet.create({
   },
   rowLeft: {
     flex: 1,
-
   },
   rowLabel: {
     fontSize: 14,
@@ -8054,13 +7585,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useUserPreferences } from '../hooks/usePreferences';
-import Slider from '@react-native-community/slider'; // <-- Import Slider
+import Slider from '@react-native-community/slider';
 
 import TagGroup from '../components/TagGroup';
+import ConfirmCancelButtons from '../components/ConfirmCancelButtons';
 import { COLORS } from '../../../theme/colors';
 import { headerStyles } from '../styles/headerStyles';
-import ConfirmCancelButtons from '../components/ConfirmCancelButtons';
 
 import {
   PlantStage,
@@ -8074,9 +7604,12 @@ import {
   Extras,
 } from '../../../types/enums';
 import { UserPreferencesRequest } from '../../../types/apiTypes';
+import { useUserPreferences } from '../hooks/usePreferences';
+import { useTranslation } from 'react-i18next';
 
 const SetUserPreferencesScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const {
     data: preferences,
     isLoading,
@@ -8117,7 +7650,7 @@ const SetUserPreferencesScreen: React.FC = () => {
   const handleSetSearchRadius = (val: number) => { 
     if (val === 500) setSearchRadius(40000);
     else setSearchRadius(val);
-    }
+  };
 
   const handleCancel = () => {
     navigation.goBack();
@@ -8146,14 +7679,14 @@ const SetUserPreferencesScreen: React.FC = () => {
       navigation.goBack();
     } catch (err) {
       console.error('Error updating preferences:', err);
-      setError('Could not update preferences.');
+      setError(t('set_preferences_update_error'));
     }
   };
 
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <Text>Loading preferences...</Text>
+        <Text>{t('set_preferences_loading')}</Text>
       </View>
     );
   }
@@ -8161,7 +7694,7 @@ const SetUserPreferencesScreen: React.FC = () => {
   if (isError || !preferences) {
     return (
       <View style={styles.center}>
-        <Text>Error loading preferences</Text>
+        <Text>{t('set_preferences_error')}</Text>
       </View>
     );
   }
@@ -8181,7 +7714,7 @@ const SetUserPreferencesScreen: React.FC = () => {
               style={headerStyles.headerBackButton}
               onPress={() => navigation.goBack()}
             />
-            <Text style={headerStyles.headerTitle}>User Preferences</Text>
+            <Text style={headerStyles.headerTitle}>{t('set_preferences_title')}</Text>
           </View>
           <MaterialIcons name="settings" size={24} color="#fff" />
         </View>
@@ -8194,21 +7727,23 @@ const SetUserPreferencesScreen: React.FC = () => {
             {error && <Text style={styles.errorText}>{error}</Text>}
 
             {/* Slider for Search Radius */}
-            <Text style={styles.label}>Search Radius: {searchRadius} km</Text>
+            <Text style={styles.label}>
+              {t('set_preferences_search_radius', { radius: searchRadius })}
+            </Text>
             <Slider
               style={styles.slider}
               minimumValue={1}
               maximumValue={500}
               step={1}
               value={searchRadius}
-              onSlidingComplete={(val) => handleSetSearchRadius(val)}
+              onSlidingComplete={handleSetSearchRadius}
               minimumTrackTintColor={COLORS.accentGreen}
               maximumTrackTintColor="#999"
-              trackStyle={{ borderRadius: 10 }}
               thumbTintColor={COLORS.accentGreen}
             />
 
-            <Text style={styles.label}>Preferred Plant Stages:</Text>
+            {/* Preferred Plant Stages */}
+            <Text style={styles.label}>{t('set_preferences_preferred_plant_stages')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(PlantStage)}
@@ -8220,9 +7755,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('plantStage.' + val)}
             />
 
-            <Text style={styles.label}>Preferred Categories:</Text>
+            {/* Preferred Categories */}
+            <Text style={styles.label}>{t('set_preferences_preferred_categories')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(PlantCategory)}
@@ -8234,9 +7771,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('plantCategory.' + val)}
             />
 
-            <Text style={styles.label}>Watering Need:</Text>
+            {/* Watering Need */}
+            <Text style={styles.label}>{t('set_preferences_watering_need')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(WateringNeed)}
@@ -8248,9 +7787,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('wateringNeed.' + val)}
             />
 
-            <Text style={styles.label}>Light Requirement:</Text>
+            {/* Light Requirement */}
+            <Text style={styles.label}>{t('set_preferences_light_requirement')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(LightRequirement)}
@@ -8262,9 +7803,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('lightRequirement.' + val)}
             />
 
-            <Text style={styles.label}>Size:</Text>
+            {/* Size */}
+            <Text style={styles.label}>{t('set_preferences_size')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(Size)}
@@ -8276,9 +7819,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('size.' + val)}
             />
 
-            <Text style={styles.label}>Indoor/Outdoor:</Text>
+            {/* Indoor/Outdoor */}
+            <Text style={styles.label}>{t('set_preferences_indoor_outdoor')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(IndoorOutdoor)}
@@ -8290,9 +7835,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('indoorOutdoor.' + val)}
             />
 
-            <Text style={styles.label}>Propagation Ease:</Text>
+            {/* Propagation Ease */}
+            <Text style={styles.label}>{t('set_preferences_propagation_ease')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(PropagationEase)}
@@ -8304,9 +7851,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('propagationEase.' + val)}
             />
 
-            <Text style={styles.label}>Pet Friendly:</Text>
+            {/* Pet Friendly */}
+            <Text style={styles.label}>{t('set_preferences_pet_friendly')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(PetFriendly)}
@@ -8318,9 +7867,11 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('petFriendly.' + val)}
             />
 
-            <Text style={styles.label}>Extras:</Text>
+            {/* Extras */}
+            <Text style={styles.label}>{t('set_preferences_extras')}</Text>
             <TagGroup
               mode="multiple"
               values={Object.values(Extras)}
@@ -8332,13 +7883,14 @@ const SetUserPreferencesScreen: React.FC = () => {
                     : [...prev, val]
                 )
               }
+              getLabel={(val) => t('extras.' + val)}
             />
 
             <ConfirmCancelButtons
               onConfirm={handleSave}
-              confirmButtonText="Save"
+              confirmButtonText={t('common.save')}
               onCancel={handleCancel}
-              cancelButtonText="Cancel"
+              cancelButtonText={t('common.cancel')}
               loading={isUpdating}
             />
           </View>
@@ -8419,6 +7971,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 // --- Hooks ---
 import { useLikablePlants } from '../hooks/useSwipe';
@@ -8439,9 +7992,10 @@ import { headerStyles } from '../styles/headerStyles';
 
 const { width } = Dimensions.get('window');
 
-interface SwipeScreenProps { }
+interface SwipeScreenProps {}
 
 const SwipeScreen: React.FC<SwipeScreenProps> = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
 
   // Data hooks
@@ -8551,10 +8105,13 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       try {
         await updatePreferences(updatedPrefs);
       } catch (err) {
-        Alert.alert('Error', 'Could not remove preference.');
+        Alert.alert(
+          t('swipeScreen.alert.error'),
+          t('swipeScreen.error.removePreference')
+        );
       }
     },
-    [userPreferences, updatePreferences]
+    [userPreferences, updatePreferences, t]
   );
 
   // ----- SWIPE ACTIONS -----
@@ -8576,7 +8133,10 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
 
     sendSwipes(requests, {
       onError: () => {
-        Alert.alert('Error', 'Failed to send swipes.');
+        Alert.alert(
+          t('swipeScreen.alert.error'),
+          t('swipeScreen.error.sendSwipes')
+        );
       },
     });
   };
@@ -8613,7 +8173,10 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
         topCardRef.current?.flyOffRight();
       },
       onError: () => {
-        Alert.alert('Error', 'Failed to send swipes.');
+        Alert.alert(
+          t('swipeScreen.alert.error'),
+          t('swipeScreen.error.sendSwipes')
+        );
       },
       onSettled: () => {
         setShowSelectModal(false);
@@ -8686,7 +8249,9 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
         style={headerStyles.headerGradient}
       >
         <View style={headerStyles.headerRow}>
-          <Text style={headerStyles.headerTitle}>Explore</Text>
+          <Text style={headerStyles.headerTitle}>
+            {t('swipeScreen.header.explore')}
+          </Text>
           <TouchableOpacity
             onPress={handleFilterPress}
             style={headerStyles.headerActionButton}
@@ -8697,9 +8262,13 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
         <View style={styles.filterContainer}>
           <View style={styles.filterInfoContainer}>
             {prefTags.length > 0 ? (
-              <Text style={styles.filterInfoTextColumn}>Filters:</Text>
+              <Text style={styles.filterInfoTextColumn}>
+                {t('swipeScreen.header.filters')}
+              </Text>
             ) : (
-              <Text style={styles.noFilterText}>No filters applied</Text>
+              <Text style={styles.noFilterText}>
+                {t('swipeScreen.header.noFilters')}
+              </Text>
             )}
           </View>
           {prefTags.length > 0 && (
@@ -8738,7 +8307,9 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       return (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loaderText}>Loading plants...</Text>
+          <Text style={styles.loaderText}>
+            {t('swipeScreen.loader.loadingPlants')}
+          </Text>
         </View>
       );
     }
@@ -8747,7 +8318,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       return (
         <View style={styles.noPlantsContainer}>
           <Text style={styles.noPlantsText}>
-            Failed to load plants or your gallery.
+            {t('swipeScreen.error.loadPlants')}
           </Text>
           <TouchableOpacity
             style={styles.reloadButton}
@@ -8756,7 +8327,9 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
               refetchMyPlants();
             }}
           >
-            <Text style={styles.reloadButtonText}>Try Again</Text>
+            <Text style={styles.reloadButtonText}>
+              {t('swipeScreen.button.tryAgain')}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -8766,13 +8339,15 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       return (
         <View style={styles.noPlantsContainer}>
           <Text style={styles.noPlantsText}>
-            Please add some plants to your gallery before exploring :)
+            {t('swipeScreen.error.noPlantsGallery')}
           </Text>
           <TouchableOpacity
             style={styles.reloadButton}
             onPress={() => navigation.navigate('AddPlant' as never)}
           >
-            <Text style={styles.reloadButtonText}>Add a Plant</Text>
+            <Text style={styles.reloadButtonText}>
+              {t('swipeScreen.button.addPlant')}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -8782,13 +8357,15 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       return (
         <View style={styles.noPlantsContainer}>
           <Text style={styles.noPlantsText}>
-            No more plants to show in your area.
+            {t('swipeScreen.error.noMorePlants')}
           </Text>
           <TouchableOpacity
             style={styles.reloadButton}
             onPress={() => refetchLikablePlants()}
           >
-            <Text style={styles.reloadButtonText}>Reload</Text>
+            <Text style={styles.reloadButtonText}>
+              {t('swipeScreen.button.reload')}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -8866,17 +8443,16 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
             onConfirm={handleSelectConfirm}
             onClose={handleSelectCancel}
           />
-      {matches.length > 0 && userProfile && (
-        <ItsAMatchModal
-          visible={matches.length > 0}
-          matches={matches}
-          currentUserId={userProfile.userId}
-          onClose={clearMatches}
-        />
-      )}
+          {matches.length > 0 && userProfile && (
+            <ItsAMatchModal
+              visible={matches.length > 0}
+              matches={matches}
+              currentUserId={userProfile.userId}
+              onClose={clearMatches}
+            />
+          )}
         </View>
       )}
-
     </SafeAreaProvider>
   );
 };
@@ -9055,11 +8631,15 @@ import PlantCardWithInfo from "../components/PlantCardWithInfo";
 import { PlantResponse } from "../../../types/apiTypes";
 import { useMarkPlantsAsTraded } from "../hooks/usePlantHooks";
 
+// Import the translation hook
+import { useTranslation } from "react-i18next";
+
 type RouteParams = {
   connectionId: number;
 };
 
 const TradeProposalsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
   const { connectionId } = route.params as RouteParams;
@@ -9118,57 +8698,77 @@ const TradeProposalsScreen: React.FC = () => {
       : item.responderCompletionConfirmed;
 
     // Column titles.
-    const userOfferTitle = "Your Offer";
-    const otherOfferTitle = "Their Offer";
+    const userOfferTitle = t("tradeProposalsScreen.yourOffer");
+    const otherOfferTitle = t("tradeProposalsScreen.theirOffer");
 
     // Handlers for pending proposals.
     const handleAccept = () =>
-      Alert.alert("Accept Proposal", "Do you want to accept this proposal?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Accepted),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.acceptProposalTitle"),
+        t("tradeProposalsScreen.alert.acceptProposalMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Accepted),
+          },
+        ]
+      );
     const handleDecline = () =>
-      Alert.alert("Decline Proposal", "Do you want to decline this proposal?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.declineProposalTitle"),
+        t("tradeProposalsScreen.alert.declineProposalMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+          },
+        ]
+      );
     const handleCancel = () =>
-      Alert.alert("Cancel Proposal", "Do you want to cancel this proposal?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.cancelProposalTitle"),
+        t("tradeProposalsScreen.alert.cancelProposalMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+          },
+        ]
+      );
 
     // Handlers for accepted proposals.
     const handleMarkCompleted = () =>
-      Alert.alert("Complete Trade", "Mark this trade as completed?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Completed),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.completeTradeTitle"),
+        t("tradeProposalsScreen.alert.completeTradeMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Completed),
+          },
+        ]
+      );
     const handleChangedMyMind = () =>
-      Alert.alert("Changed Your Mind?", "Do you want to cancel this proposal?", [
-        { text: "No" },
-        {
-          text: "Yes",
-          onPress: () =>
-            handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
-        },
-      ]);
+      Alert.alert(
+        t("tradeProposalsScreen.alert.changedMyMindTitle"),
+        t("tradeProposalsScreen.alert.changedMyMindMessage"),
+        [
+          { text: t("tradeProposalsScreen.alert.no") },
+          {
+            text: t("tradeProposalsScreen.alert.yes"),
+            onPress: () =>
+              handleUpdateStatus(item.tradeProposalId, TradeProposalStatus.Rejected),
+          },
+        ]
+      );
 
     let actions = null;
     if (item.tradeProposalStatus === TradeProposalStatus.Pending) {
@@ -9177,7 +8777,9 @@ const TradeProposalsScreen: React.FC = () => {
           style={[styles.actionButton, styles.cancelButton]}
           onPress={handleCancel}
         >
-          <Text style={styles.actionButtonText}>Cancel Proposal</Text>
+          <Text style={styles.actionButtonText}>
+            {t("tradeProposalsScreen.button.cancelProposal")}
+          </Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.actionRow}>
@@ -9185,13 +8787,17 @@ const TradeProposalsScreen: React.FC = () => {
             style={[styles.actionButton, styles.acceptButton]}
             onPress={handleAccept}
           >
-            <Text style={styles.actionButtonText}>Accept</Text>
+            <Text style={styles.actionButtonText}>
+              {t("tradeProposalsScreen.button.accept")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.rejectButton]}
             onPress={handleDecline}
           >
-            <Text style={styles.actionButtonText}>Decline</Text>
+            <Text style={styles.actionButtonText}>
+              {t("tradeProposalsScreen.button.decline")}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -9202,13 +8808,17 @@ const TradeProposalsScreen: React.FC = () => {
             style={[styles.actionButton, styles.completeButton]}
             onPress={handleMarkCompleted}
           >
-            <Text style={styles.actionButtonText}>Mark as Completed</Text>
+            <Text style={styles.actionButtonText}>
+              {t("tradeProposalsScreen.button.markCompleted")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.changedMyMindButton]}
             onPress={handleChangedMyMind}
           >
-            <Text style={styles.actionButtonText}>Changed My Mind</Text>
+            <Text style={styles.actionButtonText}>
+              {t("tradeProposalsScreen.button.changedMyMind")}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -9223,7 +8833,9 @@ const TradeProposalsScreen: React.FC = () => {
         />
       ) : (
         <View style={styles.completedSection}>
-          <Text style={styles.completedMessage}>Trade Completed</Text>
+          <Text style={styles.completedMessage}>
+            {t("tradeProposalsScreen.completed.tradeCompleted")}
+          </Text>
         </View>
       );
     }
@@ -9235,9 +8847,11 @@ const TradeProposalsScreen: React.FC = () => {
 
     return (
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Proposal #{item.tradeProposalId}</Text>
+        <Text style={styles.cardTitle}>
+          {t("tradeProposalsScreen.proposalTitle")}{item.tradeProposalId}
+        </Text>
         <Text style={styles.cardSubtitle}>
-          Created: {new Date(item.createdAt).toLocaleString()}
+          {t("tradeProposalsScreen.card.createdAt")} {new Date(item.createdAt).toLocaleString()}
         </Text>
 
         {isHorizontalLayout ? (
@@ -9302,7 +8916,9 @@ const TradeProposalsScreen: React.FC = () => {
           </View>
         )}
 
-        <Text style={styles.statusText}>Status: {item.tradeProposalStatus}</Text>
+        <Text style={styles.statusText}>
+          {t("tradeProposalsScreen.statusText")}{item.tradeProposalStatus}
+        </Text>
         {actions}
       </View>
     );
@@ -9318,9 +8934,11 @@ const TradeProposalsScreen: React.FC = () => {
   if (isError || profileError) {
     return (
       <SafeAreaProvider style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load trade proposals.</Text>
+        <Text style={styles.errorText}>
+          {t("tradeProposalsScreen.error.failedToLoad")}
+        </Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{t("tradeProposalsScreen.retry")}</Text>
         </TouchableOpacity>
       </SafeAreaProvider>
     );
@@ -9338,7 +8956,9 @@ const TradeProposalsScreen: React.FC = () => {
           >
             <Ionicons name="chevron-back" size={30} color={COLORS.textLight} />
           </TouchableOpacity>
-          <Text style={headerStyles.headerTitle}>Trade Proposals</Text>
+          <Text style={headerStyles.headerTitle}>
+            {t("tradeProposalsScreen.headerTitle")}
+          </Text>
           <View style={{ width: 50 }} />
         </View>
       </LinearGradient>
@@ -9351,7 +8971,9 @@ const TradeProposalsScreen: React.FC = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No trade proposals found.</Text>
+          <Text style={styles.emptyText}>
+            {t("tradeProposalsScreen.empty.noProposals")}
+          </Text>
         </View>
       )}
       {/* InfoModal shows the full plant card when a thumbnail’s info is pressed */}
@@ -9563,6 +9185,7 @@ export const headerStyles = StyleSheet.create({
   },
 });
 
+export default headerStyles;
 
 // File: app\features\main\styles\profileCardStyles.ts
 import { StyleSheet, Platform } from "react-native";
@@ -9764,9 +9387,7 @@ export const profileCardStyles = StyleSheet.create({
   },
 });
 
-
-// File: app\features\main\types\mainTypes.ts
-
+export default profileCardStyles;
 
 // File: app\features\onboarding\screens\OnboardingBioScreen.tsx
 import React, { useState } from 'react';
@@ -10149,38 +9770,6 @@ const styles = StyleSheet.create({
 });
 
 
-// File: app\hooks\useAuthToken.ts
-//This file is up for deletion
-
-// import { useEffect, useState } from 'react';
-// import { storage } from '../utils/storage';
-
-// export const useAuthToken = () => {
-//   const [initializing, setInitializing] = useState(true);
-//   const [accessToken, setAccessToken] = useState<string | null>(null);
-//   const [refreshToken, setRefreshToken] = useState<string | null>(null);
-
-//   useEffect(() => {
-//     const loadTokens = async () => {
-//       const at = await storage.getAccessToken();
-//       const rt = await storage.getRefreshToken();
-//       setAccessToken(at);
-//       setRefreshToken(rt);
-//       setInitializing(false);
-//     };
-//     loadTokens();
-//   }, []);
-
-//   return { initializing, accessToken, refreshToken };
-// };
-
-
-// File: app\hooks\useAxiosErrorHandler.ts
-
-
-// File: app\hooks\useNetworkStatus.ts
-
-
 // File: app\i18n\index.ts
 // app/i18n/index.ts
 import i18n from 'i18next';
@@ -10208,6 +9797,7 @@ export async function initI18n() {
   return i18n;
 }
 
+export default i18n;
 
 // File: app\i18n\locales\en.json
 {
@@ -10333,7 +9923,6 @@ export async function initI18n() {
   "connections_none_title": "No Connections Yet",
   "connections_none_message": "It looks like you haven't matched with anyone so far.",
   "connections_none_action": "Find Plants",
-  "connections_matches_label": "{{count}} Matches",
   "connections_title": "Connections",
   "chat_loading_conversation": "Loading conversation...",
   "chat_error_message": "An error occurred. Please try again.",
@@ -10353,7 +9942,308 @@ export async function initI18n() {
   "error_could_not_open_camera": "Could not open camera.",
   "error_profile_picture_update_failed": "Profile picture update failed.",
   "login_button": "Login",
-  "register_button": "Register"
+  "register_button": "Register",
+  "completedTradeActions": {
+    "prompt": "Trade complete – choose your action for your plants:",
+    "delete": "Delete",
+    "keep": "Keep",
+    "processing": "Processing...",
+    "confirm": "Confirm"
+  },
+  "change_location_permission_denied": "Permission denied. Tap on the map to place a marker.",
+  "change_location_instruction": "Tap on the map to place or move the marker.",
+  "confirmCancelButtons": {
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "error_media_library_permission_denied": "Media library permission was denied.",
+  "edit_profile_error_name_required": "Name is required.",
+  "error_update_profile_failed": "Failed to update profile.",
+  "error_update_profile_picture_failed": "Failed to update profile picture.",
+  "new_matches": "New Matches",
+  "its_a_match_modal": {
+    "close": "Close"
+  },
+  "select_plants_modal": {
+    "loading": "Loading your plants...",
+    "error": "Could not load your plants. Please try again.",
+    "retry": "Retry",
+    "empty": "You have no plants in your collection yet.",
+    "title": "Select Plants",
+    "instructions": "Select the plants you want to trade for. Tap on a plant to select it."
+  },
+  "plantStage": {
+    "Seedling": "Seedling",
+    "Cutting": "Cutting",
+    "Mature": "Mature"
+  },
+  "plantCategory": {
+    "Succulent": "Succulent",
+    "Cactus": "Cactus",
+    "Fern": "Fern",
+    "Orchid": "Orchid",
+    "Herb": "Herb",
+    "Palm": "Palm",
+    "LeafyHouseplant": "LeafyHouseplant",
+    "AquaticPlant": "AquaticPlant",
+    "ClimbingPlant": "ClimbingPlant",
+    "Tree": "Tree",
+    "Other": "Other"
+  },
+  "wateringNeed": {
+    "VeryLowWater": "VeryLowWater",
+    "LowWater": "LowWater",
+    "ModerateWater": "ModerateWater",
+    "HighWater": "HighWater",
+    "VeryHighWater": "VeryHighWater"
+  },
+  "lightRequirement": {
+    "FullSun": "FullSun",
+    "PartialSun": "PartialSun",
+    "BrightIndirectLight": "BrightIndirectLight",
+    "LowLight": "LowLight"
+  },
+  "size": {
+    "SmallSize": "SmallSize",
+    "MediumSize": "MediumSize",
+    "LargeSize": "LargeSize"
+  },
+  "indoorOutdoor": {
+    "Indoor": "Indoor",
+    "Outdoor": "Outdoor",
+    "IndoorAndOutdoor": "IndoorAndOutdoor"
+  },
+  "propagationEase": {
+    "EasyPropagation": "EasyPropagation",
+    "ModeratePropagation": "ModeratePropagation",
+    "DifficultPropagation": "DifficultPropagation"
+  },
+  "petFriendly": {
+    "PetFriendly": "PetFriendly",
+    "NotPetFriendly": "NotPetFriendly"
+  },
+  "extras": {
+    "Fragrant": "Fragrant",
+    "Edible": "Edible",
+    "Medicinal": "Medicinal",
+    "AirPurifying": "AirPurifying",
+    "Decorative": "Decorative",
+    "Flowering": "Flowering",
+    "TropicalVibe": "TropicalVibe",
+    "FoliageHeavy": "FoliageHeavy",
+    "DroughtTolerant": "DroughtTolerant",
+    "HumidityLoving": "HumidityLoving",
+    "LowMaintenance": "LowMaintenance",
+    "WinterHardy": "WinterHardy",
+    "BeginnerFriendly": "BeginnerFriendly",
+    "Fruiting": "Fruiting",
+    "PollinatorFriendly": "PollinatorFriendly",
+    "FastGrowing": "FastGrowing",
+    "VariegatedFoliage": "VariegatedFoliage",
+    "Climbing": "Climbing",
+    "GroundCover": "GroundCover",
+    "Rare": "Rare"
+  },
+  "add_plant_select_image_desc": "Choose an option to select an image for your plant.",
+  "add_plant_select_picture_button": "Select from Library",
+  "add_plant_take_picture_button": "Take Photo",
+  "browseMatches": {
+    "errorLoadingMatches": "Failed to load matches.",
+    "retry": "Retry",
+    "headerTitle": "Browse Matches"
+  },
+  "chat_error": "Error",
+  "chat_send_failed": "Failed to send message.",
+  "chat_browse_matches_button": "Browse Matches",
+  "chat_pending_proposals": "proposals awaiting action",
+  "connections_matches_label": "{{count}} Matches",
+  "connections_match_label": "{{count}} Match",
+  "makeTradeProposal": {
+    "theyOffering": "They’re Offering?",
+    "youOffering": "You’re Offering?",
+    "emptyTradeTitle": "Empty Trade",
+    "emptyTradeMessage": "Select at least one plant to trade!",
+    "tradeSuccessTitle": "Success",
+    "tradeSuccessMessage": "Trade proposal created!",
+    "tradeErrorTitle": "Error",
+    "tradeErrorMessage": "Could not create proposal. Try again.",
+    "tradeButton": "TRADE",
+    "loadingLikedPlants": "Loading liked plants...",
+    "errorLoadingPlants": "Couldn’t load plants. Please retry."
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "profile_no_user_profile_error": "User profile not found.",
+  "Thumbnails": "Thumbnails",
+  "Full Size": "Full Size",
+  "other_profile_title": "Profile",
+  "Settings": "Settings",
+  "Account": "Account",
+  "No email found": "No email found",
+  "Edit Email": "Edit Email",
+  "Password": "Password",
+  "New Password": "New Password",
+  "Log Out": "Log Out",
+  "Delete Account": "Delete Account",
+  "Language": "Language",
+  "Notifications": "Notifications",
+  "Push Notifications": "Push Notifications",
+  "Appearance": "Appearance",
+  "Dark Mode": "Dark Mode",
+  "Not Implemented": "Not Implemented",
+  "This feature is not implemented yet.": "This feature is not implemented yet.",
+  "Logout": "Logout",
+  "Are you sure you want to log out?": "Are you sure you want to log out?",
+  "Cancel": "Cancel",
+  "Yes": "Yes",
+  "settings_enter_valid_email": "Please enter a valid email.",
+  "settings_email_changed_successfully": "Email changed successfully!",
+  "settings_could_not_change_email": "Could not change email.",
+  "settings_enter_valid_password": "Please enter a valid password.",
+  "settings_password_changed_successfully": "Password changed successfully!",
+  "settings_could_not_change_password": "Could not change password.",
+  "settings_logout_confirmation": "Are you sure you want to log out?",
+  "settings_delete_account_not_implemented": "Not implemented yet.",
+  "settings_feature_not_implemented": "This feature is not implemented yet.",
+  "set_preferences_title": "User Preferences",
+  "set_preferences_search_radius": "Search Radius: {{radius}} km",
+  "set_preferences_preferred_plant_stages": "Preferred Plant Stages:",
+  "set_preferences_preferred_categories": "Preferred Categories:",
+  "set_preferences_watering_need": "Watering Need:",
+  "set_preferences_light_requirement": "Light Requirement:",
+  "set_preferences_size": "Size:",
+  "set_preferences_indoor_outdoor": "Indoor/Outdoor:",
+  "set_preferences_propagation_ease": "Propagation Ease:",
+  "set_preferences_pet_friendly": "Pet Friendly:",
+  "set_preferences_extras": "Extras:",
+  "set_preferences_loading": "Loading preferences...",
+  "set_preferences_error": "Error loading preferences.",
+  "set_preferences_update_error": "Could not update preferences.",
+  "swipeScreen": {
+    "alert": {
+      "error": "Error"
+    },
+    "error": {
+      "removePreference": "Could not remove preference.",
+      "sendSwipes": "Failed to send swipes.",
+      "loadPlants": "Failed to load plants or your gallery.",
+      "noPlantsGallery": "Please add some plants to your gallery before exploring :)",
+      "noMorePlants": "No more plants to show in your area."
+    },
+    "header": {
+      "explore": "Explore",
+      "filters": "Filters:",
+      "noFilters": "No filters applied"
+    },
+    "loader": {
+      "loadingPlants": "Loading plants..."
+    },
+    "button": {
+      "tryAgain": "Try Again",
+      "addPlant": "Add a Plant",
+      "reload": "Reload"
+    }
+  },
+  "tradeProposalsScreen": {
+    "headerTitle": "Trade Proposals",
+    "yourOffer": "Your Offer",
+    "theirOffer": "Their Offer",
+    "alert": {
+      "acceptProposalTitle": "Accept Proposal",
+      "acceptProposalMessage": "Do you want to accept this proposal?",
+      "declineProposalTitle": "Decline Proposal",
+      "declineProposalMessage": "Do you want to decline this proposal?",
+      "cancelProposalTitle": "Cancel Proposal",
+      "cancelProposalMessage": "Do you want to cancel this proposal?",
+      "completeTradeTitle": "Complete Trade",
+      "completeTradeMessage": "Mark this trade as completed?",
+      "changedMyMindTitle": "Changed Your Mind?",
+      "changedMyMindMessage": "Do you want to cancel this proposal?",
+      "no": "No",
+      "yes": "Yes"
+    },
+    "proposalTitle": "Proposal #",
+    "card": {
+      "createdAt": "Created:"
+    },
+    "statusText": "Status: ",
+    "button": {
+      "cancelProposal": "Cancel Proposal",
+      "accept": "Accept",
+      "decline": "Decline",
+      "markCompleted": "Mark as Completed",
+      "changedMyMind": "Changed My Mind"
+    },
+    "error": {
+      "failedToLoad": "Failed to load trade proposals."
+    },
+    "retry": "Retry",
+    "empty": {
+      "noProposals": "No trade proposals found."
+    },
+    "completed": {
+      "tradeCompleted": "Trade Completed"
+    }
+  },
+  "plantTags": {
+    "Seedling": "Seedling",
+    "Cutting": "Cutting",
+    "Mature": "Mature",
+    "Succulent": "Succulent",
+    "Cactus": "Cactus",
+    "Fern": "Fern",
+    "Orchid": "Orchid",
+    "Herb": "Herb",
+    "Palm": "Palm",
+    "LeafyHouseplant": "LeafyHouseplant",
+    "AquaticPlant": "AquaticPlant",
+    "ClimbingPlant": "ClimbingPlant",
+    "Tree": "Tree",
+    "Other": "Other",
+    "VeryLowWater": "VeryLowWater",
+    "LowWater": "LowWater",
+    "ModerateWater": "ModerateWater",
+    "HighWater": "HighWater",
+    "VeryHighWater": "VeryHighWater",
+    "FullSun": "FullSun",
+    "PartialSun": "PartialSun",
+    "BrightIndirectLight": "BrightIndirectLight",
+    "LowLight": "LowLight",
+    "SmallSize": "SmallSize",
+    "MediumSize": "MediumSize",
+    "LargeSize": "LargeSize",
+    "Indoor": "Indoor",
+    "Outdoor": "Outdoor",
+    "IndoorAndOutdoor": "IndoorAndOutdoor",
+    "EasyPropagation": "EasyPropagation",
+    "ModeratePropagation": "ModeratePropagation",
+    "DifficultPropagation": "DifficultPropagation",
+    "PetFriendly": "PetFriendly",
+    "NotPetFriendly": "NotPetFriendly",
+    "Fragrant": "Fragrant",
+    "Edible": "Edible",
+    "Medicinal": "Medicinal",
+    "AirPurifying": "AirPurifying",
+    "Decorative": "Decorative",
+    "Flowering": "Flowering",
+    "TropicalVibe": "TropicalVibe",
+    "FoliageHeavy": "FoliageHeavy",
+    "DroughtTolerant": "DroughtTolerant",
+    "HumidityLoving": "HumidityLoving",
+    "LowMaintenance": "LowMaintenance",
+    "WinterHardy": "WinterHardy",
+    "BeginnerFriendly": "BeginnerFriendly",
+    "Fruiting": "Fruiting",
+    "PollinatorFriendly": "PollinatorFriendly",
+    "FastGrowing": "FastGrowing",
+    "VariegatedFoliage": "VariegatedFoliage",
+    "Climbing": "Climbing",
+    "GroundCover": "GroundCover",
+    "Rare": "Rare"
+  }
 }
 
 // File: app\i18n\locales\fr.json
@@ -10504,12 +10394,6 @@ useEffect(() => {
     );
   }
 
-  
-  // 3. If location is NOT set, show onboarding flow
-  if (!userProfile?.locationLatitude || !userProfile?.locationLongitude) {
-    return <OnboardingNavigator />;
-  }
-  
   if (userProfileError && !userProfileLoading) {
     return (
       <View style={styles.errorContainer}>
@@ -10520,6 +10404,12 @@ useEffect(() => {
       </View>
     );
   }
+  
+  // 3. If location is NOT set, show onboarding flow
+  if (!userProfile?.locationLatitude || !userProfile?.locationLongitude) {
+    return <OnboardingNavigator />;
+  }
+  
   // 4. Otherwise, user has location -> show main app
   return <MainRootStackNavigator />;
 };
@@ -10722,6 +10612,7 @@ import type { RootState, AppDispatch } from './index'; // path to your store
 export const useAppDispatch: () => AppDispatch = useDispatch;
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
+export default { useAppDispatch, useAppSelector };
 
 // File: app\store\index.ts
 import { configureStore } from '@reduxjs/toolkit';
@@ -10740,6 +10631,7 @@ export const store = configureStore({
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
+export default store;
 
 // File: app\store\middlewares\loggingMiddleware.ts
 // File: app/store/middlewares/loggingMiddleware.ts
@@ -10754,6 +10646,7 @@ export const loggingMiddleware: Middleware = (storeAPI) => (next) => (action: an
   return result;
 };
 
+export default loggingMiddleware;
 
 // File: app\store\slices\globalErrorSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
@@ -10781,6 +10674,7 @@ export const globalErrorSlice = createSlice({
 
 export const { setGlobalError, clearGlobalError } = globalErrorSlice.actions;
 
+export default globalErrorSlice.reducer;
 
 // File: app\theme\colors.ts
 export const COLORS2 = {
@@ -10828,14 +10722,7 @@ export const COLORS3 = {
     accentOrange: '#F39C12'
   };
 
-// File: app\theme\index.ts
-
-
-// File: app\theme\spacing.ts
-
-
-// File: app\theme\typography.ts
-
+  export default COLORS;
 
 // File: app\types\apiTypes.ts
 import { PlantStage, PlantCategory, WateringNeed, LightRequirement, Size, IndoorOutdoor, PropagationEase, PetFriendly, Extras, TradeProposalStatus } from './enums';
@@ -11044,7 +10931,7 @@ export interface TradeProposalResponse{
 }
 
 
-
+export default { PlantStage, PlantCategory, WateringNeed, LightRequirement, Size, IndoorOutdoor, PropagationEase, PetFriendly, Extras, TradeProposalStatus }
 
 // File: app\types\enums.ts
 export enum PlantStage {
@@ -11135,15 +11022,7 @@ export enum PlantStage {
 	Completed = "Completed"
   }
   
-
-// File: app\types\global.ts
-
-
-// File: app\utils\formatting.ts
-
-
-// File: app\utils\index.ts
-
+  export default { PlantStage, PlantCategory, WateringNeed, LightRequirement, Size, IndoorOutdoor, PropagationEase, PetFriendly, Extras, TradeProposalStatus }
 
 // File: app\utils\logger.ts
 // File: app/utils/logger.ts
@@ -11160,6 +11039,7 @@ const defaultConfig = {
 
 export const log = logger.createLogger(defaultConfig);
 
+export default log;
 
 // File: app\utils\storage.ts
 import * as SecureStore from "expo-secure-store";
@@ -11186,9 +11066,7 @@ export const storage = {
   getLanguage: async () => SecureStore.getItemAsync(LANGUAGE_KEY),
 };
 
-
-// File: app\utils\validation.ts
-
+export default storage;
 
 // File: scripts\reset-project.js
 #!/usr/bin/env node

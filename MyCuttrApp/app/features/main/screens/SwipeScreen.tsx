@@ -14,6 +14,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 // --- Hooks ---
 import { useLikablePlants } from '../hooks/useSwipe';
@@ -34,9 +35,10 @@ import { headerStyles } from '../styles/headerStyles';
 
 const { width } = Dimensions.get('window');
 
-interface SwipeScreenProps { }
+interface SwipeScreenProps {}
 
 const SwipeScreen: React.FC<SwipeScreenProps> = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
 
   // Data hooks
@@ -146,10 +148,13 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       try {
         await updatePreferences(updatedPrefs);
       } catch (err) {
-        Alert.alert('Error', 'Could not remove preference.');
+        Alert.alert(
+          t('swipeScreen.alert.error'),
+          t('swipeScreen.error.removePreference')
+        );
       }
     },
-    [userPreferences, updatePreferences]
+    [userPreferences, updatePreferences, t]
   );
 
   // ----- SWIPE ACTIONS -----
@@ -171,7 +176,10 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
 
     sendSwipes(requests, {
       onError: () => {
-        Alert.alert('Error', 'Failed to send swipes.');
+        Alert.alert(
+          t('swipeScreen.alert.error'),
+          t('swipeScreen.error.sendSwipes')
+        );
       },
     });
   };
@@ -208,7 +216,10 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
         topCardRef.current?.flyOffRight();
       },
       onError: () => {
-        Alert.alert('Error', 'Failed to send swipes.');
+        Alert.alert(
+          t('swipeScreen.alert.error'),
+          t('swipeScreen.error.sendSwipes')
+        );
       },
       onSettled: () => {
         setShowSelectModal(false);
@@ -281,7 +292,9 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
         style={headerStyles.headerGradient}
       >
         <View style={headerStyles.headerRow}>
-          <Text style={headerStyles.headerTitle}>Explore</Text>
+          <Text style={headerStyles.headerTitle}>
+            {t('swipeScreen.header.explore')}
+          </Text>
           <TouchableOpacity
             onPress={handleFilterPress}
             style={headerStyles.headerActionButton}
@@ -292,9 +305,13 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
         <View style={styles.filterContainer}>
           <View style={styles.filterInfoContainer}>
             {prefTags.length > 0 ? (
-              <Text style={styles.filterInfoTextColumn}>Filters:</Text>
+              <Text style={styles.filterInfoTextColumn}>
+                {t('swipeScreen.header.filters')}
+              </Text>
             ) : (
-              <Text style={styles.noFilterText}>No filters applied</Text>
+              <Text style={styles.noFilterText}>
+                {t('swipeScreen.header.noFilters')}
+              </Text>
             )}
           </View>
           {prefTags.length > 0 && (
@@ -333,7 +350,9 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       return (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loaderText}>Loading plants...</Text>
+          <Text style={styles.loaderText}>
+            {t('swipeScreen.loader.loadingPlants')}
+          </Text>
         </View>
       );
     }
@@ -342,7 +361,7 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       return (
         <View style={styles.noPlantsContainer}>
           <Text style={styles.noPlantsText}>
-            Failed to load plants or your gallery.
+            {t('swipeScreen.error.loadPlants')}
           </Text>
           <TouchableOpacity
             style={styles.reloadButton}
@@ -351,7 +370,9 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
               refetchMyPlants();
             }}
           >
-            <Text style={styles.reloadButtonText}>Try Again</Text>
+            <Text style={styles.reloadButtonText}>
+              {t('swipeScreen.button.tryAgain')}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -361,13 +382,15 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       return (
         <View style={styles.noPlantsContainer}>
           <Text style={styles.noPlantsText}>
-            Please add some plants to your gallery before exploring :)
+            {t('swipeScreen.error.noPlantsGallery')}
           </Text>
           <TouchableOpacity
             style={styles.reloadButton}
             onPress={() => navigation.navigate('AddPlant' as never)}
           >
-            <Text style={styles.reloadButtonText}>Add a Plant</Text>
+            <Text style={styles.reloadButtonText}>
+              {t('swipeScreen.button.addPlant')}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -377,13 +400,15 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
       return (
         <View style={styles.noPlantsContainer}>
           <Text style={styles.noPlantsText}>
-            No more plants to show in your area.
+            {t('swipeScreen.error.noMorePlants')}
           </Text>
           <TouchableOpacity
             style={styles.reloadButton}
             onPress={() => refetchLikablePlants()}
           >
-            <Text style={styles.reloadButtonText}>Reload</Text>
+            <Text style={styles.reloadButtonText}>
+              {t('swipeScreen.button.reload')}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -461,17 +486,16 @@ const SwipeScreen: React.FC<SwipeScreenProps> = () => {
             onConfirm={handleSelectConfirm}
             onClose={handleSelectCancel}
           />
-      {matches.length > 0 && userProfile && (
-        <ItsAMatchModal
-          visible={matches.length > 0}
-          matches={matches}
-          currentUserId={userProfile.userId}
-          onClose={clearMatches}
-        />
-      )}
+          {matches.length > 0 && userProfile && (
+            <ItsAMatchModal
+              visible={matches.length > 0}
+              matches={matches}
+              currentUserId={userProfile.userId}
+              onClose={clearMatches}
+            />
+          )}
         </View>
       )}
-
     </SafeAreaProvider>
   );
 };

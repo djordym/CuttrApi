@@ -169,9 +169,9 @@ const ConnectionsScreen: React.FC = () => {
                 <Text style={styles.userName}>{otherUser.name}</Text>
                 {/* Using connection.numberOfMatches to show match info if relevant */}
                 <Text style={styles.matchCount}>
-                  {t('connections_matches_label', {
+                    {t(connection.numberOfMatches === 1 ? 'connections_match_label' : 'connections_matches_label', {
                     count: connection.numberOfMatches,
-                  })}
+                    })}
                 </Text>
               </View>
               <Ionicons

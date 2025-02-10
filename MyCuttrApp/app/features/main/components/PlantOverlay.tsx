@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../../../theme/colors'; 
+import { COLORS } from '../../../theme/colors';
+import { useTranslation } from 'react-i18next';
 
 interface PlantOverlayProps {
   speciesName: string;
@@ -10,23 +10,37 @@ interface PlantOverlayProps {
   compact?: boolean;
 }
 
-export const PlantOverlay: React.FC<PlantOverlayProps> = ({ speciesName, description, tags = [], compact=false }) => (
-  <View style={[styles.overlayContent, compact && styles.overlayContentCompact]}>
-    <Text style={[styles.fullPlantName, compact && styles.fullPlantNameCompact]}>{speciesName}</Text>
-    {tags.length > 0 && (
-      <View style={[styles.tagRow, compact && styles.tagRowCompact]}>
-        {tags.map((tag) => (
-          <View key={tag} style={[styles.tag, compact && styles.tagCompact]}>
-            <Text style={[styles.tagText, compact && styles.tagTextCompact]}>{tag}</Text>
-          </View>
-        ))}
-      </View>
-    )}
-    {description ? (
-      <Text style={[styles.fullDescription, compact && styles.fullDescriptionCompact]}>{description}</Text>
-    ) : null}
-  </View>
-);
+export const PlantOverlay: React.FC<PlantOverlayProps> = ({
+  speciesName,
+  description,
+  tags = [],
+  compact = false,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <View style={[styles.overlayContent, compact && styles.overlayContentCompact]}>
+      <Text style={[styles.fullPlantName, compact && styles.fullPlantNameCompact]}>
+        {speciesName}
+      </Text>
+      {tags.length > 0 && (
+        <View style={[styles.tagRow, compact && styles.tagRowCompact]}>
+          {tags.map((tag) => (
+            <View key={tag} style={[styles.tag, compact && styles.tagCompact]}>
+              <Text style={[styles.tagText, compact && styles.tagTextCompact]}>
+                {t(`plantTags.${tag}`)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {description ? (
+        <Text style={[styles.fullDescription, compact && styles.fullDescriptionCompact]}>
+          {description}
+        </Text>
+      ) : null}
+    </View>
+  );
+};
 
 export default PlantOverlay;
 

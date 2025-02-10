@@ -20,7 +20,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import {ChangeLocationModal} from './ChangeLocationModal';
+import { ChangeLocationModal } from './ChangeLocationModal';
 import { COLORS } from '../../../theme/colors';
 import { profileCardStyles } from '../styles/profileCardStyles';
 import { log } from '../../../utils/logger';
@@ -39,7 +39,7 @@ interface EditProfileModalProps {
   cardLayout: { x: number; y: number; width: number; height: number };
 }
 
-export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
+export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   visible,
   userProfile,
   onClose,
@@ -186,7 +186,7 @@ export const  EditProfileModal: React.FC<EditProfileModalProps> = ({
         name: 'profile.jpg',
         type: 'image/jpeg',
       } as any;
-      updateProfilePicture({image: photo});
+      updateProfilePicture({ image: photo });
     } catch (err) {
       console.error('Error preparing profile picture:', err);
       Alert.alert(t('error_title'), t('error_profile_picture_update_failed'));
@@ -402,5 +402,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  
 });

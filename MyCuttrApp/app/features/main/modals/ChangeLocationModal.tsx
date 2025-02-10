@@ -6,9 +6,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Dimensions,
 } from 'react-native';
 import MapView, { Marker, MapPressEvent, Region } from 'react-native-maps';
@@ -153,8 +151,8 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
           <Text style={styles.title}>{t('change_location_title')}</Text>
           <Text style={styles.subtitle}>
             {permissionStatus === Location.PermissionStatus.DENIED
-              ? t('Permission denied. Tap on the map to place a marker.')
-              : t('Tap on the map to place or move the marker.')}
+              ? t('change_location_permission_denied')
+              : t('change_location_instruction')}
           </Text>
 
           {error && <Text style={styles.errorText}>{error}</Text>}
@@ -180,14 +178,18 @@ export const ChangeLocationModal: React.FC<ChangeLocationModalProps> = ({
           </View>
 
           {loading && (
-            <ActivityIndicator size="small" color={COLORS.accentGreen} style={{ marginVertical: 10 }} />
+            <ActivityIndicator
+              size="small"
+              color={COLORS.accentGreen}
+              style={{ marginVertical: 10 }}
+            />
           )}
 
           <ConfirmCancelButtons
             onCancel={handleCancel}
             onConfirm={handleConfirm}
-            confirmButtonText={t('Confirm')}
-            cancelButtonText={t('Cancel')}
+            confirmButtonText="confirmCancelButtons.confirm"
+            cancelButtonText="confirmCancelButtons.cancel"
           />
         </View>
       </View>
