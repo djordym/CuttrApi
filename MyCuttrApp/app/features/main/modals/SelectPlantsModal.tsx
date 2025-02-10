@@ -17,7 +17,7 @@ import { PlantResponse } from '../../../types/apiTypes';
 import { t } from 'i18next';
 import { COLORS } from '../../../theme/colors';
 import ConfirmCancelButtons from '../components/ConfirmCancelButtons';
-import { PlantThumbnail } from '../components/PlantThumbnail';
+import PlantThumbnail from '../components/PlantThumbnail';
 
 interface SelectPlantsModalProps {
   visible: boolean;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { COLORS } from '../../../theme/colors';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmCancelButtonsProps {
   confirmButtonText: string;
@@ -17,6 +18,8 @@ export const ConfirmCancelButtons: React.FC<ConfirmCancelButtonsProps> = ({
   onCancel,
   loading = false,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.actions}>
       <TouchableOpacity
@@ -27,7 +30,7 @@ export const ConfirmCancelButtons: React.FC<ConfirmCancelButtonsProps> = ({
         {loading ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text style={styles.confirmButtonText}>{confirmButtonText}</Text>
+          <Text style={styles.confirmButtonText}>{t(confirmButtonText)}</Text>
         )}
       </TouchableOpacity>
 
@@ -36,7 +39,7 @@ export const ConfirmCancelButtons: React.FC<ConfirmCancelButtonsProps> = ({
         onPress={onCancel}
         disabled={loading}
       >
-        <Text style={styles.cancelButtonText}>{cancelButtonText}</Text>
+        <Text style={styles.cancelButtonText}>{t(cancelButtonText)}</Text>
       </TouchableOpacity>
     </View>
   );

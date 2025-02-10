@@ -38,6 +38,18 @@ builder.Host.UseSerilog((context, services, configuration) =>
         .ReadFrom.Services(services);
 });
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Listen on HTTP port 5020
+    options.ListenAnyIP(5020);
+
+    // Listen on HTTPS port 7098 (or any port you prefer) with HTTPS configuration.
+    options.ListenAnyIP(7098, listenOptions =>
+    {
+        listenOptions.UseHttps(); // Use default certificate or specify one
+    });
+});
+
 // Add services to the container.
 // Add services to the container.
 builder.Services.AddControllers(options =>
@@ -174,10 +186,11 @@ if (app.Environment.IsDevelopment())
         var dbContext = scope.ServiceProvider.GetRequiredService<CuttrDbContext>();
         dbContext.Database.Migrate();
     }
-
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseHttpsRedirection();
 
 app.UseCors();
 // Configure Middleware
@@ -185,10 +198,8 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<LoggingMiddleware>();
 app.UseSerilogRequestLogging();
 // In your Program.cs or launchSettings.json:
-app.Urls.Add("http://0.0.0.0:5020");
 
 
-//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 

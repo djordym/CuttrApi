@@ -21,7 +21,7 @@ import { COLORS } from '../../../theme/colors';
 import { PlantOverlay } from './PlantOverlay';
 
 const { width } = Dimensions.get('window');
-const SWIPE_THRESHOLD = 0.25 * width;
+const SWIPE_THRESHOLD = 0.1 * width;
 
 /**
  * Methods the parent can call on this card

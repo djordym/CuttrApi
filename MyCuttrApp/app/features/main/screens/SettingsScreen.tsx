@@ -121,9 +121,9 @@ const SettingsScreen: React.FC = () => {
           text: t('Yes'),
           style: 'destructive',
           onPress: async () => {
+            authService.logout();
             queryClient.clear();
             await storage.clearTokens();
-            authService.logout();
             store.dispatch(logout());
           },
         },
