@@ -179,10 +179,10 @@ if (app.Environment.IsDevelopment())
         var dbContext = scope.ServiceProvider.GetRequiredService<CuttrDbContext>();
         dbContext.Database.Migrate();
     }
-    app.UseSwagger();
-    app.UseSwaggerUI();
 }
 
+app.UseSwagger();
+app.UseSwaggerUI();
 app.UseCors();
 // Configure Middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
