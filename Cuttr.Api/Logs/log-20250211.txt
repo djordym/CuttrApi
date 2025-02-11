@@ -1,1 +1,14 @@
 [2025-02-11 10:24:32 WRN] Overriding address(es) 'https://localhost:7098, http://localhost:5020'. Binding to endpoints defined via IConfiguration and/or UseKestrel() instead.
+[2025-02-11 15:06:20 WRN] Overriding address(es) 'https://localhost:7098, http://localhost:5020'. Binding to endpoints defined via IConfiguration and/or UseKestrel() instead.
+[2025-02-11 15:06:32 INF] HTTP Request Information: POST /api/Auth/login  {
+  "email": "string",
+  "password": "string"
+}
+[2025-02-11 15:06:33 WRN] User with email string not found.
+[2025-02-11 15:06:33 WRN] Invalid login attempt for email: string
+[2025-02-11 15:06:33 WRN] Authentication failed for email: string
+Cuttr.Business.Exceptions.AuthenticationException: Invalid email or password.
+   at Cuttr.Business.Managers.AuthManager.AuthenticateUserAsync(UserLoginRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\Cuttr.Business\Managers\AuthManager.cs:line 43
+   at Cuttr.Api.Controllers.AuthController.Login(UserLoginRequest request) in C:\Users\Jordy\OneDrive\Documenten\PROJECTS\CUTTR\CUTTRFINAL\Cuttr.Api\Controllers\AuthController.cs:line 31
+[2025-02-11 15:06:33 INF] HTTP POST /api/Auth/login responded 401 in 568.0036 ms
+[2025-02-11 15:06:33 INF] HTTP Response Information: 401 Invalid email or password.
