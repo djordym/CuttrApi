@@ -13,8 +13,8 @@ env:
   AZURE_APIM_APPSERVICEURL: https://cuttrapi-epfvarfnb9bccdcn.westeurope-01.azurewebsites.net
   SWASHBUCLE_ASPNET_CORE_CLI_PACKAGE_VERSION: 7.1.0
   SWASHBUCKLE_DOTNET_CORE_VERSION: 3.1.x
-  API_IMPORT_SPECIFICATION_PATH: Cuttr.Api/publish/swagger.json
-  API_IMPORT_DLL: CuttrApi/Cuttr.Api/bin/Release/net8.0/Cuttr.Api.dll
+  API_IMPORT_SPECIFICATION_PATH: publish/swagger.json
+  API_IMPORT_DLL: bin/Release/net8.0/Cuttr.Api.dll
   API_IMPORT_VERSION: v1
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 8.0.x
