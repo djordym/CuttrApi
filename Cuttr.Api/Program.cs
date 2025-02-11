@@ -41,10 +41,10 @@ builder.Host.UseSerilog((context, services, configuration) =>
 builder.WebHost.ConfigureKestrel(options =>
 {
     // Listen on HTTP port 5020
-    options.ListenAnyIP(5020);
+    options.ListenAnyIP(8080);
 
     // Listen on HTTPS port 7098 (or any port you prefer) with HTTPS configuration.
-    options.ListenAnyIP(7098, listenOptions =>
+    options.ListenAnyIP(8080, listenOptions =>
     {
         listenOptions.UseHttps(); // Use default certificate or specify one
     });
