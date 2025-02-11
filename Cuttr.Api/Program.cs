@@ -155,7 +155,10 @@ builder.Services.AddSwaggerGen(options =>
 });
 // Configure JWT Authentication
 var secretKey = builder.Configuration["Jwt:Secret"];
-var testforconfig = builder.Configuration["ConnectionStrings:CuttrDb"];
+if (string.IsNullOrEmpty(secretKey))
+{
+    throw new InvalidOperationException("JWT secret key is not configured.");
+}
 var key = Encoding.UTF8.GetBytes(secretKey);
 
 builder.Services

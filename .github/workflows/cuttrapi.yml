@@ -20,6 +20,8 @@ env:
   DOTNET_CORE_VERSION: 8.0.x
   WORKING_DIRECTORY: Cuttr.Api
   CLR_ICU_VERSION_OVERRIDE: 74
+  Jwt__Secret: ${{ secrets.Jwt__Secret }}
+  ConnectionStrings__CuttrDb: ${{ secrets.ConnectionStrings__CuttrDb }}
 jobs:
   build:
     runs-on: ubuntu-latest
