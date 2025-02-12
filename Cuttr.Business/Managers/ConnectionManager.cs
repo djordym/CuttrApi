@@ -4,11 +4,13 @@ using Cuttr.Business.Entities; // Connection, ConnectionMessage, TradeProposal (
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Cuttr.Business.Interfaces.RepositoryInterfaces;
+using Cuttr.Business.Interfaces.Services;
 using Cuttr.Business.Mappers; // Example for mapping domain <-> DTO
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using UnauthorizedAccessException = Cuttr.Business.Exceptions.UnauthorizedAccessException;
 
@@ -21,19 +23,25 @@ namespace Cuttr.Business.Managers
         private readonly ITradeProposalRepository _tradeProposalRepository;
         private readonly IPlantRepository _plantRepository; // optional if you need to load plants
         private readonly ILogger<ConnectionManager> _logger;
+        private readonly IUserRepository _userRepository;
+        private readonly IExpoPushNotificationService _expoPushNotificationService;
 
         public ConnectionManager(
             IConnectionRepository connectionRepository,
             IMessageRepository messageRepository,
             ITradeProposalRepository tradeProposalRepository,
             IPlantRepository plantRepository,
-            ILogger<ConnectionManager> logger)
+            ILogger<ConnectionManager> logger,
+            IUserRepository userRepository,
+            IExpoPushNotificationService expoPushNotificationService)
         {
             _connectionRepository = connectionRepository;
             _messageRepository = messageRepository;
             _tradeProposalRepository = tradeProposalRepository;
             _plantRepository = plantRepository;
             _logger = logger;
+            _userRepository = userRepository;
+            _expoPushNotificationService = expoPushNotificationService;
         }
 
         public async Task<IEnumerable<ConnectionResponse>> GetConnectionsForUserAsync(int userId)
@@ -260,6 +268,19 @@ namespace Cuttr.Business.Managers
                 };
 
                 await _tradeProposalRepository.CreateAsync(newProposal);
+
+                int recipientUserId = (connection.UserId1 == userId) ? connection.UserId2 : connection.UserId1;
+                var recipientUser = await _userRepository.GetUserByIdAsync(recipientUserId);
+                if (!string.IsNullOrEmpty(recipientUser.ExpoPushToken))
+                {
+                    await _expoPushNotificationService.SendPushNotificationAsync(
+                         recipientUser.ExpoPushToken,
+                         "New Trade Proposal",
+                         "You have received a new trade proposal.",
+                         new { connectionId = connection.ConnectionId, proposalId = newProposal.TradeProposalId }
+                    );
+                }
+
                 _logger.LogInformation("Successfully created trade proposal with ID {ProposalId}.", newProposal.TradeProposalId);
                 return;
             }

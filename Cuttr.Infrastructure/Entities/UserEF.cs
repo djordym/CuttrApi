@@ -38,6 +38,9 @@ namespace Cuttr.Infrastructure.Entities
         public DateTime UpdatedAt { get; set; }
         public Point? Location { get; set; }
 
+        [MaxLength(512)]
+        public string ExpoPushToken { get; set; }
+
         // Navigation properties
         public virtual ICollection<PlantEF> Plants { get; set; }
 

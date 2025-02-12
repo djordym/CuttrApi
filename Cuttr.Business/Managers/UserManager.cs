@@ -225,5 +225,24 @@ namespace Cuttr.Business.Managers
                 throw new BusinessException("Error updating location.", ex);
             }
         }
+
+        public async Task UpdatePushTokenAsync(int userId, string expoPushToken)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                if (user == null)
+                    throw new NotFoundException("User not found.");
+
+                user.ExpoPushToken = expoPushToken;
+                await _userRepository.UpdateUserAsync(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating push token for user {UserId}", userId);
+                throw new BusinessException("Error updating push token", ex);
+            }
+        }
+
     }
 }

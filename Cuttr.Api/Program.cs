@@ -7,6 +7,7 @@ using Cuttr.Business.Services;
 using Cuttr.Business.Utilities;
 using Cuttr.Infrastructure;
 using Cuttr.Infrastructure.Repositories;
+using Cuttr.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -107,6 +108,9 @@ builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IUserPreferencesRepository, UserPreferencesRepository>();
+
+builder.Services.AddHttpClient<IExpoPushNotificationService, ExpoPushNotificationService>();
+
 
 
 

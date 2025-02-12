@@ -23,6 +23,7 @@ namespace Cuttr.Business.Entities
         public double? LocationLatitude { get; set; }
 
         public double? LocationLongitude { get; set; }
+        public string ExpoPushToken { get; set; }
 
         // Business entities for related data
         public List<Plant> Plants { get; set; }

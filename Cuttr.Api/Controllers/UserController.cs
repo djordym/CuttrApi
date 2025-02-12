@@ -227,6 +227,24 @@ namespace Cuttr.Api.Controllers
             }
         }
 
+        [Authorize]
+        [HttpPut("me/push-token")]
+        public async Task<IActionResult> UpdatePushToken([FromBody] PushTokenUpdateRequest request)
+        {
+            try
+            {
+                int userId = User.GetUserId();
+                await _userManager.UpdatePushTokenAsync(userId, request.ExpoPushToken);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating push token for user.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+            }
+        }
+
+
         // temporary seed function that accepts list of registrationrequests
         [AllowAnonymous]
         [HttpPost("seed")]

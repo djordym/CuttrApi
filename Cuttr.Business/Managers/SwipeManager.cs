@@ -5,6 +5,7 @@ using Cuttr.Business.Entities;
 using Cuttr.Business.Exceptions;
 using Cuttr.Business.Interfaces.ManagerInterfaces;
 using Cuttr.Business.Interfaces.RepositoryInterfaces;
+using Cuttr.Business.Interfaces.Services;
 using Cuttr.Business.Mappers;
 using Microsoft.Extensions.Logging;
 using System;
@@ -23,14 +24,15 @@ namespace Cuttr.Business.Managers
         private readonly IUserRepository _userRepository;
         private readonly IMatchRepository _matchRepository;
         private readonly IConnectionRepository _connectionRepository;
-
+        private readonly IExpoPushNotificationService _expoPushNotificationService;
         public SwipeManager(
             ISwipeRepository swipeRepository,
             IPlantRepository plantRepository,
             IUserRepository userRepository,
             ILogger<SwipeManager> logger,
         IMatchRepository matchRepository,
-        IConnectionRepository connectionRepository)
+        IConnectionRepository connectionRepository,
+        IExpoPushNotificationService expoPushNotificationService)
         {
             _swipeRepository = swipeRepository;
             _plantRepository = plantRepository;
@@ -38,6 +40,7 @@ namespace Cuttr.Business.Managers
             _userRepository = userRepository;
             _matchRepository = matchRepository;
             _connectionRepository = connectionRepository;
+            _expoPushNotificationService = expoPushNotificationService;
         }
 
         public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests, int userId)
@@ -128,10 +131,24 @@ namespace Cuttr.Business.Managers
                                 IsActive = true
                             };
 
+
+
                             currentConnection = await _connectionRepository.CreateConnectionAsync(newConnection);
 
                             // Map domain object to a response for the client
                             swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(currentConnection);
+
+                            int recipientUserId = (currentConnection.UserId1 == userId) ? currentConnection.UserId2 : currentConnection.UserId1;
+                            var recipientUser = await _userRepository.GetUserByIdAsync(recipientUserId);
+                            if (!string.IsNullOrEmpty(recipientUser.ExpoPushToken))
+                            {
+                                await _expoPushNotificationService.SendPushNotificationAsync(
+                                     recipientUser.ExpoPushToken,
+                                     "New Connection",
+                                     "Congratulations! You got a new connection.",
+                                     new { connectionId = currentConnection.ConnectionId }
+                                );
+                            }
                         }
                         else
                         {

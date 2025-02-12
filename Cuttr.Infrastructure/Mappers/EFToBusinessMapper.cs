@@ -29,6 +29,7 @@ namespace Cuttr.Infrastructure.Mappers
                 LocationLongitude = efUser.Location?.X,
                 Plants = efUser.Plants?.Select(MapToPlantWithoutUser).ToList(),
                 Preferences = MapToUserPreferences(efUser.Preferences),
+                ExpoPushToken = efUser.ExpoPushToken,
                 // Exclude CreatedAt and UpdatedAt
             };
         }
@@ -159,6 +160,7 @@ namespace Cuttr.Infrastructure.Mappers
                 Name = efUser.Name,
                 ProfilePictureUrl = efUser.ProfilePictureUrl,
                 Bio = efUser.Bio,
+                ExpoPushToken = efUser.ExpoPushToken,
                 // Location is updated seperately and shouldn't be necessary to be mapped
                 // Plants are not mapped to prevent circular reference
                 Preferences = MapToUserPreferences(efUser.Preferences),
