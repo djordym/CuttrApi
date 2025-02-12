@@ -39,7 +39,7 @@ namespace Cuttr.Infrastructure.Entities
         public Point? Location { get; set; }
 
         [MaxLength(512)]
-        public string ExpoPushToken { get; set; }
+        public string? ExpoPushToken { get; set; }
 
         // Navigation properties
         public virtual ICollection<PlantEF> Plants { get; set; }
