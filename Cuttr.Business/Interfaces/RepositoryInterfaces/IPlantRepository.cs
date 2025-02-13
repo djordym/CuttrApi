@@ -15,7 +15,6 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
         Task DeletePlantAsync(int plantId);
         Task<IEnumerable<Plant>> GetTradablePlantsByUserIdAsync(int userId);
         Task<IEnumerable<Plant>> GetAllPlantsAsync();
-        Task<IEnumerable<Plant>> GetTradablePlantsWithinRadiusAsync(double originLat, double originLon, double radiusKm);
-
+        Task<IEnumerable<Plant>> GetFilteredTradablePlantsAsync(int userId, double originLat, double originLon, int radiusKm, UserPreferences preferences);
     }
 }

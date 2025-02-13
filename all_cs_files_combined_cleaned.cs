@@ -71,6 +71,7 @@ builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IUserPreferencesRepository, UserPreferencesRepository>();
+builder.Services.AddHttpClient<IExpoPushNotificationService, ExpoPushNotificationService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -1140,6 +1141,22 @@ _logger.LogError(ex, "An unexpected error occurred while updating the location."
 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 }
 }
+[Authorize]
+[HttpPut("me/push-token")]
+public async Task<IActionResult> UpdatePushToken([FromBody] PushTokenUpdateRequest request)
+{
+try
+{
+int userId = User.GetUserId();
+await _userManager.UpdatePushTokenAsync(userId, request.ExpoPushToken);
+return NoContent();
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "Error updating push token for user.");
+return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+}
+}
 [AllowAnonymous]
 [HttpPost("seed")]
 public async Task<IActionResult> SeedRegisterUsers([FromBody] List<UserRegistrationRequest> requests)
@@ -1422,6 +1439,14 @@ public string SpeciesName { get; set; }
 public string CareRequirements { get; set; }
 public string Description { get; set; }
 public string Category { get; set; }
+}
+}
+//PushTokenUpdateRequest
+namespace Cuttr.Business.Contracts.Inputs
+{
+public class PushTokenUpdateRequest
+{
+public string ExpoPushToken { get; set; }
 }
 }
 //RefreshTokenRequest
@@ -1851,6 +1876,7 @@ public string ProfilePictureUrl { get; set; }
 public string Bio { get; set; }
 public double? LocationLatitude { get; set; }
 public double? LocationLongitude { get; set; }
+public string ExpoPushToken { get; set; }
 public List<Plant> Plants { get; set; }
 public UserPreferences Preferences { get; set; }
 }
@@ -2110,6 +2136,7 @@ Task<UserResponse> UpdateUserAsync(int userId, UserUpdateRequest request);
 Task DeleteUserAsync(int userId);
 Task<UserResponse> UpdateUserProfileImageAsync(int userId, UserProfileImageUpdateRequest request);
 Task UpdateUserLocationAsync(int userId, double latitude, double longitude);
+Task UpdatePushTokenAsync(int userId, string expoPushToken);
 }
 }
 //IUserPreferencesManager
@@ -2240,6 +2267,14 @@ public interface IBlobStorageService
 {
 Task<string> UploadFileAsync(IFormFile file, string containerName);
 Task DeleteFileAsync(string fileUrl, string containerName);
+}
+}
+//IExpoPushNotificationService
+namespace Cuttr.Business.Interfaces.Services
+{
+public interface IExpoPushNotificationService
+{
+Task SendPushNotificationAsync(string expoPushToken, string title, string body, object data = null);
 }
 }
 //AuthManager
@@ -2391,18 +2426,24 @@ private readonly IMessageRepository _messageRepository;
 private readonly ITradeProposalRepository _tradeProposalRepository;
 private readonly IPlantRepository _plantRepository;
 private readonly ILogger<ConnectionManager> _logger;
+private readonly IUserRepository _userRepository;
+private readonly IExpoPushNotificationService _expoPushNotificationService;
 public ConnectionManager(
 IConnectionRepository connectionRepository,
 IMessageRepository messageRepository,
 ITradeProposalRepository tradeProposalRepository,
 IPlantRepository plantRepository,
-ILogger<ConnectionManager> logger)
+ILogger<ConnectionManager> logger,
+IUserRepository userRepository,
+IExpoPushNotificationService expoPushNotificationService)
 {
 _connectionRepository = connectionRepository;
 _messageRepository = messageRepository;
 _tradeProposalRepository = tradeProposalRepository;
 _plantRepository = plantRepository;
 _logger = logger;
+_userRepository = userRepository;
+_expoPushNotificationService = expoPushNotificationService;
 }
 public async Task<IEnumerable<ConnectionResponse>> GetConnectionsForUserAsync(int userId)
 {
@@ -2519,6 +2560,17 @@ PlantIdsProposedByUser2 = IsUser1 ? request.OtherPlantIds : request.UserPlantIds
 ProposalOwnerUserId = userId
 };
 await _tradeProposalRepository.CreateAsync(newProposal);
+int recipientUserId = (connection.UserId1 == userId) ? connection.UserId2 : connection.UserId1;
+var recipientUser = await _userRepository.GetUserByIdAsync(recipientUserId);
+if (!string.IsNullOrEmpty(recipientUser.ExpoPushToken))
+{
+await _expoPushNotificationService.SendPushNotificationAsync(
+recipientUser.ExpoPushToken,
+"New Trade Proposal",
+"You have received a new trade proposal.",
+new { connectionId = connection.ConnectionId, proposalId = newProposal.TradeProposalId }
+);
+}
 _logger.LogInformation("Successfully created trade proposal with ID {ProposalId}.", newProposal.TradeProposalId);
 return;
 }
@@ -2706,27 +2758,45 @@ public class MessageManager : IMessageManager
 private readonly IMessageRepository _messageRepository;
 private readonly IConnectionRepository _connectionRepository;
 private readonly ILogger<MessageManager> _logger;
+private readonly IExpoPushNotificationService _expoPushNotificationService;
+private readonly IUserRepository _userRepository;
 public MessageManager(
 IMessageRepository messageRepository,
 IConnectionRepository matchRepository,
-ILogger<MessageManager> logger)
+ILogger<MessageManager> logger,
+IExpoPushNotificationService expoPushNotificationService,
+IUserRepository userRepository)
 {
 _messageRepository = messageRepository;
 _connectionRepository = matchRepository;
 _logger = logger;
+_expoPushNotificationService = expoPushNotificationService;
+_userRepository = userRepository;
 }
 public async Task<MessageResponse> SendMessageAsync(MessageRequest request, int senderUserId, int connectionId)
 {
 try
 {
-var match = await _connectionRepository.GetConnectionByIdAsync(connectionId);
-if (match == null)
+var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
+if (connection == null)
 throw new NotFoundException($"Match with ID {connectionId} not found.");
-if (match.UserId1 != senderUserId && match.UserId2 != senderUserId)
+if (connection.UserId1 != senderUserId && connection.UserId2 != senderUserId)
 throw new BusinessException("Sender user is not part of the match.");
 var message = ContractToBusinessMapper.MapToMessage(request, senderUserId, connectionId);
 var createdMessage = await _messageRepository.AddMessageAsync(message);
-return BusinessToContractMapper.MapToMessageResponse(createdMessage);
+var messageresponse = BusinessToContractMapper.MapToMessageResponse(createdMessage);
+int recipientUserId = connection.UserId1 == senderUserId ? connection.UserId2 : connection.UserId1;
+var recipientUser = await _userRepository.GetUserByIdAsync(recipientUserId);
+if (!string.IsNullOrEmpty(recipientUser.ExpoPushToken))
+{
+await _expoPushNotificationService.SendPushNotificationAsync(
+recipientUser.ExpoPushToken,
+"New Message",
+"You have received a new message.",
+new { connectionId = connection.ConnectionId }
+);
+}
+return messageresponse;
 }
 catch (NotFoundException)
 {
@@ -3175,13 +3245,15 @@ private readonly ILogger<SwipeManager> _logger;
 private readonly IUserRepository _userRepository;
 private readonly IMatchRepository _matchRepository;
 private readonly IConnectionRepository _connectionRepository;
+private readonly IExpoPushNotificationService _expoPushNotificationService;
 public SwipeManager(
 ISwipeRepository swipeRepository,
 IPlantRepository plantRepository,
 IUserRepository userRepository,
 ILogger<SwipeManager> logger,
 IMatchRepository matchRepository,
-IConnectionRepository connectionRepository)
+IConnectionRepository connectionRepository,
+IExpoPushNotificationService expoPushNotificationService)
 {
 _swipeRepository = swipeRepository;
 _plantRepository = plantRepository;
@@ -3189,6 +3261,7 @@ _logger = logger;
 _userRepository = userRepository;
 _matchRepository = matchRepository;
 _connectionRepository = connectionRepository;
+_expoPushNotificationService = expoPushNotificationService;
 }
 public async Task<List<SwipeResponse>> RecordSwipesAsync(List<SwipeRequest> requests, int userId)
 {
@@ -3252,6 +3325,17 @@ IsActive = true
 };
 currentConnection = await _connectionRepository.CreateConnectionAsync(newConnection);
 swipeResponse.Connection = BusinessToContractMapper.MapToConnectionResponse(currentConnection);
+int recipientUserId = (currentConnection.UserId1 == userId) ? currentConnection.UserId2 : currentConnection.UserId1;
+var recipientUser = await _userRepository.GetUserByIdAsync(recipientUserId);
+if (!string.IsNullOrEmpty(recipientUser.ExpoPushToken))
+{
+await _expoPushNotificationService.SendPushNotificationAsync(
+recipientUser.ExpoPushToken,
+"New Connection",
+"Congratulations! You got a new connection.",
+new { connectionId = currentConnection.ConnectionId }
+);
+}
 }
 else
 {
@@ -3465,6 +3549,22 @@ throw;
 {
 _logger.LogError(ex, $"Error updating location for user with ID {userId}.");
 throw new BusinessException("Error updating location.", ex);
+}
+}
+public async Task UpdatePushTokenAsync(int userId, string expoPushToken)
+{
+try
+{
+var user = await _userRepository.GetUserByIdAsync(userId);
+if (user == null)
+throw new NotFoundException("User not found.");
+user.ExpoPushToken = expoPushToken;
+await _userRepository.UpdateUserAsync(user);
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "Error updating push token for user {UserId}", userId);
+throw new BusinessException("Error updating push token", ex);
 }
 }
 }
@@ -3804,7 +3904,7 @@ PreferedExtras = request.PreferedExtras
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0bbd738b182911a055ee2c10c1e8dcb7dd0bcade")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+989b24a4b5b03673be7dd8bd8bcf8627fcb708cb")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -3816,7 +3916,7 @@ PreferedExtras = request.PreferedExtras
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+989b24a4b5b03673be7dd8bd8bcf8627fcb708cb")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Business")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -4422,6 +4522,8 @@ public string? Bio { get; set; }
 public DateTime CreatedAt { get; set; }
 public DateTime UpdatedAt { get; set; }
 public Point? Location { get; set; }
+[MaxLength(512)]
+public string? ExpoPushToken { get; set; }
 public virtual ICollection<PlantEF> Plants { get; set; }
 public virtual UserPreferencesEF Preferences { get; set; }
 public virtual ICollection<MessageEF> SentMessages { get; set; }
@@ -4493,6 +4595,7 @@ Bio = user.Bio,
 Plants = user.Plants?.Select(MapToPlantEFWithoutUser).ToList(),
 Preferences = MapToUserPreferencesEF(user.Preferences),
 Location = location,
+ExpoPushToken = user.ExpoPushToken,
 };
 }
 public static PlantEF MapToPlantEF(Plant plant)
@@ -4554,6 +4657,7 @@ PasswordHash = user.PasswordHash,
 Name = user.Name,
 ProfilePictureUrl = user.ProfilePictureUrl,
 Bio = user.Bio,
+ExpoPushToken = user.ExpoPushToken,
 Preferences = MapToUserPreferencesEF(user.Preferences),
 };
 }
@@ -4778,6 +4882,7 @@ LocationLatitude = efUser.Location?.Y,
 LocationLongitude = efUser.Location?.X,
 Plants = efUser.Plants?.Select(MapToPlantWithoutUser).ToList(),
 Preferences = MapToUserPreferences(efUser.Preferences),
+ExpoPushToken = efUser.ExpoPushToken,
 };
 }
 public static Plant MapToPlant(PlantEF efPlant)
@@ -4870,6 +4975,7 @@ Email = efUser.Email,
 Name = efUser.Name,
 ProfilePictureUrl = efUser.ProfilePictureUrl,
 Bio = efUser.Bio,
+ExpoPushToken = efUser.ExpoPushToken,
 Preferences = MapToUserPreferences(efUser.Preferences),
 };
 }
@@ -5068,7 +5174,7 @@ return System.Text.Json.JsonSerializer.Deserialize<List<Extras>>(serializedExtra
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0bbd738b182911a055ee2c10c1e8dcb7dd0bcade")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+989b24a4b5b03673be7dd8bd8bcf8627fcb708cb")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -5083,7 +5189,7 @@ return System.Text.Json.JsonSerializer.Deserialize<List<Extras>>(serializedExtra
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+989b24a4b5b03673be7dd8bd8bcf8627fcb708cb")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cuttr.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -6005,6 +6111,52 @@ throw new RepositoryException($"User with ID {userId} not found.");
 efUser.Location = point;
 await _context.SaveChangesAsync();
 _context.Entry(efUser).State = EntityState.Detached;
+}
+}
+}
+//ExpoPushNotificationService
+namespace Cuttr.Infrastructure.Services
+{
+public class ExpoPushNotificationService : IExpoPushNotificationService
+{
+private readonly HttpClient _httpClient;
+private readonly ILogger<ExpoPushNotificationService> _logger;
+private readonly string _expoPushEndpoint;
+public ExpoPushNotificationService(HttpClient httpClient, IConfiguration configuration, ILogger<ExpoPushNotificationService> logger)
+{
+_httpClient = httpClient;
+_logger = logger;
+_expoPushEndpoint = configuration["ExpoPushNotifications:Endpoint"] ?? "https:
+}
+public async Task SendPushNotificationAsync(string expoPushToken, string title, string body, object data = null)
+{
+if (string.IsNullOrEmpty(expoPushToken))
+{
+_logger.LogWarning("Expo push token is null or empty. Notification not sent.");
+return;
+}
+var payload = new
+{
+to = expoPushToken,
+sound = "default",
+title = title,
+body = body,
+data = data
+};
+var jsonPayload = JsonConvert.SerializeObject(payload);
+var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+try
+{
+var response = await _httpClient.PostAsync(_expoPushEndpoint, httpContent);
+if (!response.IsSuccessStatusCode)
+{
+_logger.LogError("Failed to send push notification. Status Code: {StatusCode}", response.StatusCode);
+}
+}
+catch (Exception ex)
+{
+_logger.LogError(ex, "Exception occurred while sending push notification.");
+}
 }
 }
 }

@@ -1,5 +1,6 @@
 ﻿using Cuttr.Business.Entities;
 using Cuttr.Business.Interfaces.RepositoryInterfaces;
+using Cuttr.Infrastructure.Entities;
 using Cuttr.Infrastructure.Exceptions;
 using Cuttr.Infrastructure.Mappers;
 using Microsoft.EntityFrameworkCore;
@@ -148,22 +149,109 @@ namespace Cuttr.Infrastructure.Repositories
             }
         }
 
-        public async Task<IEnumerable<Plant>> GetTradablePlantsWithinRadiusAsync(double originLat, double originLon, double radiusKm)
+        public async Task<IEnumerable<Plant>> GetFilteredTradablePlantsAsync(
+            int currentUserId,
+            double originLat,
+            double originLon,
+            int radiusKm,
+            UserPreferences preferences)
         {
             // Convert radius to meters
             double radiusMeters = radiusKm * 1000;
-
-            // Create an origin point
             var origin = new Point(originLon, originLat) { SRID = 4326 };
 
-            // Query plants whose user's location is within the radius
-            var efPlants = await _context.Plants
-                .AsNoTracking()
-                .Include(p => p.User)
-                .Where(p => p.User.Location != null && p.User.Location.Distance(origin) <= radiusMeters && p.IsTraded==false)
-                .ToListAsync();
+            // Base query: plant is tradable, not owned by the current user, and within radius.
+            var query = _context.Plants
+                                .AsNoTracking()
+                                .Include(p => p.User)
+                                .Where(p => !p.IsTraded &&
+                                            p.UserId != currentUserId &&
+                                            p.User.Location != null &&
+                                            p.User.Location.Distance(origin) <= radiusMeters);
 
-            return efPlants.Select(EFToBusinessMapper.MapToPlant);
+            // Convert enum lists to lists of strings and apply filters
+
+            if (preferences.PreferedPlantStage?.Any() == true)
+            {
+                var preferredPlantStages = preferences.PreferedPlantStage
+                                                     .Select(stage => stage.ToString())
+                                                     .ToList();
+                query = query.Where(p => preferredPlantStages.Contains(p.PlantStage));
+            }
+
+            if (preferences.PreferedPlantCategory?.Any() == true)
+            {
+                var preferredCategories = preferences.PreferedPlantCategory
+                                                    .Select(cat => cat.ToString())
+                                                    .ToList();
+                query = query.Where(p => preferredCategories.Contains(p.PlantCategory));
+            }
+
+            if (preferences.PreferedWateringNeed?.Any() == true)
+            {
+                var preferredWateringNeeds = preferences.PreferedWateringNeed
+                                                       .Select(need => need.ToString())
+                                                       .ToList();
+                query = query.Where(p => preferredWateringNeeds.Contains(p.WateringNeed));
+            }
+
+            if (preferences.PreferedLightRequirement?.Any() == true)
+            {
+                var preferredLightRequirements = preferences.PreferedLightRequirement
+                                                            .Select(req => req.ToString())
+                                                            .ToList();
+                query = query.Where(p => preferredLightRequirements.Contains(p.LightRequirement));
+            }
+
+            if (preferences.PreferedSize?.Any() == true)
+            {
+                var preferredSizes = preferences.PreferedSize
+                                            .Select(size => size.ToString())
+                                            .ToList();
+                query = query.Where(p => preferredSizes.Contains(p.Size));
+            }
+
+            if (preferences.PreferedIndoorOutdoor?.Any() == true)
+            {
+                var preferredIndoorOutdoor = preferences.PreferedIndoorOutdoor
+                                                    .Select(io => io.ToString())
+                                                    .ToList();
+                query = query.Where(p => preferredIndoorOutdoor.Contains(p.IndoorOutdoor));
+            }
+
+            if (preferences.PreferedPropagationEase?.Any() == true)
+            {
+                var preferredPropagationEase = preferences.PreferedPropagationEase
+                                                      .Select(ease => ease.ToString())
+                                                      .ToList();
+                query = query.Where(p => preferredPropagationEase.Contains(p.PropagationEase));
+            }
+
+            if (preferences.PreferedPetFriendly?.Any() == true)
+            {
+                var preferredPetFriendly = preferences.PreferedPetFriendly
+                                                  .Select(pf => pf.ToString())
+                                                  .ToList();
+                query = query.Where(p => preferredPetFriendly.Contains(p.PetFriendly));
+            }
+
+            if (preferences.PreferedExtras?.Any() == true)
+            {
+                // Assuming Extras are stored in a way that allows a substring match.
+                var preferredExtras = preferences.PreferedExtras
+                                                  .Select(extra => extra.ToString())
+                                                  .ToList();
+                query = query.Where(p => p.Extras != null && preferredExtras.Any(extra => p.Extras.Contains(extra)));
+            }
+
+            // Randomize the results to ensure fairness.
+            query = query.OrderBy(p => Guid.NewGuid());
+
+            // Limit the number of candidates returned.
+            var efPlants = await query.ToListAsync();
+            return efPlants.Select(EFToBusinessMapper.MapToPlant).ToList();
         }
+
+
     }
 }

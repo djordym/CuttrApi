@@ -183,133 +183,59 @@ namespace Cuttr.Business.Managers
 
         public async Task<List<PlantResponse>> GetLikablePlantsAsync(int userId, int maxCount)
         {
-            try
+            // 1. Get the user with its preferences
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if (user == null)
+                throw new BusinessException("User not found.");
+            if (user.Preferences == null)
+                throw new BusinessException("User preferences not found.");
+            if (user.LocationLatitude == null || user.LocationLongitude == null)
+                throw new BusinessException("User location not set.");
+
+            // 2. Set search radius (fallback to 10km if not set)
+            int radiusKm = user.Preferences.SearchRadius > 0 ? user.Preferences.SearchRadius : 10;
+
+            // 3. Retrieve candidate plants already filtered by location, preferences, not owned by the user,
+            // and in randomized order.
+            var candidatePlants = await _plantRepository.GetFilteredTradablePlantsAsync(
+                                        userId,
+                                        user.LocationLatitude.Value,
+                                        user.LocationLongitude.Value,
+                                        radiusKm,
+                                        user.Preferences
+                                    );
+
+            if (!candidatePlants.Any())
+                return new List<PlantResponse>();
+
+            // 4. Retrieve all of the user's plants (their IDs) to check swipe interactions.
+            var userPlants = await _plantRepository.GetTradablePlantsByUserIdAsync(userId);
+            var userPlantIds = userPlants.Select(up => up.PlantId).ToList();
+
+            // 5. Bulk-load swipe data for candidate plants against the user's plants.
+            var candidatePlantIds = candidatePlants.Select(p => p.PlantId).ToList();
+            var swipeData = await _swipeRepository.GetSwipesForUserPlantsAsync(userPlantIds, candidatePlantIds);
+            // Group swipes by candidate plant id
+            var swipeCounts = swipeData.GroupBy(s => s.SwipedPlantId)
+                                       .ToDictionary(g => g.Key, g => g.Count());
+
+            // 6. Select only those candidate plants that have at least one of the user's plants
+            // that hasn’t yet swiped (i.e. not all user plants have swiped on it).
+            var likablePlants = new List<PlantResponse>();
+            foreach (var plant in candidatePlants)
             {
-                // 1. Retrieve the user to get location & preferences
-                var user = await _userRepository.GetUserByIdAsync(userId);
-                if (user == null)
-                    throw new BusinessException("User not found.");
-
-                if (user.Preferences == null)
-                    throw new BusinessException("User preferences not found.");
-
-                if (user.LocationLatitude == null || user.LocationLongitude == null)
-                    throw new BusinessException("User location not set.");
-
-                // 2. Determine radius or fallback
-                int radius = user.Preferences.SearchRadius > 0
-                             ? user.Preferences.SearchRadius
-                             : 10000; // or 9999, etc.
-
-                // 3. Retrieve the candidate plants in radius
-                var candidatePlants = await _plantRepository.GetTradablePlantsWithinRadiusAsync(
-                                          user.LocationLatitude.Value,
-                                          user.LocationLongitude.Value,
-                                          radius);
-
-                // 4. Exclude user’s own plants
-                candidatePlants = candidatePlants.Where(p => p.UserId != userId);
-
-                // 5. Apply preference filters if lists are non-empty
-                if (user.Preferences.PreferedPlantStage != null && user.Preferences.PreferedPlantStage.Any())
+                // If there are no swipes or not all of the user's plants have swiped...
+                if (!swipeCounts.TryGetValue(plant.PlantId, out int swipeCount) || swipeCount < userPlantIds.Count)
                 {
-                    candidatePlants = candidatePlants
-                        .Where(p => user.Preferences.PreferedPlantStage.Contains(p.PlantStage));
+                    likablePlants.Add(BusinessToContractMapper.MapToPlantResponse(plant));
                 }
-
-                if (user.Preferences.PreferedPlantCategory != null && user.Preferences.PreferedPlantCategory.Any())
-                {
-                    candidatePlants = candidatePlants
-                        .Where(p => p.PlantCategory.HasValue
-                                    && user.Preferences.PreferedPlantCategory.Contains(p.PlantCategory.Value));
-                }
-
-                if (user.Preferences.PreferedWateringNeed != null && user.Preferences.PreferedWateringNeed.Any())
-                {
-                    candidatePlants = candidatePlants
-                        .Where(p => p.WateringNeed.HasValue
-                                    && user.Preferences.PreferedWateringNeed.Contains(p.WateringNeed.Value));
-                }
-
-                if (user.Preferences.PreferedLightRequirement != null && user.Preferences.PreferedLightRequirement.Any())
-                {
-                    candidatePlants = candidatePlants
-                        .Where(p => p.LightRequirement.HasValue
-                                    && user.Preferences.PreferedLightRequirement.Contains(p.LightRequirement.Value));
-                }
-
-                if (user.Preferences.PreferedSize != null && user.Preferences.PreferedSize.Any())
-                {
-                    candidatePlants = candidatePlants
-                        .Where(p => p.Size.HasValue
-                                    && user.Preferences.PreferedSize.Contains(p.Size.Value));
-                }
-
-                if (user.Preferences.PreferedIndoorOutdoor != null && user.Preferences.PreferedIndoorOutdoor.Any())
-                {
-                    candidatePlants = candidatePlants
-                        .Where(p => p.IndoorOutdoor.HasValue
-                                    && user.Preferences.PreferedIndoorOutdoor.Contains(p.IndoorOutdoor.Value));
-                }
-
-                if (user.Preferences.PreferedPropagationEase != null && user.Preferences.PreferedPropagationEase.Any())
-                {
-                    candidatePlants = candidatePlants
-                        .Where(p => p.PropagationEase.HasValue
-                                    && user.Preferences.PreferedPropagationEase.Contains(p.PropagationEase.Value));
-                }
-
-                if (user.Preferences.PreferedPetFriendly != null && user.Preferences.PreferedPetFriendly.Any())
-                {
-                    candidatePlants = candidatePlants
-                        .Where(p => p.PetFriendly.HasValue
-                                    && user.Preferences.PreferedPetFriendly.Contains(p.PetFriendly.Value));
-                }
-
-
-                if (user.Preferences.PreferedExtras != null && user.Preferences.PreferedExtras.Any())
-                {
-                    candidatePlants = candidatePlants
-                        .Where(p => p.Extras != null && p.Extras.Any(e => user.Preferences.PreferedExtras.Contains(e)));
-                }
-
-                // 6. Retrieve user's own plants (to check if already swiped)
-                var userPlants = await _plantRepository.GetTradablePlantsByUserIdAsync(userId);
-
-                var likablePlants = new List<PlantResponse>();
-
-                // 7. Exclude plants that have already been swiped
-                foreach (var plant in candidatePlants)
-                {
-                    bool hasUninteractedPlant = false;
-                    foreach (var up in userPlants)
-                    {
-                        // Check if this user plant has NOT swiped on the candidate plant
-                        bool hasSwipe = await _swipeRepository.HasSwipeAsync(up.PlantId, plant.PlantId);
-                        if (!hasSwipe)
-                        {
-                            hasUninteractedPlant = true;
-                            break; // Found an uninteracted swipe; no need to check further for this plant
-                        }
-                    }
-
-                    if (hasUninteractedPlant)
-                    {
-                        likablePlants.Add(BusinessToContractMapper.MapToPlantResponse(plant));
-                    }
-
-                    if (likablePlants.Count >= maxCount)
-                        break; // Reached the maximum count
-
-                }
-                return likablePlants;
+                if (likablePlants.Count >= maxCount)
+                    break;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving likable plants.");
-                throw new BusinessException("Error retrieving likable plants.", ex);
-            }
+
+            return likablePlants;
         }
+
 
 
         public async Task SeedPlantAsync(SeedPlantRequest request)

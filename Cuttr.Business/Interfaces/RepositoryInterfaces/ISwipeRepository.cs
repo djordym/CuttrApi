@@ -15,6 +15,6 @@ namespace Cuttr.Business.Interfaces.RepositoryInterfaces
         Task<Swipe> GetSwipeForPairAsync(int swiperPlantId, int swipedPlantId);
         Task UpdateSwipeAsync(Swipe swipe);
         Task<IEnumerable<Plant>> GetTradableLikedPlantsBySwiperAsync(int swiperUserId, int swipedPlantOwnerUserId);
-
+        Task<IEnumerable<Swipe>> GetSwipesForUserPlantsAsync(List<int> userPlantIds, List<int> candidatePlantIds);
     }
 }

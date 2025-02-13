@@ -136,5 +136,24 @@ namespace Cuttr.Infrastructure.Repositories
                 throw new RepositoryException("An error occurred while retrieving liked plants.", ex);
             }
         }
+
+        public async Task<IEnumerable<Swipe>> GetSwipesForUserPlantsAsync(List<int> userPlantIds, List<int> candidatePlantIds)
+        {
+            try
+            {
+                var swipes = await _context.Swipes
+                    .AsNoTracking()
+                    .Where(s => userPlantIds.Contains(s.SwiperPlantId) && candidatePlantIds.Contains(s.SwipedPlantId))
+                    .ToListAsync();
+
+                return swipes.Select(EFToBusinessMapper.MapToSwipe);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving swipes for user plants.");
+                throw new RepositoryException("An error occurred while retrieving swipes for user plants.", ex);
+            }
+        }
+
     }
 }
