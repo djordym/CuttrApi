@@ -11,7 +11,7 @@ namespace Cuttr.Business.Contracts.Inputs
     {
         public string SpeciesName { get; set; }
         public string? Description { get; set; }
-        public PlantStage PlantStage { get; set; }
+        public PlantStage? PlantStage { get; set; }
         public PlantCategory? PlantCategory { get; set; }
         public WateringNeed? WateringNeed { get; set; }
         public LightRequirement? LightRequirement { get; set; }
