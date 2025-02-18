@@ -41,6 +41,8 @@ Release/
 appsettings.json
 appsettings.Development.json
 
+
+
 # Web development
 node_modules/
 dist/
@@ -78,3 +80,5 @@ TestResults/
 *.bak
 *.swp
 *.tmp
+all_cs_files_combined_cleaned.cs
+Gather all cs files.py
