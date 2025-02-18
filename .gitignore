@@ -38,6 +38,9 @@ Release/
 *.csproj.CoreCompileOutputs.cache
 *.csproj.FileListAbsolute.txt
 
+appsettings.json
+appsettings.Development.json
+
 # Web development
 node_modules/
 dist/
